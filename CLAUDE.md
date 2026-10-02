@@ -28,6 +28,7 @@ Le document Grist principal est `espaces/gestion-projets/` : un espace unique (g
   - **par URL (GitHub Pages, branche `master`)** : `https://nantodevison.github.io/pmd-suite-numerique/widgets/<widget>/`. Grist affiche un avertissement « source inconnue » à confirmer, puis il faut régler le niveau d'accès du widget sur « Accès complet » ;
   - **par copier-coller** dans l'éditeur de Custom Widget (onglet HTML : `index.html`, onglet JavaScript : le fichier JS).
 - `index.html` charge le fichier JS par `<script src="…">` : indispensable en mode URL, sans effet en copier-coller.
+- **Widget en service par URL** (statut `en service` dans le catalogue, ex. `kanban` pour l'Observatoire) : une fusion sur `master` vaut **mise en production**. Tester d'abord dans le Custom Widget Builder, sur une copie du document, **avant** de fusionner ; Claude le rappelle à chaque PR qui touche un tel widget. Après publication, recharger la page Grist avec Ctrl + F5 : GitHub Pages laisse le navigateur garder l'ancienne version environ 10 minutes.
 - **Ne jamais déplacer ni renommer le dossier d'un widget publié** : le chemin fait partie de l'URL, et les documents Grist qui l'utilisent casseraient. Un widget ne se range pas par projet ni par généricité : ce classement va dans le catalogue.
 - Les dossiers `widgets/_…` (gabarit, code JS partagé) ne sont pas des widgets ; ils sont publiés grâce à `.nojekyll` à la racine.
 - Pour rendre un widget réutilisable, privilégier l'association de colonnes (configurée par l'utilisateur) et le filtrage natif de Grist (« Sélectionner par ») plutôt que des noms de tables ou de colonnes codés en dur.
@@ -60,3 +61,13 @@ Configuration dans `.env` à la racine (voir `python/README.md` pour la liste). 
 ## GT CBS (projet terminé)
 
 Les widgets `parcours-doc`, `questions` et `echanges` (statut « archivé ») servaient la plateforme de questions/réponses du GT « Harmonisation CBS » (DGPR). Le widget `echanges` envoie des emails via l'API Brevo ; c'est désactivé par `var NOTIFICATIONS_ENABLED = false;` en tête de `widgets/echanges/widget.js` (fonctions `notifyOnNewResponse`, `sendSollicitation`, `notifyAuthor`).
+
+## Feuille de route
+<!-- Lu par les compétences etat-des-lieux et cloture-session -->
+source: grist                      # grist | fichier | aucune
+serveur: https://grist.numerique.gouv.fr
+document: env:GRIST_KANBAN_DOC_ID  # identifiant gardé dans le .env (dépôt public)
+table: Taches
+projet: 15                         # Kanban
+statuts_ouverts: 🖐️ À faire, ♻️ En cours
+statuts_termines: ✅ Fait, ❌ Annulé, 🗃️ Archivé
