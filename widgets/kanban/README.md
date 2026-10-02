@@ -44,18 +44,40 @@ l'onglet actif sont mémorisés dans les options du widget (`grist.setOption`).
 Par défaut, l'association est préremplie pour la table `Taches` de l'espace
 [gestion de projets](../../espaces/gestion-projets/).
 
+### Projet du Kanban : un Kanban = un projet
+
+Le panneau ⚙ comporte aussi le réglage **« Projet du Kanban »**, à choisir une
+fois à l'installation du widget (la liste des projets est celle que vise la
+colonne « Champ Projet »). Ce choix est mémorisé dans le widget ; pour suivre
+un autre projet, on ajoute un **autre** widget Kanban avec son propre réglage.
+
+Une fois le projet choisi, le Kanban :
+- n'affiche que les tâches de ce projet (barre du haut : « Projet : … · Vue : … ») ;
+- ne propose que les EPICs de ce projet, dans le panneau ✏️ et à la création
+  d'une carte (l'EPIC actuel d'une carte reste visible s'il appartient à un
+  autre projet) ;
+- attribue ce projet aux nouvelles cartes.
+
+Tant qu'aucun projet n'est choisi, le Kanban affiche toutes les tâches, signale
+« ⚠️ Choisissez le projet du Kanban dans ⚙ » et **bloque la création de cartes**.
+
+> **À l'installation (ou après la mise à jour du 2026-10-02 pour un Kanban
+> existant) : ouvrir ⚙, choisir le projet, puis « Appliquer ».**
+
 ## Limites connues
 
 Relevées à la lecture du code, puis en partie vérifiées lors du test par URL
 du 2026-09-24 (sur une copie du document de gestion de projets).
 
-**Valeurs propres à l'Observatoire, codées en dur :**
-- le projet des nouvelles cartes est la **6ᵉ ligne** de `Projets2`
-  (`tablePrj.id[5]`) : fragile si des lignes sont supprimées ou réordonnées ;
+**Valeurs propres à l'Observatoire, encore codées en dur** (à généraliser) :
 - les personnes assignables sont limitées aux contacts n° 20, 21, 23 et 360 ;
 - les onglets Standardiser et Linéariser reposent sur les noms exacts de deux
   EPICs, et sur des listes de statuts propres au projet ;
-- les tables `Projets2`, `Contacts` et `EPICs` sont lues par leur nom.
+- les tables `Contacts` et `EPICs` sont encore lues par leur nom (pour la liste
+  des contacts autorisés et l'ancienne liste d'EPICs).
+
+Le projet OTV codé en dur (6ᵉ ligne de `Projets2`) a été remplacé le
+2026-10-02 par le réglage « Projet du Kanban ».
 
 **Corrigé et validé en test le 2026-09-24 :**
 - les champs de type référence (EPIC, Assigné à) étaient enregistrés comme du
