@@ -46,7 +46,7 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 .toolbar-title { font-weight: 700; font-size: 15px; letter-spacing: -.3px; }
 .toolbar-table-name {
   font-size: 11px; color: var(--text-muted); background: var(--col-bg);
-  border-radius: 5px; padding: 3px 10px; max-width: 220px;
+  border-radius: 5px; padding: 3px 10px; max-width: 420px; /* ✅ place pour « Projet : … · Vue : … » */
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
@@ -495,6 +495,8 @@ textarea.edit-control { resize: vertical; min-height: 90px; line-height: 1.5; }
         <div class="config-field"><label for="col-epic">EPIC</label><select id="col-epic"><option value="">— aucune —</option></select></div>
         <div class="config-field"><label for="col-millesime">Millésime / Année</label><select id="col-millesime"><option value="">— aucune —</option></select></div>
         <div class="config-field"><label for="col-projet">Champ Projet</label><select id="col-projet"><option value="">— aucune —</option></select></div>
+        <!-- ✅ Projet du Kanban : un Kanban = un projet (choisi une fois, mémorisé dans le widget) -->
+        <div class="config-field"><label for="col-projet-kanban">Projet du Kanban</label><select id="col-projet-kanban"><option value="">— choisir —</option></select></div>
       </div>
       <div class="config-actions">
         <button id="btn-save-config" class="btn-primary">✓ Appliquer</button>

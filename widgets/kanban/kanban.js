@@ -43,8 +43,10 @@ const STATE = {
   editPanel: { recordId: null, dirty: false, fields: {} },
   addModal:  { statut: null },
 
-  //stocker l'ID du projet OTV
-  projectOtvId: null,
+  // ✅ Projet du Kanban : numéro de la ligne du projet choisi dans ⚙
+  // (un Kanban = un projet). null tant qu'aucun projet n'est choisi.
+  // Remplace l'ancien projet OTV codé en dur (6ᵉ ligne de Projets2).
+  projetKanban: null,
 
   //cache des tables de référence
   referenceData: {
@@ -133,8 +135,11 @@ let _tableName = null;
    associé, la correspondance numéro ↔ nom :
      REFS.epic    = { estListe: false, tableVisee: 'EPICs',    options: [{id, nom}, …] }
      REFS.assigne = { estListe: true,  tableVisee: 'Contacts', options: [{id, nom}, …] }
+     REFS.projet  = { estListe: false, tableVisee: 'Projets2', options: [{id, nom}, …] }
+   Pour les EPICs, chaque option porte en plus le numéro de son projet
+   (projetId), afin de ne proposer que les EPICs du projet du Kanban.
    Il vaut null si le champ n'est pas associé ou n'est pas une référence. */
-const REFS = { epic: null, assigne: null };
+const REFS = { epic: null, assigne: null, projet: null };
 
 /* ══════════════════════════════════════════════════════════════
    1. INITIALISATION GRIST
@@ -151,7 +156,8 @@ grist.ready({ requiredAccess: 'full' });
 // ✅ Correctif : récupérer le nom réel de la table liée au widget.
 // Sans cela, getTableName() retombe sur 'Taches' et les écritures partent
 // dans la table Taches même quand le widget affiche une autre table.
-(async () => {
+// On garde la « promesse » pour pouvoir attendre ce nom avant de lire les références.
+const _tableNamePret = (async () => {
   try {
     _tableName = await grist.getTable().getTableId();
   } catch (err) {
@@ -162,10 +168,8 @@ grist.ready({ requiredAccess: 'full' });
 // ✨ Récupérer les données de référence après l'initialisation
 (async () => {
   try {
-    // Récupérer le projet OTV
-    const tablePrj = await grist.docApi.fetchTable('Projets2');
-    STATE.projectOtvId = tablePrj.id[5];
-    console.log('✓ ID projet OTV récupéré:', STATE.projectOtvId);
+    // (Le projet OTV n'est plus lu ici : il est remplacé par le réglage
+    //  « Projet du Kanban » du panneau ⚙, voir STATE.projetKanban.)
 
     const CONTACTS_AUTORISES_IDS = [20, 21 ,23 ,360]; //
 
@@ -237,8 +241,13 @@ grist.onOptions((options) => {
   if (options && options.mapping)      { Object.assign(STATE.mapping, options.mapping); syncSelectsToMapping(); }
   if (options && options.columnOrder)  STATE.columnOrder = options.columnOrder;
   if (options && options.activeView)   STATE.activeView  = options.activeView;
+  // ✅ Projet du Kanban mémorisé dans les options du widget
+  STATE.projetKanban = (options && options.projetKanban) ? Number(options.projetKanban) : null;
   syncViewTabs();
   renderBoard();
+  // Les noms des projets et des EPICs sont nécessaires pour filtrer les cartes :
+  // on les charge, puis on redessine le tableau.
+  assurerReferences().then(renderBoard);
 });
 
 /* ══════════════════════════════════════════════════════════════
@@ -266,10 +275,32 @@ function syncSelectsToMapping() {
 }
 
 function loadSavedMapping() { syncSelectsToMapping(); }
-function openConfig()  { populateSelects(); syncSelectsToMapping(); document.getElementById('config-panel').classList.remove('hidden'); }
+function openConfig()  {
+  populateSelects(); syncSelectsToMapping();
+  remplirChoixProjet(REFS.projet); // ✅ liste « Projet du Kanban »
+  document.getElementById('config-panel').classList.remove('hidden');
+}
 function closeConfig() { document.getElementById('config-panel').classList.add('hidden'); }
 
-function saveConfig() {
+/* ✅ Remplit la liste « Projet du Kanban » du panneau ⚙ à partir des projets
+   visés par la colonne « Champ Projet » (ref = REFS.projet, ou null). */
+function remplirChoixProjet(ref) {
+  const sel = document.getElementById('col-projet-kanban');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— choisir —</option>';
+  sel.disabled = !ref;
+  if (!ref) return;
+  [...ref.options]
+    .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
+    .forEach(o => {
+      const opt = document.createElement('option');
+      opt.value = String(o.id); opt.textContent = o.nom || `(ligne ${o.id})`;
+      sel.appendChild(opt);
+    });
+  sel.value = STATE.projetKanban ? String(STATE.projetKanban) : '';
+}
+
+async function saveConfig() {
   Object.entries(SELECT_IDS).forEach(([key, selectId]) => {
     const sel = document.getElementById(selectId);
     STATE.mapping[key] = sel ? sel.value : '';
@@ -277,8 +308,14 @@ function saveConfig() {
   if (!STATE.mapping.titre || !STATE.mapping.statut) {
     showToast('⚠️ Titre et Statut sont obligatoires.', 3000); return;
   }
+  // ✅ Projet du Kanban : mémorisé dans les options du widget
+  const selProjet = document.getElementById('col-projet-kanban');
+  STATE.projetKanban = (selProjet && selProjet.value) ? Number(selProjet.value) : null;
   grist.setOption('mapping', STATE.mapping).catch(() => {});
-  closeConfig(); renderBoard();
+  grist.setOption('projetKanban', STATE.projetKanban).catch(() => {});
+  closeConfig();
+  await assurerReferences(); // l'association des colonnes a pu changer
+  renderBoard();
   showToast('✓ Configuration sauvegardée');
 }
 
@@ -299,6 +336,20 @@ function switchView(viewId) {
   renderBoard();
 }
 
+/* ✅ Projet du Kanban : une carte appartient-elle au projet choisi ?
+   Grist envoie le NOM affiché du projet de la carte : on le compare au nom
+   du projet choisi. Si aucun projet n'est choisi (ou pas de colonne Projet),
+   toutes les cartes sont gardées. */
+function estDuProjet(record) {
+  if (!STATE.projetKanban || !STATE.mapping.projet || !REFS.projet) return true;
+  return String(getField(record, 'projet') ?? '') === nomAffiche('projet', STATE.projetKanban);
+}
+
+/** Les cartes du projet du Kanban (toutes, si aucun projet n'est choisi). */
+function recordsDuProjet() {
+  return STATE.records.filter(estDuProjet);
+}
+
 function updateEpicFilterOptions() {
   const sel = document.getElementById('filter-epic');
   if (!sel) return;
@@ -307,7 +358,7 @@ function updateEpicFilterOptions() {
 
   const current = sel.value;
   const epics = new Set();
-  STATE.records.forEach(r => {
+  recordsDuProjet().forEach(r => { // ✅ seulement les EPICs des cartes du projet
     const v = getField(r, 'epic');
     if (v && String(v).trim()) epics.add(String(v));
   });
@@ -328,7 +379,7 @@ function updatePersonFilterOptions() {
 
   const current = sel.value;
   const names = new Set();
-  STATE.records.forEach(r => {
+  recordsDuProjet().forEach(r => { // ✅ seulement les personnes des cartes du projet
     const v = getField(r, 'assigne');
     if (v && String(v).trim()) names.add(String(v));
   });
@@ -357,6 +408,9 @@ function getFilteredRecords() {
   const view = VIEWS[STATE.activeView] || VIEWS.taches;
 
   return STATE.records.filter(r => {
+    // ✅ Projet du Kanban : on ne garde que les cartes du projet choisi
+    if (!estDuProjet(r)) return false;
+
     // Filtre EPIC de la vue (automatique, inclusion)
     if (view.epicFilter && STATE.mapping.epic) {
       const val = getField(r, 'epic');
@@ -484,7 +538,18 @@ function renderBoard() {
   }
 
   const tn = document.getElementById('toolbar-table-name');
-  if (tn) tn.textContent = `Vue : ${VIEWS[STATE.activeView]?.label || ''}`;
+  // ✅ Barre du haut : projet du Kanban + vue active (ou alerte si aucun projet)
+  if (tn) {
+    const vue = `Vue : ${VIEWS[STATE.activeView]?.label || ''}`;
+    if (STATE.mapping.projet && !STATE.projetKanban) {
+      tn.textContent = `⚠️ Choisissez le projet du Kanban dans ⚙ · ${vue}`;
+      tn.style.color = 'var(--danger)';
+    } else {
+      const nomProjet = STATE.projetKanban ? nomAffiche('projet', STATE.projetKanban) : '';
+      tn.textContent = nomProjet ? `Projet : ${nomProjet} · ${vue}` : vue;
+      tn.style.color = '';
+    }
+  }
 }
 
 function getOrderedStatuts(statutList, view) {
@@ -660,6 +725,12 @@ function buildPrioBadge(val) {
    ══════════════════════════════════════════════════════════════ */
 
 async function openAddCardModal(statut) {
+  // ✅ Projet du Kanban : pas de création de carte tant que le projet n'est pas
+  // choisi (sinon la tâche serait créée sans projet, donc « orpheline »).
+  if (STATE.mapping.projet && !STATE.projetKanban) {
+    showToast('⚠️ Choisissez d\'abord le projet du Kanban dans ⚙', 3500);
+    return;
+  }
   STATE.addModal.statut = statut;
   document.getElementById('modal-statut-badge').textContent = statut;
   await assurerReferences(); // ✅ Correctif : correspondances numéro ↔ nom à jour
@@ -810,9 +881,9 @@ async function submitAddCardModal() {
   if (STATE.mapping.statut) newRecord[STATE.mapping.statut] = statut;
   if (STATE.mapping.titre)  newRecord[STATE.mapping.titre]  = titre;
 
-  // Champ Projet : référence vers la ligne OTV
-  if (STATE.mapping.projet && STATE.projectOtvId !== null) {
-    newRecord[STATE.mapping.projet] = STATE.projectOtvId;
+  // ✅ Champ Projet : référence vers le projet du Kanban (choisi dans ⚙)
+  if (STATE.mapping.projet && STATE.projetKanban) {
+    newRecord[STATE.mapping.projet] = STATE.projetKanban;
   }
 
   // ✨ Champs simples (texte, non-référence)
@@ -1230,9 +1301,26 @@ async function chargerReference(tableId, colId) {
   return { estListe, tableVisee, options };
 }
 
-/** (Re)charge REFS pour les champs EPIC et Assigné à, selon l'association courante. */
+/**
+ * ✅ Projet du Kanban : nom de la première colonne de `tableId` qui est une
+ * référence vers `tableCible` (ex. dans EPICs, la colonne qui vise Projets2).
+ * null s'il n'y en a pas.
+ */
+async function colonneQuiVise(tableId, tableCible) {
+  const tables   = await grist.docApi.fetchTable('_grist_Tables');
+  const colonnes = await grist.docApi.fetchTable('_grist_Tables_column');
+  const idxTable = tables.tableId.indexOf(tableId);
+  if (idxTable === -1) return null;
+  const numeroTable = tables.id[idxTable];
+  const idx = colonnes.id.findIndex((_, i) =>
+    colonnes.parentId[i] === numeroTable && colonnes.type[i] === `Ref:${tableCible}`);
+  return idx === -1 ? null : colonnes.colId[idx];
+}
+
+/** (Re)charge REFS pour les champs EPIC, Assigné à et Projet, selon l'association courante. */
 async function assurerReferences() {
-  for (const key of ['epic', 'assigne']) {
+  await _tableNamePret; // le nom réel de la table doit être connu
+  for (const key of ['epic', 'assigne', 'projet']) {
     REFS[key] = null;
     const col = STATE.mapping[key];
     if (!col) continue;
@@ -1241,6 +1329,23 @@ async function assurerReferences() {
     } catch (err) {
       // En cas d'échec, le widget garde le comportement de la version d'origine
       console.error(`Kanban – lecture de la référence « ${col} » impossible:`, err);
+    }
+  }
+
+  // ✅ Projet du Kanban : pour chaque EPIC, retenir le numéro de son projet,
+  // en cherchant dans la table des EPICs la colonne qui vise la table des projets.
+  if (REFS.epic && REFS.projet) {
+    try {
+      const colProjet = await colonneQuiVise(REFS.epic.tableVisee, REFS.projet.tableVisee);
+      if (colProjet) {
+        const lignes = await grist.docApi.fetchTable(REFS.epic.tableVisee);
+        REFS.epic.options.forEach(o => {
+          const i = lignes.id.indexOf(o.id);
+          o.projetId = i !== -1 ? lignes[colProjet][i] : 0;
+        });
+      }
+    } catch (err) {
+      console.error('Kanban – lien EPIC → projet introuvable:', err);
     }
   }
 }
@@ -1278,6 +1383,11 @@ function optionsProposees(key, idsActuels) {
   if (key === 'assigne' && STATE.referenceData.contacts.length > 0) {
     const autorises = STATE.referenceData.contacts.map(c => c.id);
     return ref.options.filter(o => autorises.includes(o.id) || idsActuels.includes(o.id));
+  }
+  // ✅ Projet du Kanban : seuls les EPICs du projet choisi (#144), en gardant
+  // l'EPIC actuel de la carte même s'il appartient à un autre projet.
+  if (key === 'epic' && STATE.projetKanban && ref.options.some(o => 'projetId' in o)) {
+    return ref.options.filter(o => o.projetId === STATE.projetKanban || idsActuels.includes(o.id));
   }
   return ref.options;
 }
@@ -1340,6 +1450,8 @@ function getReferenceOptions(fieldKey) {
     case 'assigne':
       return STATE.referenceData.contacts || [];
     case 'epic':
+      // ✅ Projet du Kanban : si la référence est connue, seuls les EPICs du projet (#144)
+      if (REFS.epic) return optionsProposees('epic', []);
       // Si EPIC est une table de référence
       if (STATE.referenceData.epics.length > 0) {
         return STATE.referenceData.epics;
@@ -1414,6 +1526,16 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-config')       ?.addEventListener('click', openConfig);
   document.getElementById('btn-save-config')  ?.addEventListener('click', saveConfig);
   document.getElementById('btn-close-config') ?.addEventListener('click', closeConfig);
+  // ✅ Si l'on change le « Champ Projet », on recharge la liste des projets proposés
+  document.getElementById('col-projet')?.addEventListener('change', async (e) => {
+    const col = e.target.value;
+    let ref = null;
+    if (col) {
+      try { ref = await chargerReference(getTableName(), col); }
+      catch (err) { console.error('Kanban – lecture des projets impossible:', err); }
+    }
+    remplirChoixProjet(ref);
+  });
   document.getElementById('config-panel')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeConfig(); });
 
   // Onglets de vue
