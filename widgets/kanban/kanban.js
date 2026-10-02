@@ -538,17 +538,19 @@ function renderBoard() {
   }
 
   const tn = document.getElementById('toolbar-table-name');
-  // ✅ Barre du haut : projet du Kanban + vue active (ou alerte si aucun projet)
+  // ✅ Barre du haut : projet du Kanban (ou alerte si aucun projet choisi).
+  // La vue active n'y figure plus : l'onglet sélectionné l'indique déjà.
   if (tn) {
-    const vue = `Vue : ${VIEWS[STATE.activeView]?.label || ''}`;
     if (STATE.mapping.projet && !STATE.projetKanban) {
-      tn.textContent = `⚠️ Choisissez le projet du Kanban dans ⚙ · ${vue}`;
+      tn.textContent = '⚠️ Choisissez le projet du Kanban dans ⚙';
       tn.style.color = 'var(--danger)';
     } else {
       const nomProjet = STATE.projetKanban ? nomAffiche('projet', STATE.projetKanban) : '';
-      tn.textContent = nomProjet ? `Projet : ${nomProjet} · ${vue}` : vue;
+      tn.textContent = nomProjet ? `Projet : ${nomProjet}` : '';
       tn.style.color = '';
     }
+    // Pastille grise masquée quand il n'y a rien à afficher
+    tn.style.display = tn.textContent ? '' : 'none';
   }
 }
 
