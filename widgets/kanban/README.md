@@ -52,7 +52,7 @@ colonne « Champ Projet »). Ce choix est mémorisé dans le widget ; pour suivr
 un autre projet, on ajoute un **autre** widget Kanban avec son propre réglage.
 
 Une fois le projet choisi, le Kanban :
-- n'affiche que les tâches de ce projet (barre du haut : « Projet : … · Vue : … ») ;
+- n'affiche que les tâches de ce projet (barre du haut : « Projet : … ») ;
 - ne propose que les EPICs de ce projet, dans le panneau ✏️ et à la création
   d'une carte (l'EPIC actuel d'une carte reste visible s'il appartient à un
   autre projet) ;
