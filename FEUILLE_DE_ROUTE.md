@@ -25,6 +25,11 @@ _Projet « Kanban » — toutes les tâches ouvertes — lu le 2026-10-02 18:15_
 <!-- fin grist -->
 
 ## ⚠️ Urgent
+- **À faire sur le PC fixe en premier** (séance du 2026-10-03 sur le portable, Grist injoignable) :
+  1. `git pull` ;
+  2. passer #152 (.env.example) à « ✅ Fait » dans Grist — fait dans le commit 744a913 ;
+  3. renommer `GRIST_DOC_ID` en `GRIST_SYNC_DOC_ID` dans le `.env` du fixe ;
+  4. synchroniser `.claude` entre les deux PC : le `grist_taches.py` du portable ne lit pas `env:GRIST_KANBAN_DOC_ID` (404 « document not found »), la version du fixe est plus avancée → c'est la tâche #151 ci-dessous.
 - Versionner les outils et compétences Claude (`%USERPROFILE%\.claude`) dans un dépôt GitHub privé — aujourd'hui aucun historique ni sauvegarde (tâche Grist #151, priorité Haute)
 
 ## En cours
