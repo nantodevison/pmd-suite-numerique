@@ -8,7 +8,7 @@ Variables d'environnement requises (fichier .env) :
     DOCS_CSRF_TOKEN     Header CSRF Docs
     GRIST_API_URL       URL de base de l'API Grist
     GRIST_API_KEY       Clé API Grist
-    GRIST_DOC_ID        UUID du document Grist cible
+    GRIST_SYNC_DOC_ID   UUID du document Grist cible de la sync
 
 Variables optionnelles :
     DOCS_BASE_URL       URL de base de l'instance Docs

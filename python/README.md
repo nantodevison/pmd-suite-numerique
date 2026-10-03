@@ -99,7 +99,7 @@ cp .env.example .env
 | `DOCS_CSRF_TOKEN` | ✓ | Cookie `csrftoken` |
 | `GRIST_API_URL` | ✓ | URL de base de l'API Grist |
 | `GRIST_API_KEY` | ✓ | Clé d'API Grist |
-| `GRIST_DOC_ID` | ✓ | UUID du document Grist cible |
+| `GRIST_SYNC_DOC_ID` | ✓ | UUID du document Grist cible de la sync (dernier usage : GT CBS, table `Chapitres`) |
 | `GITHUB_TOKEN` | — | PAT GitHub (scope `contents:write`) pour héberger les images |
 | `GITHUB_REPO` | — | Repo GitHub cible (défaut : `nantodevison/pmd-suite-numerique`) |
 | `GITHUB_IMAGES_FOLDER` | — | Dossier images dans le repo (défaut : `images`) |

@@ -19,13 +19,13 @@ class GristClient:
     ):
         self.api_url = (api_url or os.environ.get("GRIST_API_URL", "")).rstrip("/")
         self.api_key = api_key or os.environ.get("GRIST_API_KEY", "")
-        self.doc_id = doc_id or os.environ.get("GRIST_DOC_ID", "")
+        self.doc_id = doc_id or os.environ.get("GRIST_SYNC_DOC_ID", "")
         if not self.api_url:
             raise ValueError("GRIST_API_URL est requis.")
         if not self.api_key:
             raise ValueError("GRIST_API_KEY est requis.")
         if not self.doc_id:
-            raise ValueError("GRIST_DOC_ID est requis.")
+            raise ValueError("GRIST_SYNC_DOC_ID est requis.")
         self.session = requests.Session()
         self.session.headers.update({
             "Authorization": f"Bearer {self.api_key}",
