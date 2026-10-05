@@ -8,16 +8,14 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début grist : section régénérée depuis Grist, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Kanban » — toutes les tâches ouvertes — lu le 2026-10-02 18:15_
+_Projet « Kanban » — toutes les tâches ouvertes — lu le 2026-10-05 15:09_
 
 ### 🖐️ À faire
 - [ ] #146 Supprimer les onglets Standardiser et Linéariser (Haute, EPIC « Supprimer les spécifité OTV »)
-- [ ] #151 Versionner les outils et compétences Claude (dossier .claude) dans un dépôt GitHub privé (Haute, EPIC « Améliorer la qualité du code »)
 - [ ] #147 Chercher les autres spécificités OTV dans le code (Moyenne, EPIC « Supprimer les spécifité OTV »)
 - [ ] #148 Généraliser la liste des contacts assignables du Kanban (Moyenne, EPIC « Supprimer les spécifité OTV »)
 - [ ] #149 Ouvrir la carte au clic (Moyenne, EPIC « Améliorer l'interface »)
 - [ ] #150 Ouvrir la carte au centre, en plus grand (Moyenne, EPIC « Améliorer l'interface »)
-- [ ] #152 Ajouter un fichier .env.example au dépôt (Basse, EPIC « Améliorer la qualité du code »)
 - [ ] #153 Supprimer l'appel en double à grist.ready() dans le Kanban (Basse, EPIC « Améliorer la qualité du code »)
 - [ ] #154 Placer le fetchTable('EPICs') du Kanban dans le bloc de gestion d'erreur (Basse, EPIC « Améliorer la qualité du code »)
 - [ ] #155 Corriger le préréglage « Millésime » en « Millesime » dans le Kanban (Basse, EPIC « Améliorer la qualité du code »)
@@ -25,12 +23,7 @@ _Projet « Kanban » — toutes les tâches ouvertes — lu le 2026-10-02 18:15_
 <!-- fin grist -->
 
 ## ⚠️ Urgent
-- **À faire sur le PC fixe en premier** (séance du 2026-10-03 sur le portable, Grist injoignable) :
-  1. `git pull` ;
-  2. passer #152 (.env.example) à « ✅ Fait » dans Grist — fait dans le commit 744a913 ;
-  3. renommer `GRIST_DOC_ID` en `GRIST_SYNC_DOC_ID` dans le `.env` du fixe ;
-  4. synchroniser `.claude` entre les deux PC : le `grist_taches.py` du portable ne lit pas `env:GRIST_KANBAN_DOC_ID` (404 « document not found »), la version du fixe est plus avancée → c'est la tâche #151 ci-dessous.
-- Versionner les outils et compétences Claude (`%USERPROFILE%\.claude`) dans un dépôt GitHub privé — aujourd'hui aucun historique ni sauvegarde (tâche Grist #151, priorité Haute)
+(rien)
 
 ## En cours
 - [x] Fusionner la branche feat/restructuration (nouvelle structure widgets/ python/ espaces/ projets/) — PR #10, 2026-09-23
@@ -65,3 +58,7 @@ _Projet « Kanban » — toutes les tâches ouvertes — lu le 2026-10-02 18:15_
 - 2026-10-02 — widget en service par URL : tester dans le Custom Widget Builder avant de fusionner — une fusion sur master vaut mise en production
 - 2026-10-02 — une ligne des Notes d'un EPIC = une tâche — convention pour alimenter le kanban Grist
 - 2026-10-03 — GRIST_DOC_ID renommé GRIST_SYNC_DOC_ID, variables de la sync sans suffixe de projet — depuis le regroupement des projets, seul le document cible est propre à un projet ; cookies Docs, instance et dépôt sont communs
+- 2026-10-05 — outils et compétences Claude versionnés dans le dépôt privé nantodevison/claude-config, .gitignore en liste blanche — sauvegarde et synchronisation entre le fixe et le portable
+- 2026-10-05 — grist_taches.py reste dans .claude avec les compétences — couple indissociable, utilisé sur tous les projets ; objectif : sauvegarde personnelle, pas diffusion
+- 2026-10-05 — mémoires de projet non versionnées, propres à chaque poste — chemins de projet différents d'un poste à l'autre et contenus divergents ; les règles importantes vont dans le CLAUDE.md du projet
+- 2026-10-05 — etat-des-lieux et cloture-session suivent aussi le dépôt .claude (pull proposé en début de séance, commit et push séparés en fin de séance) — éviter que les deux postes divergent
