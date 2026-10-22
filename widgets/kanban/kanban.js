@@ -663,7 +663,9 @@ function buildCard(record, palette) {
   titleEl.textContent = titre;
   card.appendChild(titleEl);
 
-  const desc = getField(record, 'description');
+  // Aperçu de la description en texte brut : la description est en Markdown,
+  // et l'on ne veut voir sur la carte ni « ** » ni « # ».
+  const desc = Fiche.markdownVersTexte(getField(record, 'description'));
   if (desc) {
     const descEl = document.createElement('div');
     descEl.className   = 'card-description';
@@ -701,7 +703,10 @@ function buildCard(record, palette) {
 
   card.addEventListener('dragstart', onDragStart);
   card.addEventListener('dragend',   onDragEnd);
-  card.addEventListener('click', () => grist.setSelectedRows([record.id]));
+  // Un clic ouvre la fiche de la carte (et sélectionne la ligne dans Grist,
+  // ce que fait openEditPanel). Pas de conflit avec le glisser-déposer : le
+  // navigateur n'émet pas de « click » quand la carte a été déplacée.
+  card.addEventListener('click', () => openEditPanel(record.id));
 
   return card;
 }
@@ -962,13 +967,20 @@ async function deleteCard(recordId, titre) {
 async function openEditPanel(recordId) {
   const record = STATE.records.find(r => r.id === recordId);
   if (!record) return;
+  // Un clic sur une autre carte remplace le contenu de la fiche : on prévient
+  // si des modifications de la carte affichée n'ont pas été sauvegardées.
+  if (STATE.editPanel.dirty && STATE.editPanel.recordId !== recordId) {
+    if (!confirm('Des modifications non sauvegardées seront perdues. Continuer ?')) return;
+  }
   STATE.editPanel.recordId = recordId;
   STATE.editPanel.dirty    = false;
   STATE.editPanel.fields   = {};
   await assurerReferences(); // ✅ Correctif : correspondances numéro ↔ nom à jour
   populateEditPanel(record);
-  document.getElementById('edit-panel').classList.add('open');
-  document.getElementById('board').classList.add('panel-open');
+  // Fiche « côté » ou « centre » selon le dernier choix (voir _commun/fiche.js).
+  // Sur le côté, on réserve sa place au tableau ; au centre, elle le recouvre.
+  const disposition = Fiche.ouvrir(document.getElementById('edit-panel'));
+  document.getElementById('board').classList.toggle('panel-open', disposition === 'cote');
   grist.setSelectedRows([recordId]);
 }
 
@@ -991,7 +1003,9 @@ function populateEditPanel(record) {
   propsToShow.forEach(key => {
     if (!STATE.mapping[key]) return;
     const value = getField(record, key);
-    const row = document.createElement('div'); row.className = 'edit-prop';
+    // La classe « edit-prop-<champ> » permet de styler une propriété précise
+    // (par exemple la description, qui occupe toute la largeur).
+    const row = document.createElement('div'); row.className = 'edit-prop edit-prop-' + key;
     const label = document.createElement('div'); label.className = 'edit-prop-label';
     label.innerHTML = `<span class="prop-icon">${PROP_ICONS[key] || '•'}</span>${PROP_LABELS[key] || key}`;
     row.appendChild(label);
@@ -999,10 +1013,8 @@ function populateEditPanel(record) {
     const wrap = document.createElement('div');
 
     if (key === 'description') {
-      const ta = document.createElement('textarea'); ta.className = 'edit-control';
-      ta.value = value || ''; ta.placeholder = 'Ajouter une description…'; ta.rows = 4;
-      ta.addEventListener('input', () => markDirty('description', ta.value));
-      wrap.appendChild(ta);
+      // Description en Markdown : affichée mise en forme, modifiable en brut.
+      wrap.appendChild(Fiche.champMarkdown(value, (texte) => markDirty('description', texte)));
 
     } else if (key === 'statut') {
       const sel = document.createElement('select'); sel.className = 'edit-control';
@@ -1083,7 +1095,7 @@ function closeEditPanel(force = false) {
   if (STATE.editPanel.dirty && !force) {
     if (!confirm('Des modifications non sauvegardées seront perdues. Continuer ?')) return;
   }
-  document.getElementById('edit-panel').classList.remove('open');
+  Fiche.fermer(document.getElementById('edit-panel'));
   document.getElementById('board').classList.remove('panel-open');
   STATE.editPanel.recordId = null; STATE.editPanel.dirty = false; STATE.editPanel.fields = {};
 }
@@ -1560,7 +1572,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape') closeAddCardModal();
   });
 
-  // Panneau édition
+  // Panneau édition = « fiche » : bouton ⤢ / ⇥ pour passer du côté au centre,
+  // clic sur le fond assombri pour fermer (voir _commun/fiche.js).
+  const panneau = document.getElementById('edit-panel');
+  Fiche.installer(panneau, {
+    actions:    panneau.querySelector('.edit-panel-header-actions'),
+    fermer:     () => closeEditPanel(),
+    surBascule: (d) => document.getElementById('board')
+                        .classList.toggle('panel-open', d === 'cote' && panneau.classList.contains('open')),
+  });
   document.getElementById('edit-panel-close')?.addEventListener('click', () => closeEditPanel());
   document.getElementById('edit-save-btn')   ?.addEventListener('click', saveEditPanel);
   document.getElementById('edit-cancel-btn') ?.addEventListener('click', () => closeEditPanel());

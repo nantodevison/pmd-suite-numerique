@@ -19,6 +19,10 @@ EPIC et par personne, tri par priorité.
 |---|---|
 | `index.html` | Structure HTML et styles ; charge `kanban.js` |
 | `kanban.js` | Logique Grist : réception des données, rendu, glisser-déposer, écriture |
+| [`../_commun/fiche.js`](../_commun/fiche.js), [`fiche.css`](../_commun/fiche.css) | Fiche partagée avec la Galerie : disposition côté / centre, Markdown |
+
+Le Kanban dépend du dossier `_commun/` : il ne fonctionne donc qu'**en mode
+URL** (en copier-coller, il faudrait aussi coller `fiche.js` et `fiche.css`).
 
 ## Déploiement
 
@@ -63,6 +67,24 @@ Tant qu'aucun projet n'est choisi, le Kanban affiche toutes les tâches, signale
 
 > **À l'installation (ou après la mise à jour du 2026-10-02 pour un Kanban
 > existant) : ouvrir ⚙, choisir le projet, puis « Appliquer ».**
+
+## Fiche d'une carte
+
+Un **clic sur une carte** ouvre sa fiche (le bouton ✏️ fait de même) ; un
+glissement, lui, déplace la carte sans ouvrir la fiche. La fiche s'affiche :
+- **sur le côté** : panneau étroit, le tableau reste visible ;
+- **au centre** : grande fenêtre, les propriétés en en-tête sur deux colonnes et
+  la description en grand dessous.
+
+Le bouton ⤢ / ⇥ de l'en-tête passe d'une disposition à l'autre ; le dernier
+choix est mémorisé dans le navigateur (chacun garde le sien). Échap, ✕ ou un
+clic sur le fond assombri ferment la fiche ; une confirmation est demandée si
+des modifications n'ont pas été sauvegardées.
+
+La **description est en Markdown** (`**gras**`, `*italique*`, `# titre`,
+`- liste`, `[lien](url)`…) : affichée mise en forme, modifiable en brut avec
+« ✏️ Modifier ». Sur les cartes, son aperçu est en texte simple. Le HTML produit
+est nettoyé par DOMPurify avant affichage.
 
 ## Limites connues
 

@@ -5,6 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kanban Grist</title>
   <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  <!-- Markdown des descriptions : marked (Markdown → HTML) et DOMPurify
+       (nettoyage du HTML). « integrity » garantit que le fichier reçu du CDN
+       est exactement celui prévu ; sinon le navigateur refuse de l'exécuter. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"
+          integrity="sha512-xeUh+KxNyTufZOje++oQHstlMQ8/rpyzPuM+gjMFYK3z5ILJGE7l2NvYL+XfliKURMpBIKKp1XoPN/qswlSMFA=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"
+          integrity="sha512-jB0TkTBeQC9ZSkBqDhdmfTv1qdfbWpGE72yJ/01Srq6hEzZIz2xkz1e57p9ai7IeHMwEG7HpzG6NdptChif5Pg=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <!-- Fiche partagée avec les autres widgets (mode URL uniquement) -->
+  <link rel="stylesheet" href="../_commun/fiche.css" />
   <style>
 /* ══════════════════════════════════════════════════════════════
    KANBAN GRIST — styles v3
@@ -439,6 +450,21 @@ textarea.edit-control { resize: vertical; min-height: 90px; line-height: 1.5; }
 .edit-panel-footer .btn-primary { flex: 1; padding: 9px; font-size: 13px; }
 .edit-panel-footer .btn-ghost { padding: 9px 14px; font-size: 13px; }
 
+/* La description occupe toute la largeur, son libellé au-dessus. */
+.edit-prop-description { grid-template-columns: 1fr; }
+
+/* Fiche centrée (voir ../_commun/fiche.css) : les propriétés forment un
+   en-tête sur deux colonnes, la description s'étale en grand dessous. */
+body .edit-panel.fiche-centre .edit-panel-body {
+  display: grid; grid-template-columns: 1fr 1fr; align-content: start;
+  gap: 14px 28px; padding: 24px 30px 32px;
+}
+body .edit-panel.fiche-centre .edit-title-field,
+body .edit-panel.fiche-centre .edit-divider,
+body .edit-panel.fiche-centre .edit-prop-description { grid-column: 1 / -1; }
+body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
+body .edit-panel.fiche-centre .edit-divider { margin: 0 -30px; }
+
 .edit-dirty-dot { width: 7px; height: 7px; background: var(--warning); border-radius: 50%; display: none; }
 .edit-dirty-dot.visible { display: block; }
 
@@ -584,6 +610,7 @@ textarea.edit-control { resize: vertical; min-height: 90px; line-height: 1.5; }
   </div>
 
   <div id="toast" class="toast hidden"></div>
+  <script src="../_commun/fiche.js"></script>
   <script src="kanban.js"></script>
 </body>
 </html>
