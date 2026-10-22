@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Galerie Grist</title>
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  <!-- Markdown du texte principal : marked (Markdown → HTML) et DOMPurify
+       (nettoyage du HTML). « integrity » garantit que le fichier reçu du CDN
+       est exactement celui prévu ; sinon le navigateur refuse de l'exécuter. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"
+          integrity="sha512-xeUh+KxNyTufZOje++oQHstlMQ8/rpyzPuM+gjMFYK3z5ILJGE7l2NvYL+XfliKURMpBIKKp1XoPN/qswlSMFA=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"
+          integrity="sha512-jB0TkTBeQC9ZSkBqDhdmfTv1qdfbWpGE72yJ/01Srq6hEzZIz2xkz1e57p9ai7IeHMwEG7HpzG6NdptChif5Pg=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <!-- Fiche partagée avec le Kanban (mode URL uniquement) -->
+  <link rel="stylesheet" href="../_commun/fiche.css" />
+  <style>
+/* ══════════════════════════════════════════════════════════════
+   GALERIE GRIST — styles (même palette que le Kanban)
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  --bg:         #f0f2f5;
+  --surface:    #ffffff;
+  --col-bg:     #eef0f5;
+  --text:       #2d3748;
+  --text-muted: #718096;
+  --accent:     #667eea;
+  --border:     #e2e8f0;
+  --font:       'Segoe UI', system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var(--text); background: var(--bg); }
+body { display: flex; flex-direction: column; overflow: hidden; }
+
+/* Barre du haut */
+.barre {
+  display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+  padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.barre-titre { font-size: 15px; font-weight: 700; }
+.barre-compte {
+  font-size: 11px; font-weight: 700; color: var(--text-muted);
+  background: var(--col-bg); padding: 2px 9px; border-radius: 999px;
+}
+.recherche {
+  margin-left: auto; width: min(280px, 45vw);
+  padding: 6px 10px; border: 1.5px solid var(--border); border-radius: 8px;
+  font-family: inherit; font-size: 13px; color: var(--text);
+}
+.recherche:focus { outline: none; border-color: var(--accent); }
+
+/* Grille de cartes : autant de colonnes que la largeur le permet */
+.grille {
+  flex: 1; overflow-y: auto; padding: 16px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px; align-content: start;
+}
+.carte {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 14px 16px; min-height: 120px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-top: 4px solid var(--accent); border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(9, 30, 66, .07);
+  cursor: pointer; transition: box-shadow .15s, transform .15s;
+}
+.carte:hover { box-shadow: 0 6px 18px rgba(9, 30, 66, .13); transform: translateY(-1px); }
+.carte.selectionnee { outline: 2px solid var(--accent); outline-offset: 1px; }
+.carte-titre { font-size: 14px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
+.carte-contexte { display: flex; flex-wrap: wrap; gap: 4px; }
+.pastille {
+  font-size: 11px; padding: 2px 8px; border-radius: 999px;
+  background: var(--col-bg); color: var(--text-muted);
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.carte-texte {
+  font-size: 12px; line-height: 1.5; color: var(--text-muted);
+  /* Aperçu limité à 4 lignes */
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* Messages (aucune carte, colonnes à associer) */
+.message {
+  grid-column: 1 / -1; text-align: center; color: var(--text-muted);
+  padding: 60px 20px; line-height: 1.6;
+}
+
+/* Petit message temporaire en bas de l'écran */
+.toast {
+  position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+  background: #2d3748; color: #fff; padding: 8px 16px; border-radius: 8px;
+  font-size: 13px; z-index: 2000; opacity: 0; transition: opacity .2s; pointer-events: none;
+}
+.toast.visible { opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <header class="barre">
+    <span class="barre-titre" id="titre-table">🖼️ Galerie</span>
+    <span class="barre-compte" id="compte">0</span>
+    <input type="search" class="recherche" id="recherche" placeholder="Rechercher…" />
+  </header>
+
+  <main class="grille" id="grille"></main>
+
+  <!-- La fiche : sur le côté ou au centre (bouton ⤢ / ⇥, voir ../_commun/fiche.js) -->
+  <aside id="fiche" class="fiche-panneau" role="dialog" aria-label="Fiche">
+    <div class="fiche-panneau-entete">
+      <span class="fiche-panneau-libelle">Fiche</span>
+      <div class="fiche-panneau-actions" id="fiche-actions">
+        <span class="fiche-modifie" id="fiche-modifie" title="Modifications non sauvegardées"></span>
+        <button type="button" class="fiche-fermer" id="fiche-fermer" title="Fermer">✕</button>
+      </div>
+    </div>
+    <div class="fiche-panneau-corps" id="fiche-corps"></div>
+    <div class="fiche-panneau-pied">
+      <button type="button" class="fiche-btn-principal" id="fiche-sauver" disabled>✓ Sauvegarder</button>
+      <button type="button" class="fiche-btn-secondaire" id="fiche-annuler">Annuler</button>
+    </div>
+  </aside>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="../_commun/fiche.js"></script>
+  <script src="galerie.js"></script>
+</body>
+</html>
