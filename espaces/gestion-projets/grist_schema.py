@@ -108,10 +108,10 @@ class EPICs:
   Projet = grist.Reference('Projets2', reverse_of='EPICs')
   Titre = grist.Text()
   Taches = grist.ReferenceList('Taches', reverse_of='EPIC')
-  Notes = grist.Text()
   Retour_U = grist.ReferenceList('Retour_U', reverse_of='EPIC')
   objectifs_resultats_cle = grist.Reference('Objectifs_resultats_cles', reverse_of='EPICs')
   Priorite = grist.Choice()
+  Description = grist.Text()
 
   def Avancement(rec, table):
     cnt=0
@@ -235,6 +235,30 @@ class Objectifs_resultats_cles:
   resultats_cle = grist.Text()
   delai = grist.Date()
   EPICs = grist.ReferenceList('EPICs', reverse_of='objectifs_resultats_cle')
+  Description = grist.Text()
+
+
+@grist.UserTable
+class Otv_cas_usage:
+  Titre = grist.Text()
+  Annee = grist.Int()
+  Type_demandeur = grist.Choice()
+  Demandeur = grist.Text()
+  Territoire = grist.Reference('Enum_Territoire')
+  Besoin = grist.Text()
+  Reponse = grist.Text()
+  Plus_value = grist.Text()
+  Donnees = grist.ChoiceList()
+  Image = grist.Attachments()
+  Cas_similaire_de = grist.Reference('Otv_cas_usage')
+  Publie = grist.Bool()
+  Contact = grist.ReferenceList('Contacts')
+  Note_interne = grist.Text()
+  Description = grist.Text()
+
+  @grist.formulaType(grist.Bool())
+  def Est_carte(rec, table):
+    return not rec.Cas_similaire_de
 
 
 @grist.UserTable
@@ -404,3 +428,6 @@ class Taches:
         return True
     else:
         return False
+
+  def Id2(rec, table):
+    return rec.id
