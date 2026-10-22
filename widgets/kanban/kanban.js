@@ -147,12 +147,6 @@ const REFS = { epic: null, assigne: null, projet: null };
 
 grist.ready({ requiredAccess: 'full' });
 
-/* ══════════════════════════════════════════════════════════════
-   1. INITIALISATION GRIST
-   ══════════════════════════════════════════════════════════════ */
-
-grist.ready({ requiredAccess: 'full' });
-
 // ✅ Correctif : récupérer le nom réel de la table liée au widget.
 // Sans cela, getTableName() retombe sur 'Taches' et les écritures partent
 // dans la table Taches même quand le widget affiche une autre table.
@@ -195,6 +189,9 @@ const _tableNamePret = (async () => {
         nom: tableEpics.Titre?.[idx] || `EPIC ${id}`
       }));
       console.log('✓ EPICs chargés:', STATE.referenceData.epics.length);
+      // Messages de diagnostic, désormais dans le bloc de gestion d'erreur :
+      // sans table EPICs, ils ne provoquent plus d'erreur non rattrapée.
+      console.log('Colonnes disponibles dans EPICs:', Object.keys(tableEpics));
     } catch (err) {
       console.log('ℹ️ Pas de table EPICs séparée (champ texte)');
     }
@@ -202,9 +199,6 @@ const _tableNamePret = (async () => {
   } catch (err) {
     console.error('⚠️ Erreur récupération données référence:', err);
   }
-  const tableEpics = await grist.docApi.fetchTable('EPICs');
-  console.log('Colonnes disponibles dans EPICs:', Object.keys(tableEpics));
-  console.log('Exemple de données brutes:', tableEpics);
 })();
 
 grist.onRecords((records, _mappings, tableId) => {
@@ -236,7 +230,7 @@ grist.onOptions((options) => {
   Object.assign(STATE.mapping, {
     titre:'Nom', statut:'statut', description:'Description',
     priorite:'Priorite', assigne:'qui_', date:'date_cible',
-    epic:'EPIC', millesime:'Millésime', projet:'Projet',
+    epic:'EPIC', millesime:'Millesime', projet:'Projet',
   });
   if (options && options.mapping)      { Object.assign(STATE.mapping, options.mapping); syncSelectsToMapping(); }
   if (options && options.columnOrder)  STATE.columnOrder = options.columnOrder;

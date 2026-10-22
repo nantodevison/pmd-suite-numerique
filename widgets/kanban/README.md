@@ -117,9 +117,9 @@ Les cellules abîmées par la version d'origine se réparent dans Grist en
 resélectionnant la valeur (ou via le panneau corrigé, si le texte correspond à
 un nom connu).
 
-**Autres défauts relevés à la lecture du code :**
-- `grist.ready()` est appelé deux fois, et un `fetchTable('EPICs')` est placé
-  hors du bloc de gestion d'erreur ;
-- le préréglage cherche une colonne `Millésime`, alors qu'elle s'appelle
-  `Millesime` ;
+**Corrigé le 2026-10-22** (#153, #154, #155) : `grist.ready()` appelé deux
+fois ; un `fetchTable('EPICs')` hors du bloc de gestion d'erreur ; préréglage
+`Millésime` au lieu de `Millesime`.
+
+**Autre défaut relevé à la lecture du code :**
 - si la table est vide, le panneau ⚙ ne propose aucune colonne.
