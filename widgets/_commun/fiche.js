@@ -23,6 +23,9 @@
       à l'affichage ; un widget peut aussi s'en servir pour réécrire les
       cellules une fois pour toutes (voir la Galerie).
 
+   5. Un petit menu (choix simple ou multiple, ou date) qui s'ouvre au clic
+      sur une pastille de la fiche, pour en changer la valeur.
+
    DÉPENDANCES (à charger AVANT ce fichier, depuis cdnjs) :
      - marked     : transforme le Markdown en HTML ;
      - DOMPurify  : nettoie ce HTML. Indispensable : le widget a l'accès
@@ -235,7 +238,121 @@
     return bloc;
   }
 
-  /* ── 3. Dispositions « côté » / « centre » ─────────────────── */
+  /* ── 3. Petit menu ouvert au clic sur une pastille ─────────── */
+
+  /*
+   * Un seul menu à la fois, flottant sous la pastille cliquée (ou au-dessus
+   * s'il manque de place). Il se ferme par un clic ailleurs ou par Échap ;
+   * dans ce cas, Échap ne ferme PAS la fiche (l'événement est arrêté).
+   */
+  let menuOuvert = null;
+
+  function fermerMenu() {
+    if (!menuOuvert) return;
+    menuOuvert.remove();
+    menuOuvert = null;
+    document.removeEventListener('mousedown', clicHorsMenu, true);
+    document.removeEventListener('keydown', echapMenu, true);
+  }
+
+  function clicHorsMenu(e) {
+    if (menuOuvert && !menuOuvert.contains(e.target)) fermerMenu();
+  }
+
+  function echapMenu(e) {
+    if (e.key !== 'Escape') return;
+    e.stopImmediatePropagation();   // la fiche reste ouverte
+    e.preventDefault();
+    fermerMenu();
+  }
+
+  // Ouvre un menu vide près de « ancre » et le renvoie, pour le remplir.
+  function ouvrirMenu(ancre) {
+    fermerMenu();
+    const menu = document.createElement('div');
+    menu.className = 'fiche-menu';
+    document.body.appendChild(menu);
+    menuOuvert = menu;
+    // « true » : ces écouteurs passent avant ceux du widget (Échap → fiche).
+    document.addEventListener('mousedown', clicHorsMenu, true);
+    document.addEventListener('keydown', echapMenu, true);
+    // Placement après remplissage (taille connue) : voir placerMenu.
+    requestAnimationFrame(() => placerMenu(menu, ancre));
+    return menu;
+  }
+
+  function placerMenu(menu, ancre) {
+    const r = ancre.getBoundingClientRect();
+    const largeur = menu.offsetWidth, hauteur = menu.offsetHeight;
+    const enDessous = r.bottom + 4 + hauteur <= window.innerHeight || r.top < hauteur;
+    menu.style.top  = `${Math.max(4, enDessous ? r.bottom + 4 : r.top - hauteur - 4)}px`;
+    menu.style.left = `${Math.max(4, Math.min(r.left, window.innerWidth - largeur - 8))}px`;
+  }
+
+  /**
+   * Menu de choix.
+   *   options   : [{ valeur, libelle }]
+   *   selection : valeurs actuellement choisies (liste)
+   *   multiple  : true → cases à cocher, le menu reste ouvert ;
+   *               false → un clic choisit et ferme le menu
+   *   vide      : libellé d'une option « aucune valeur » (choix simple), ou absent
+   *   valeurVide: valeur renvoyée pour cette option ('' par défaut)
+   *   surChoix  : appelée avec la valeur (simple) ou la liste (multiple)
+   */
+  function menuChoix(ancre, { options, selection = [], multiple = false, vide, valeurVide = '', surChoix }) {
+    const menu = ouvrirMenu(ancre);
+    const choisis = new Set(selection);
+    const lignes = (vide && !multiple) ? [{ valeur: valeurVide, libelle: vide, estVide: true }, ...options] : options;
+    if (!lignes.length) {
+      menu.appendChild(Object.assign(document.createElement('div'), { className: 'fiche-menu-vide', textContent: 'Aucun choix possible' }));
+    }
+    lignes.forEach(o => {
+      const item = document.createElement(multiple ? 'label' : 'button');
+      item.className = 'fiche-menu-item' + (o.estVide ? ' fiche-menu-item-vide' : '');
+      if (multiple) {
+        const caseACocher = document.createElement('input');
+        caseACocher.type = 'checkbox';
+        caseACocher.checked = choisis.has(o.valeur);
+        caseACocher.addEventListener('change', () => {
+          if (caseACocher.checked) choisis.add(o.valeur); else choisis.delete(o.valeur);
+          // On garde l'ordre des options, plus lisible que l'ordre des clics.
+          surChoix(options.map(x => x.valeur).filter(v => choisis.has(v)));
+        });
+        item.append(caseACocher, document.createTextNode(' ' + o.libelle));
+      } else {
+        item.type = 'button';
+        item.textContent = o.libelle;
+        if (choisis.has(o.valeur)) item.classList.add('choisi');
+        item.addEventListener('click', () => { fermerMenu(); surChoix(o.valeur); });
+      }
+      menu.appendChild(item);
+    });
+    return menu;
+  }
+
+  /**
+   * Menu de date : un calendrier du navigateur et un bouton « Effacer ».
+   *   valeur   : date actuelle au format AAAA-MM-JJ ('' si aucune)
+   *   surChoix : appelée avec la nouvelle date (AAAA-MM-JJ, ou '' pour effacer)
+   */
+  function menuDate(ancre, { valeur = '', surChoix }) {
+    const menu = ouvrirMenu(ancre);
+    const saisie = document.createElement('input');
+    saisie.type = 'date';
+    saisie.className = 'fiche-menu-date';
+    saisie.value = valeur;
+    saisie.addEventListener('change', () => { if (saisie.value) { surChoix(saisie.value); fermerMenu(); } });
+    const effacer = document.createElement('button');
+    effacer.type = 'button';
+    effacer.className = 'fiche-menu-item fiche-menu-item-vide';
+    effacer.textContent = 'Effacer la date';
+    effacer.addEventListener('click', () => { fermerMenu(); surChoix(''); });
+    menu.append(saisie, effacer);
+    setTimeout(() => saisie.focus(), 0);
+    return menu;
+  }
+
+  /* ── 4. Dispositions « côté » / « centre » ─────────────────── */
 
   function dispositionMemorisee() {
     // try/catch : le stockage du navigateur peut être bloqué (navigation
@@ -307,6 +424,7 @@
   }
 
   function fermer(panneau) {
+    fermerMenu();
     panneau.classList.remove('open');
     if (voile) voile.classList.remove('visible');
   }
@@ -315,6 +433,7 @@
   window.Fiche = {
     markdownVersHtml, markdownVersTexte, champMarkdown,
     estNotepad, notepadVersMarkdown,
+    menuChoix, menuDate, fermerMenu,
     installer, ouvrir, fermer, disposition,
   };
 })();

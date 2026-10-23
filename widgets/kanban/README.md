@@ -57,9 +57,9 @@ un autre projet, on ajoute un **autre** widget Kanban avec son propre réglage.
 
 Une fois le projet choisi, le Kanban :
 - n'affiche que les tâches de ce projet (barre du haut : « Projet : … ») ;
-- ne propose que les EPICs de ce projet, dans le panneau ✏️ et à la création
-  d'une carte (l'EPIC actuel d'une carte reste visible s'il appartient à un
-  autre projet) ;
+- ne propose que les EPICs de ce projet, dans la fiche (pour une carte sans
+  EPIC) et à la création d'une carte (l'EPIC actuel d'une carte reste
+  visible s'il appartient à un autre projet) ;
 - attribue ce projet aux nouvelles cartes.
 
 Tant qu'aucun projet n'est choisi, le Kanban affiche toutes les tâches, signale
@@ -71,10 +71,23 @@ Tant qu'aucun projet n'est choisi, le Kanban affiche toutes les tâches, signale
 ## Fiche d'une carte
 
 Un **clic sur une carte** ouvre sa fiche (le bouton ✏️ fait de même) ; un
-glissement, lui, déplace la carte sans ouvrir la fiche. La fiche s'affiche :
-- **sur le côté** : panneau étroit, le tableau reste visible ;
-- **au centre** : grande fenêtre, les propriétés en en-tête sur deux colonnes et
-  la description en grand dessous.
+glissement, lui, déplace la carte sans ouvrir la fiche. Son contenu est dense :
+- le **titre**, et dessous l'**EPIC** en petit et en italique : non modifiable,
+  sauf s'il manque (« 🏷️ + Choisir un EPIC ») ;
+- des **pastilles** Statut, Priorité, 👤 Assigné(s) et 📅 Échéance : un clic
+  ouvre un petit menu pour changer la valeur (cases à cocher pour plusieurs
+  personnes, calendrier et « Effacer » pour la date) ; une valeur absente
+  apparaît en pointillés (« + Priorité »…) ;
+- la **description**, en grand.
+
+Le millésime n'est plus dans la fiche (il reste sur les cartes et dans ⚙) :
+c'est un champ propre à l'Observatoire, appelé à disparaître du widget.
+
+La fiche s'affiche, avec le même contenu :
+- **sur le côté** : panneau étroit, le tableau reste visible ; les pastilles
+  sont sous le titre ;
+- **au centre** : grande fenêtre ; les pastilles sont dans un encart à droite
+  du titre, la description en grand dessous.
 
 Le bouton ⤢ / ⇥ de l'en-tête passe d'une disposition à l'autre ; le dernier
 choix est mémorisé dans le navigateur (chacun garde le sien). Échap, ✕ ou un

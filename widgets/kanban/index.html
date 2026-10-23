@@ -444,7 +444,6 @@ select.edit-control {
   background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px;
 }
 textarea.edit-control { resize: vertical; min-height: 90px; line-height: 1.5; }
-.edit-divider { height: 1px; background: var(--border); margin: 0 -18px; }
 
 .edit-panel-footer { padding: 14px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; flex-shrink: 0; }
 .edit-panel-footer .btn-primary { flex: 1; padding: 9px; font-size: 13px; }
@@ -453,17 +452,10 @@ textarea.edit-control { resize: vertical; min-height: 90px; line-height: 1.5; }
 /* La description occupe toute la largeur, son libellé au-dessus. */
 .edit-prop-description { grid-template-columns: 1fr; }
 
-/* Fiche centrée (voir ../_commun/fiche.css) : les propriétés forment un
-   en-tête sur deux colonnes, la description s'étale en grand dessous. */
-body .edit-panel.fiche-centre .edit-panel-body {
-  display: grid; grid-template-columns: 1fr 1fr; align-content: start;
-  gap: 14px 28px; padding: 24px 30px 32px;
-}
-body .edit-panel.fiche-centre .edit-title-field,
-body .edit-panel.fiche-centre .edit-divider,
-body .edit-panel.fiche-centre .edit-prop-description { grid-column: 1 / -1; }
+/* Fiche centrée (voir ../_commun/fiche.css) : titre et EPIC à gauche,
+   encart des pastilles à droite ; la description s'étale en grand dessous. */
+body .edit-panel.fiche-centre .edit-panel-body { padding: 24px 30px 32px; }
 body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
-body .edit-panel.fiche-centre .edit-divider { margin: 0 -30px; }
 
 .edit-dirty-dot { width: 7px; height: 7px; background: var(--warning); border-radius: 50%; display: none; }
 .edit-dirty-dot.visible { display: block; }
