@@ -11,9 +11,17 @@
    widget) :
      - Titre        (obligatoire)
      - Description  (facultatif) : texte principal, en Markdown ;
+     - Pastilles    (facultatif, plusieurs colonnes possibles) : pastilles
+                    colorées, sur la carte ET en tête de la fiche ;
+     - ObjetsLies   (facultatif, listes de références) : les tâches d'un
+                    EPIC, les EPICs d'un projet… sous le titre de la fiche ;
      - Contexte     (facultatif, plusieurs colonnes possibles) : rappelé en
-                    en-tête de la fiche ; les 3 premières apparaissent aussi
-                    sur la carte.
+                    en-tête de la fiche seulement, avec son libellé.
+   La carte ne montre que le titre et les pastilles ; le texte principal
+   se lit dans la fiche (la recherche porte quand même sur lui).
+   Couleur d'une pastille : celle du choix dans Grist pour une colonne
+   Choix ; une échelle du rouge au vert pour un pourcentage ; sinon un
+   pastel fixe propre à chaque valeur.
    Pour n'afficher qu'une partie des lignes (par exemple les EPICs d'un
    projet), on utilise le filtrage natif de Grist : « Sélectionner par » ou
    les filtres de la vue.
@@ -21,13 +29,11 @@
 
 'use strict';
 
-const NB_PASTILLES_CARTE = 3;   // colonnes de contexte rappelées sur chaque carte
-
 const ETAT = {
   lignes:     [],     // lignes reçues de Grist
-  colonnes:   null,   // association : { Titre: 'colId', Description: 'colId', Contexte: ['colId', …] }
+  colonnes:   null,   // association : { Titre: 'colId', Description: 'colId', Pastilles: [...], Contexte: [...] }
   table:      null,   // identifiant de la table affichée
-  infos:      {},     // colId → { libelle, type, formule, colAffichee }
+  infos:      {},     // colId → { libelle, type, formule, colAffichee, couleursChoix }
   references: {},     // 'table|colonne affichée' → { numéro de ligne: nom affiché }
   recherche:  '',
   selection:  null,   // numéro de la ligne sélectionnée dans Grist
@@ -44,7 +50,15 @@ grist.ready({
   columns: [
     { name: 'Titre',       title: 'Titre', type: 'Text' },
     { name: 'Description', title: 'Texte principal (Markdown)', type: 'Text', optional: true },
-    { name: 'Contexte',    title: 'Contexte (en-tête de la fiche)', allowMultiple: true, optional: true },
+    // « type » limite les colonnes proposées par Grist. Les listes de
+    // références (RefList) sont exclues des pastilles : elles vont dans
+    // « Objets liés ». Une colonne calculée sans type déclaré (« Any »,
+    // comme Avancement) reste proposée partout.
+    { name: 'Pastilles',   title: 'Pastilles (carte et fiche)', allowMultiple: true, optional: true,
+      type: 'Text,Numeric,Int,Bool,Date,DateTime,Choice,ChoiceList,Ref' },
+    { name: 'ObjetsLies',  title: 'Objets liés (sous le titre de la fiche)', allowMultiple: true, optional: true,
+      type: 'RefList' },
+    { name: 'Contexte',    title: 'Contexte (fiche seulement)', allowMultiple: true, optional: true },
   ],
 });
 
@@ -94,11 +108,12 @@ async function chargerInfosColonnes() {
         // isFormula avec une formule vide = colonne vide, encore modifiable
         formule:     Boolean(cols.isFormula[i]) && Boolean(cols.formula[i]),
         colAffichee: iAffichee !== -1 ? cols.colId[iAffichee] : null,
+        ...lireOptions(cols.widgetOptions[i]),
       };
     });
   }
 
-  for (const colId of colonnesContexte()) {
+  for (const colId of [...colonnesPastilles(), ...colonnesObjetsLies(), ...colonnesContexte()]) {
     const info = ETAT.infos[colId];
     const ref  = info && /^(Ref|RefList):(.+)$/.exec(info.type);
     if (!ref) continue;
@@ -117,10 +132,39 @@ async function chargerInfosColonnes() {
    2. LECTURE DES VALEURS
    ══════════════════════════════════════════════════════════════ */
 
-/** Colonnes de contexte associées (toujours une liste, éventuellement vide). */
+/**
+ * Réglages d'affichage d'une colonne, rangés par Grist dans ses
+ * « widgetOptions » (texte JSON) :
+ *   couleursChoix : { choix: { fond, texte } } (colonnes Choix) ;
+ *   pourcentage   : true pour un nombre affiché en % dans Grist.
+ */
+function lireOptions(widgetOptions) {
+  try {
+    const options = JSON.parse(widgetOptions || '{}');
+    const couleursChoix = {};
+    Object.entries(options.choiceOptions || {}).forEach(([choix, o]) => {
+      if (o.fillColor) couleursChoix[choix] = { fond: o.fillColor, texte: o.textColor || '#000000' };
+    });
+    return { couleursChoix, pourcentage: options.numMode === 'percent' };
+  } catch (_) { return { couleursChoix: {}, pourcentage: false }; }
+}
+
+/**
+ * Colonnes associées sous un nom (« Pastilles », « ObjetsLies »,
+ * « Contexte »), toujours en liste, sans la colonne du texte principal
+ * (déjà affichée en grand).
+ */
+function colonnesAssociees(nom) {
+  const c = ETAT.colonnes && ETAT.colonnes[nom];
+  const liste = Array.isArray(c) ? c : (c ? [c] : []);
+  return liste.filter(colId => colId !== ETAT.colonnes.Description);
+}
+function colonnesPastilles()  { return colonnesAssociees('Pastilles'); }
+function colonnesObjetsLies() { return colonnesAssociees('ObjetsLies'); }
+/** Contexte, sans les colonnes déjà affichées en pastilles ou en objets liés. */
 function colonnesContexte() {
-  const c = ETAT.colonnes && ETAT.colonnes.Contexte;
-  return Array.isArray(c) ? c : (c ? [c] : []);
+  const dejaAffichees = [...colonnesPastilles(), ...colonnesObjetsLies()];
+  return colonnesAssociees('Contexte').filter(colId => !dejaAffichees.includes(colId));
 }
 
 function libelle(colId) {
@@ -131,16 +175,21 @@ function estFormule(colId) {
   return Boolean(ETAT.infos[colId] && ETAT.infos[colId].formule);
 }
 
-/** Valeur d'une cellule mise en forme pour l'affichage ('' si vide). */
-function valeurAffichee(colId, valeur) {
+/**
+ * Valeur d'une cellule sous forme d'une liste de textes : un seul élément
+ * en général, plusieurs pour une liste (références multiples, choix
+ * multiples). Les éléments vides sont retirés.
+ */
+function elementsAffiches(colId, valeur) {
   const info = ETAT.infos[colId] || { type: '', colAffichee: null };
-  if (estErreur(valeur)) return '⚠️ invalide';
+  if (estErreur(valeur)) return ['⚠️ invalide'];
   if (Array.isArray(valeur)) {
     // Une liste peut arriver « encodée » : ['L', a, b…]
     const liste = valeur[0] === 'L' ? valeur.slice(1) : valeur;
-    return liste.map(v => valeurSimple(info, v)).filter(Boolean).join(', ');
+    return liste.map(v => valeurSimple(info, v)).filter(Boolean);
   }
-  return valeurSimple(info, valeur);
+  const texte = valeurSimple(info, valeur);
+  return texte ? [texte] : [];
 }
 
 /**
@@ -172,13 +221,74 @@ function valeurSimple(info, v) {
     return new Date(v * 1000).toLocaleString('fr-FR');
   }
   if (typeof v === 'boolean') return v ? '✓ oui' : '✗ non';
+  // Nombre affiché en pourcentage dans Grist : 0.67 → « 67 % »
+  if (info.pourcentage && typeof v === 'number') return `${Math.round(v * 100)} %`;
   if (typeof v === 'object') return JSON.stringify(v);   // cas rares (pièces jointes…)
   // Un texte peut contenir du Markdown : on en retire les symboles.
   return info.type === 'Text' ? Fiche.markdownVersTexte(String(v)) : String(v);
 }
 
 /* ══════════════════════════════════════════════════════════════
-   3. GRILLE DE CARTES
+   3. PASTILLES ET COULEURS
+   ══════════════════════════════════════════════════════════════ */
+
+// Pourcentages : du rouge (peu avancé) au vert (terminé)
+const COULEURS_POURCENTAGE = [
+  { jusqua: 33,  fond: '#fed7d7', texte: '#9b2c2c' },   // rouge
+  { jusqua: 66,  fond: '#feebc8', texte: '#9c4221' },   // orange
+  { jusqua: 99,  fond: '#ecf5c6', texte: '#4a6115' },   // jaune-vert
+  { jusqua: 100, fond: '#c6f6d5', texte: '#22543d' },   // vert
+];
+
+/**
+ * Couleur d'une pastille d'après son texte affiché, ou null (gris neutre).
+ *   - choix coloré dans Grist → cette couleur ;
+ *   - « 67 % »                → échelle COULEURS_POURCENTAGE ;
+ *   - choix sans couleur, ou référence → pastel fixe propre à la valeur.
+ */
+function couleurPastille(colId, texte) {
+  const info = ETAT.infos[colId] || { type: '', couleursChoix: {} };
+  if (info.couleursChoix && info.couleursChoix[texte]) return info.couleursChoix[texte];
+
+  const pourcent = /^\s*(-?\d+(?:[.,]\d+)?)\s*%\s*$/.exec(texte);
+  if (pourcent) {
+    const n = parseFloat(pourcent[1].replace(',', '.'));
+    return COULEURS_POURCENTAGE.find(c => n <= c.jusqua) || COULEURS_POURCENTAGE[COULEURS_POURCENTAGE.length - 1];
+  }
+
+  if (/^(Choice|ChoiceList|Ref|RefList)\b/.test(info.type)) return couleurPastel(texte);
+  return null;
+}
+
+/**
+ * Pastel calculé à partir du texte : la même valeur a toujours la même
+ * couleur (d'une carte à l'autre, d'une séance à l'autre).
+ */
+function couleurPastel(texte) {
+  let somme = 0;
+  for (const caractere of texte) somme = (somme * 31 + caractere.codePointAt(0)) % 360;
+  return { fond: `hsl(${somme}, 70%, 91%)`, texte: `hsl(${somme}, 45%, 28%)` };
+}
+
+/**
+ * Pastilles d'une cellule : une par élément (une liste de choix en donne
+ * plusieurs). Renvoie un tableau d'éléments <span>, vide si la cellule l'est.
+ */
+function creerPastilles(colId, valeur) {
+  const erreur = estErreur(valeur);
+  return elementsAffiches(colId, valeur).map(texte => {
+    const p = document.createElement('span');
+    p.className = 'pastille' + (erreur ? ' pastille-erreur' : '');
+    p.textContent = texte;
+    p.title = `${libelle(colId)} : ${texte}`;
+    const couleur = erreur ? null : couleurPastille(colId, texte);
+    if (couleur) { p.style.background = couleur.fond; p.style.color = couleur.texte; }
+    return p;
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   4. GRILLE DE CARTES
    ══════════════════════════════════════════════════════════════ */
 
 function afficherGrille() {
@@ -226,29 +336,14 @@ function construireCarte(ligne) {
   titre.textContent = ligne[ETAT.colonnes.Titre] || '(sans titre)';
   carte.appendChild(titre);
 
-  // Pastilles : les premières colonnes de contexte non vides
+  // Pastilles : toutes les colonnes associées comme « Pastilles », non vides
   const pastilles = document.createElement('div');
   pastilles.className = 'carte-contexte';
-  colonnesContexte().slice(0, NB_PASTILLES_CARTE).forEach(colId => {
-    const valeur = valeurAffichee(colId, ligne[colId]);
-    if (!valeur) return;
-    const p = document.createElement('span');
-    p.className = 'pastille' + (estErreur(ligne[colId]) ? ' pastille-erreur' : '');
-    p.textContent = valeur;
-    p.title = `${libelle(colId)} : ${valeur}`;
-    pastilles.appendChild(p);
-  });
+  colonnesPastilles().forEach(colId => pastilles.append(...creerPastilles(colId, ligne[colId])));
   if (pastilles.children.length) carte.appendChild(pastilles);
-
-  // Aperçu du texte principal, sans les symboles Markdown
-  const colTexte = ETAT.colonnes.Description;
-  const apercu = colTexte ? Fiche.markdownVersTexte(ligne[colTexte]) : '';
-  if (apercu) {
-    const texte = document.createElement('div');
-    texte.className = 'carte-texte';
-    texte.textContent = apercu;
-    carte.appendChild(texte);
-  }
+  // Pas d'aperçu du texte principal : la carte reste concise (titre et
+  // pastilles) ; le texte se lit dans la fiche. La place libre en bas de
+  // carte pourra accueillir une image plus tard.
 
   carte.addEventListener('click', () => ouvrirFiche(ligne.id));
   return carte;
@@ -262,7 +357,7 @@ function message(texte) {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   4. FICHE
+   5. FICHE
    ══════════════════════════════════════════════════════════════ */
 
 const panneau = () => document.getElementById('fiche');
@@ -294,30 +389,57 @@ function remplirFiche(id) {
   titre.type = 'text';
   titre.className = 'fiche-titre';
   titre.value = ligne[colTitre] ?? '';
-  corps.appendChild(titre);
+  // En-tête (styles dans ../_commun/fiche.css) :
+  //   à gauche, le titre puis les objets liés ;
+  //   à droite (au centre) ou dessous (sur le côté), les pastilles.
+  const entete = document.createElement('div');
+  entete.className = 'fiche-entete';
+  const principal = document.createElement('div');
+  principal.className = 'fiche-entete-principal';
+  const encart = document.createElement('div');
+  encart.className = 'fiche-entete-pastilles';
+  entete.append(principal, encart);
+  corps.appendChild(entete);
+
+  principal.appendChild(titre);
   if (estFormule(colTitre)) {
     // Une infobulle ne se découvre qu'en survolant : on l'écrit en clair.
     titre.readOnly = true;
     const note = document.createElement('div');
     note.className = 'fiche-titre-note';
     note.textContent = '🔒 Calculé par une formule : non modifiable ici';
-    corps.appendChild(note);
+    principal.appendChild(note);
   } else {
     titre.addEventListener('input', () => noterModif(colTitre, titre.value));
   }
 
-  // En-tête de contexte : toutes les colonnes associées, même vides
-  const cols = colonnesContexte();
-  if (cols.length) {
+  // Objets liés : une ligne par colonne, « LIBELLÉ  [élément] [élément]… »
+  colonnesObjetsLies().forEach(colId => {
+    const ligneLies = document.createElement('div');
+    ligneLies.className = 'fiche-lies';
+    const lib = document.createElement('span');
+    lib.className = 'fiche-lies-libelle';
+    lib.textContent = libelle(colId);
+    const elements = valeurContexte(colId, ligne[colId]);
+    if (!elements.length) {
+      const vide = document.createElement('span');
+      vide.className = 'fiche-lies-vide';
+      vide.textContent = '—';
+      elements.push(vide);
+    }
+    ligneLies.append(lib, ...elements);
+    principal.appendChild(ligneLies);
+  });
+
+  // Pastilles colorées, sans libellé (rappelé au survol) ; vides omises
+  colonnesPastilles().forEach(colId => encart.append(...creerPastilles(colId, ligne[colId])));
+
+  // Contexte : paires « libellé : valeur », même vides (« — »)
+  const contexte = colonnesContexte();
+  if (contexte.length) {
     const liste = document.createElement('dl');
     liste.className = 'fiche-contexte';
-    cols.forEach(colId => {
-      const dt = document.createElement('dt');
-      dt.textContent = libelle(colId);
-      const dd = document.createElement('dd');
-      dd.textContent = valeurAffichee(colId, ligne[colId]) || '—';
-      liste.append(dt, dd);
-    });
+    contexte.forEach(colId => liste.append(...ligneEntete(colId, valeurContexte(colId, ligne[colId]))));
     corps.appendChild(liste);
   }
 
@@ -340,6 +462,35 @@ function remplirFiche(id) {
 
   ETAT.fiche.modifs = {};
   majIndicateur();
+}
+
+/** Une ligne de l'en-tête de la fiche : libellé, puis les éléments donnés (ou « — »). */
+function ligneEntete(colId, elements) {
+  const dt = document.createElement('dt');
+  dt.textContent = libelle(colId);
+  const dd = document.createElement('dd');
+  if (elements.length) dd.append(...elements); else dd.textContent = '—';
+  return [dt, dd];
+}
+
+/**
+ * Valeur d'une colonne de contexte : un texte simple, ou, pour une liste
+ * (les tâches d'un EPIC…), une pastille blanche par élément, plus lisible
+ * qu'une énumération séparée par des virgules.
+ */
+function valeurContexte(colId, valeur) {
+  const elements = elementsAffiches(colId, valeur);
+  const estListe = Array.isArray(valeur) && !estErreur(valeur);
+  if (!estListe) return elements.length ? [document.createTextNode(elements.join(', '))] : [];
+  const bloc = document.createElement('div');
+  bloc.className = 'fiche-liste';
+  elements.forEach(texte => {
+    const puce = document.createElement('span');
+    puce.className = 'fiche-liste-element';
+    puce.textContent = texte;
+    bloc.appendChild(puce);
+  });
+  return elements.length ? [bloc] : [];
 }
 
 function noterModif(colId, valeur) {
@@ -388,7 +539,7 @@ function afficherToast(texte, duree = 2200) {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   5. CONVERSION DES ANCIENS TEXTES « NOTEPAD »
+   6. CONVERSION DES ANCIENS TEXTES « NOTEPAD »
    Le widget Notepad de Grist enregistrait ses textes en JSON. Ils sont
    déjà affichés convertis ; ce bandeau propose de les réécrire en
    Markdown dans Grist, une fois pour toutes. Il disparaît de lui-même
@@ -462,7 +613,7 @@ async function convertirNotepad() {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   6. ÉVÉNEMENTS DE LA PAGE
+   7. ÉVÉNEMENTS DE LA PAGE
    ══════════════════════════════════════════════════════════════ */
 
 document.addEventListener('DOMContentLoaded', () => {

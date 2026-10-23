@@ -39,8 +39,24 @@ section **Colonnes** du widget, associer :
 | Champ | Obligatoire | Rôle | Exemple (EPICs) |
 |---|---|---|---|
 | **Titre** | oui | titre de la carte et de la fiche | `Titre` |
-| **Texte principal (Markdown)** | non | texte de la fiche ; aperçu sur la carte | `Description` |
-| **Contexte (en-tête de la fiche)** | non, plusieurs colonnes possibles | rappelé en en-tête de la fiche ; les 3 premières aussi sur la carte | `Projet`, `Priorite`, `Avancement` |
+| **Texte principal (Markdown)** | non | texte de la fiche (pas sur la carte, mais pris en compte par la recherche) | `Description` |
+| **Pastilles (carte et fiche)** | non, plusieurs colonnes possibles (pas de liste de références) | pastilles colorées sur la carte ; dans la fiche, sans libellé, à droite du titre (au centre) ou dessous (sur le côté) | `Avancement`, `Priorite`, `Projet` |
+| **Objets liés (sous le titre de la fiche)** | non, plusieurs colonnes possibles (listes de références seulement) | une ligne par colonne sous le titre de la fiche, un élément par pastille blanche | `Taches`, `Retour_U` |
+| **Contexte (fiche seulement)** | non, plusieurs colonnes possibles | encart « libellé : valeur » sous l'en-tête de la fiche | `objectifs_resultats_cle` |
+
+Grist ne propose dans chaque champ que les colonnes de type compatible ; une
+colonne calculée sans type déclaré (comme `Avancement`) est proposée partout.
+La colonne du texte principal est ignorée si elle est aussi choisie ailleurs,
+de même qu'une colonne de contexte déjà affichée en pastille ou en objet lié.
+
+La carte ne montre que le titre et les pastilles : elle doit rester concise.
+
+**Couleur des pastilles** :
+- colonne Choix : la couleur du choix réglée dans Grist ; à défaut, un pastel ;
+- pourcentage (« 67 % », ou nombre affiché en % dans Grist) : rouge jusqu'à
+  33 %, orange jusqu'à 66 %, jaune-vert jusqu'à 99 %, vert à 100 % ;
+- référence : un pastel propre à chaque valeur (toujours le même) ;
+- autres colonnes : gris neutre ; cellule en erreur : « ⚠️ invalide » en rouge.
 
 Pour n'afficher qu'une partie des lignes (par exemple les EPICs d'un projet),
 utiliser le filtrage natif de Grist : **« Sélectionner par »** une autre vue,
@@ -56,9 +72,14 @@ l'EPIC ouvert).
   le navigateur ; Échap, ✕ ou un clic sur le fond assombri la ferment.
 - Le **titre** et le **texte principal** sont modifiables, puis enregistrés avec
   « ✓ Sauvegarder ». Une colonne calculée par une formule reste en lecture seule.
-- Le **contexte** est affiché en lecture seule (v1) : références par leur nom
-  affiché, dates au format français, listes séparées par des virgules.
+- En-tête en lecture seule (v1) : le titre, avec dessous les **objets liés**
+  (« — » si aucun) ; les **pastilles** dans un encart à droite (au centre) ou
+  sous le titre (sur le côté), libellé au survol ; puis le **contexte**, même
+  vide (« — »). Références par leur nom affiché, dates au format français.
 - Le Markdown est nettoyé par DOMPurify avant affichage.
+- Les textes de l'ancien widget **Notepad** de Grist (format JSON) sont
+  affichés convertis en Markdown ; un bandeau propose de les réécrire en
+  Markdown dans Grist, une fois pour toutes.
 
 ## Limites connues (v1)
 

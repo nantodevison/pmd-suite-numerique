@@ -53,6 +53,33 @@
 .fiche-titre[readonly] { cursor: default; }
 .fiche-titre-note { margin-top: -4px; font-size: 11.5px; color: var(--text-muted, #718096); }
 
+/* ── En-tête de la fiche ────────────────────────────────────────
+   .fiche-entete
+     .fiche-entete-principal : titre, puis les objets liés (.fiche-lies)
+     .fiche-entete-pastilles : pastilles colorées, sans libellé
+   Sur le côté, tout s'empile ; au centre, les pastilles passent dans un
+   encart à droite du titre (voir « Disposition centre » plus bas). */
+.fiche-entete { display: flex; flex-direction: column; gap: 10px; }
+.fiche-entete-principal { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.fiche-entete-pastilles { display: flex; flex-wrap: wrap; gap: 4px; }
+.fiche-entete-pastilles:empty { display: none; }
+
+/* Objets liés : « LIBELLÉ  [élément] [élément]… » */
+.fiche-lies { display: flex; align-items: baseline; gap: 10px; }
+.fiche-lies-libelle {
+  flex-shrink: 0;
+  font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase;
+  color: var(--text-muted, #718096);
+}
+.fiche-lies-vide { font-size: 12.5px; color: var(--text-muted, #718096); }
+
+/* Liste d'éléments en petites pastilles blanches (objets liés, contexte) */
+.fiche-liste { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.fiche-liste-element {
+  font-size: 11.5px; padding: 2px 8px; border-radius: 6px;
+  background: var(--surface, #fff); border: 1px solid var(--border, #e2e8f0); color: var(--text, #2d3748);
+}
+
 /* En-tête de contexte : paires « libellé : valeur » */
 .fiche-contexte {
   display: grid; grid-template-columns: max-content 1fr; gap: 7px 12px;
@@ -175,3 +202,13 @@ body .fiche-centre .fiche-md-saisie { min-height: 40vh; }
 body .fiche-centre .fiche-md-rendu  { font-size: 14px; }
 body .fiche-centre .fiche-panneau-corps { padding: 24px 30px 32px; }
 body .fiche-centre .fiche-titre { font-size: 21px; }
+
+/* Au centre : titre et objets liés à gauche, encart des pastilles à droite */
+body .fiche-centre .fiche-entete { flex-direction: row; align-items: flex-start; gap: 20px; }
+body .fiche-centre .fiche-entete-principal { flex: 1; }
+body .fiche-centre .fiche-entete-pastilles {
+  flex: 0 0 auto; max-width: 34%;
+  flex-direction: column; align-items: flex-end; gap: 6px;
+  padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--border, #e2e8f0); background: var(--col-bg, #eef0f5);
+}
