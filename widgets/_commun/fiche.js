@@ -18,6 +18,11 @@
    3. La version « texte brut » d'un Markdown, pour les aperçus courts
       (sur une carte, on ne veut voir ni « ** » ni « # »).
 
+   4. La conversion des textes écrits avec l'ancien widget « Notepad » de
+      Grist (format JSON {"ops": […]}) en Markdown. Elle s'applique d'office
+      à l'affichage ; un widget peut aussi s'en servir pour réécrire les
+      cellules une fois pour toutes (voir la Galerie).
+
    DÉPENDANCES (à charger AVANT ce fichier, depuis cdnjs) :
      - marked     : transforme le Markdown en HTML ;
      - DOMPurify  : nettoie ce HTML. Indispensable : le widget a l'accès
@@ -41,13 +46,121 @@
   // Un seul « voile » (fond assombri derrière la fiche centrée) par page.
   let voile = null;
 
-  /* ── 1. Markdown ───────────────────────────────────────────── */
+  /* ── 1. Format Notepad → Markdown ──────────────────────────── */
+
+  /*
+   * Le widget Notepad enregistre un texte sous la forme
+   *   {"ops":[{"insert":"Titre"},{"insert":"\n","attributes":{"header":2}}, …]}
+   * Chaque « insert » est un morceau de texte ; ses « attributes » disent
+   * comment l'écrire (gras, lien…). La mise en forme d'une LIGNE (titre,
+   * liste, citation) est portée par le « \n » qui termine cette ligne.
+   */
+
+  /** Renvoie les opérations Notepad d'un texte, ou null s'il n'en est pas un. */
+  function operationsNotepad(texte) {
+    if (typeof texte !== 'string' || !texte.trimStart().startsWith('{"ops"')) return null;
+    try {
+      const objet = JSON.parse(texte);
+      return Array.isArray(objet.ops) ? objet.ops : null;
+    } catch (_) { return null; }
+  }
+
+  function estNotepad(texte) { return operationsNotepad(texte) !== null; }
+
+  // Écrit un morceau de texte en Markdown selon ses attributs. Les espaces
+  // de début et de fin restent hors des « ** » : « ** gras** » ne serait
+  // pas compris comme du gras.
+  function morceauMarkdown(texte, attr) {
+    if (!texte) return '';
+    if (attr.code) return '`' + texte + '`';
+    const [, avant, coeur, apres] = /^(\s*)([\s\S]*?)(\s*)$/.exec(texte);
+    if (!coeur) return texte;
+    // \ * et ` ont un sens en Markdown : on les protège dans le texte simple.
+    let md = coeur.replace(/([\\*`])/g, '\\$1');
+    if (attr.bold)   md = `**${md}**`;
+    if (attr.italic) md = `*${md}*`;
+    if (attr.strike) md = `~~${md}~~`;
+    if (attr.link)   md = `[${md}](${attr.link})`;
+    // Souligné, couleurs, surlignage : pas d'équivalent Markdown, le texte reste.
+    return avant + md + apres;
+  }
+
+  // Nature d'une ligne : sert à savoir où laisser une ligne vide, sans
+  // laquelle un paragraphe placé après une liste serait avalé par la liste.
+  function natureLigne(attr) {
+    if (attr.header) return 'titre';
+    if (attr.list) return 'liste';
+    if (attr.blockquote) return 'citation';
+    if (attr['code-block']) return 'code';
+    return 'texte';
+  }
+
+  function prefixeLigne(attr) {
+    if (attr.header) return '#'.repeat(Math.min(attr.header, 6)) + ' ';
+    if (attr.blockquote) return '> ';
+    if (attr.list) {
+      const retrait = '    '.repeat(attr.indent || 0);   // listes imbriquées
+      const puce = { ordered: '1. ', checked: '- [x] ', unchecked: '- [ ] ' }[attr.list] || '- ';
+      return retrait + puce;
+    }
+    return '';
+  }
+
+  /** Texte Notepad → Markdown ; un texte qui n'est pas du Notepad est rendu tel quel. */
+  function notepadVersMarkdown(texte) {
+    const ops = operationsNotepad(texte);
+    if (!ops) return texte;
+
+    // 1. Découpage en lignes. Les morceaux d'une ligne sont gardés bruts
+    //    jusqu'à son « \n » : c'est lui qui dit si c'est une ligne de code
+    //    (écrite telle quelle) ou de texte (mise en forme Markdown).
+    const lignes = [];
+    let morceaux = [];   // [{ texte, attr }] de la ligne en cours
+    const finirLigne = (attrLigne) => {
+      const md = attrLigne['code-block']
+        ? morceaux.map(m => m.texte).join('')
+        : morceaux.map(m => m.image ? `![](${m.image})` : morceauMarkdown(m.texte, m.attr)).join('');
+      lignes.push({ md, attr: attrLigne });
+      morceaux = [];
+    };
+    ops.forEach(op => {
+      const attr = op.attributes || {};
+      if (typeof op.insert !== 'string') {
+        // Objet inséré : seule l'image a un équivalent Markdown.
+        if (op.insert && op.insert.image) morceaux.push({ image: op.insert.image });
+        return;
+      }
+      op.insert.split('\n').forEach((texte, i) => {
+        if (i > 0) finirLigne(attr);
+        if (texte) morceaux.push({ texte, attr });
+      });
+    });
+    if (morceaux.length) finirLigne({});
+
+    // 2. Assemblage, avec une ligne vide quand la nature change
+    const sortie = [];
+    let precedente = null;
+    lignes.forEach(({ md, attr }) => {
+      const nature = natureLigne(attr);
+      if (precedente === 'code' && nature !== 'code') sortie.push('```');
+      if (precedente !== null && nature !== precedente && sortie[sortie.length - 1] !== '') sortie.push('');
+      if (nature === 'code' && precedente !== 'code') sortie.push('```');
+      sortie.push(nature === 'code' ? md : prefixeLigne(attr) + md);
+      precedente = nature;
+    });
+    if (precedente === 'code') sortie.push('```');
+    return sortie.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  /* ── 2. Markdown ───────────────────────────────────────────── */
 
   /** Markdown → HTML nettoyé, prêt à être inséré avec innerHTML. */
   function markdownVersHtml(texte) {
     if (!texte) return '';
+    // Un ancien texte Notepad est d'abord converti en Markdown.
+    texte = notepadVersMarkdown(String(texte));
     // breaks : un simple retour à la ligne est conservé, comme dans Grist.
-    const html = marked.parse(String(texte), { breaks: true, gfm: true });
+    const html = marked.parse(texte, { breaks: true, gfm: true });
     return DOMPurify.sanitize(html);
   }
 
@@ -68,7 +181,9 @@
    * Renvoie l'élément à insérer dans la fiche.
    */
   function champMarkdown(valeur, surChangement) {
-    let texte = valeur || '';
+    // Un ancien texte Notepad se modifie directement en Markdown : il sera
+    // enregistré dans ce format à la prochaine sauvegarde.
+    let texte = notepadVersMarkdown(valeur || '');
 
     const bloc = document.createElement('div');
     bloc.className = 'fiche-md';
@@ -120,7 +235,7 @@
     return bloc;
   }
 
-  /* ── 2. Dispositions « côté » / « centre » ─────────────────── */
+  /* ── 3. Dispositions « côté » / « centre » ─────────────────── */
 
   function dispositionMemorisee() {
     // try/catch : le stockage du navigateur peut être bloqué (navigation
@@ -199,6 +314,7 @@
   // Seul objet rendu visible au reste de la page.
   window.Fiche = {
     markdownVersHtml, markdownVersTexte, champMarkdown,
+    estNotepad, notepadVersMarkdown,
     installer, ouvrir, fermer, disposition,
   };
 })();

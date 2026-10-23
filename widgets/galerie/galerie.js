@@ -134,6 +134,7 @@ function estFormule(colId) {
 /** Valeur d'une cellule mise en forme pour l'affichage ('' si vide). */
 function valeurAffichee(colId, valeur) {
   const info = ETAT.infos[colId] || { type: '', colAffichee: null };
+  if (estErreur(valeur)) return '⚠️ invalide';
   if (Array.isArray(valeur)) {
     // Une liste peut arriver « encodée » : ['L', a, b…]
     const liste = valeur[0] === 'L' ? valeur.slice(1) : valeur;
@@ -142,7 +143,19 @@ function valeurAffichee(colId, valeur) {
   return valeurSimple(info, valeur);
 }
 
+/**
+ * Une cellule en erreur (par exemple une référence vers une ligne qui
+ * n'existe pas : « InvalidTypedValue ») arrive soit comme un objet
+ * { name, message, details }, soit « encodée » : ['E', nom, …].
+ */
+function estErreur(v) {
+  if (Array.isArray(v)) return v[0] === 'E';
+  return Boolean(v) && typeof v === 'object' && !(v instanceof Date)
+    && typeof v.name === 'string' && 'message' in v;
+}
+
 function valeurSimple(info, v) {
+  if (estErreur(v)) return '⚠️ invalide';
   if (v === null || v === undefined || v === '') return '';
   const ref = /^(Ref|RefList):(.+)$/.exec(info.type);
   if (ref && typeof v === 'number') {
@@ -177,8 +190,11 @@ function afficherGrille() {
     grille.appendChild(message('Associez au moins la colonne « Titre » dans le panneau de droite de Grist '
       + '(section « Colonnes » du widget), puis, si vous le souhaitez, le texte principal et le contexte.'));
     document.getElementById('compte').textContent = '0';
+    document.getElementById('bandeau-notepad').hidden = true;
     return;
   }
+
+  majBandeauNotepad();
 
   const visibles = ETAT.lignes.filter(correspondRecherche);
   document.getElementById('compte').textContent = visibles.length === ETAT.lignes.length
@@ -193,7 +209,9 @@ function afficherGrille() {
 
 function correspondRecherche(ligne) {
   if (!ETAT.recherche) return true;
-  const texte = [ligne[ETAT.colonnes.Titre], ETAT.colonnes.Description && ligne[ETAT.colonnes.Description]]
+  const description = ETAT.colonnes.Description && ligne[ETAT.colonnes.Description];
+  // Texte Notepad : on cherche dans le texte, pas dans son enveloppe JSON.
+  const texte = [ligne[ETAT.colonnes.Titre], description && Fiche.notepadVersMarkdown(String(description))]
     .filter(Boolean).join(' ').toLowerCase();
   return texte.includes(ETAT.recherche);
 }
@@ -215,7 +233,7 @@ function construireCarte(ligne) {
     const valeur = valeurAffichee(colId, ligne[colId]);
     if (!valeur) return;
     const p = document.createElement('span');
-    p.className = 'pastille';
+    p.className = 'pastille' + (estErreur(ligne[colId]) ? ' pastille-erreur' : '');
     p.textContent = valeur;
     p.title = `${libelle(colId)} : ${valeur}`;
     pastilles.appendChild(p);
@@ -276,13 +294,17 @@ function remplirFiche(id) {
   titre.type = 'text';
   titre.className = 'fiche-titre';
   titre.value = ligne[colTitre] ?? '';
+  corps.appendChild(titre);
   if (estFormule(colTitre)) {
+    // Une infobulle ne se découvre qu'en survolant : on l'écrit en clair.
     titre.readOnly = true;
-    titre.title = 'Calculé par une formule : non modifiable ici';
+    const note = document.createElement('div');
+    note.className = 'fiche-titre-note';
+    note.textContent = '🔒 Calculé par une formule : non modifiable ici';
+    corps.appendChild(note);
   } else {
     titre.addEventListener('input', () => noterModif(colTitre, titre.value));
   }
-  corps.appendChild(titre);
 
   // En-tête de contexte : toutes les colonnes associées, même vides
   const cols = colonnesContexte();
@@ -366,7 +388,81 @@ function afficherToast(texte, duree = 2200) {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   5. ÉVÉNEMENTS DE LA PAGE
+   5. CONVERSION DES ANCIENS TEXTES « NOTEPAD »
+   Le widget Notepad de Grist enregistrait ses textes en JSON. Ils sont
+   déjà affichés convertis ; ce bandeau propose de les réécrire en
+   Markdown dans Grist, une fois pour toutes. Il disparaît de lui-même
+   quand il n'y a plus rien à convertir.
+   ══════════════════════════════════════════════════════════════ */
+
+/** Colonne du texte principal, si elle peut être réécrite (sinon null). */
+function colonneTexteModifiable() {
+  const col = ETAT.colonnes && ETAT.colonnes.Description;
+  return col && !estFormule(col) ? col : null;
+}
+
+function majBandeauNotepad() {
+  const bandeau = document.getElementById('bandeau-notepad');
+  const col = colonneTexteModifiable();
+  const nb = col ? ETAT.lignes.filter(l => Fiche.estNotepad(l[col])).length : 0;
+  bandeau.hidden = nb === 0;
+  if (nb) {
+    document.getElementById('bandeau-notepad-texte').textContent =
+      `${nb} texte${nb > 1 ? 's' : ''} au format de l'ancien widget Notepad `
+      + '(affichés ici convertis, mais enregistrés tels quels dans Grist).';
+  }
+}
+
+async function convertirNotepad() {
+  const col = colonneTexteModifiable();
+  if (!col) return;
+  // On lit la table entière : les lignes masquées par un filtre ou par
+  // « Sélectionner par » sont converties aussi.
+  const table = await grist.docApi.fetchTable(ETAT.table);
+  const ids = [], textes = [];
+  table.id.forEach((id, i) => {
+    if (Fiche.estNotepad(table[col][i])) {
+      ids.push(id);
+      textes.push(Fiche.notepadVersMarkdown(table[col][i]));
+    }
+  });
+  if (!ids.length) { afficherToast('Rien à convertir'); return; }
+
+  const ok = confirm(`${ids.length} texte(s) de la colonne « ${libelle(col)} » (table ${ETAT.table}) `
+    + 'vont être réécrits en Markdown, y compris dans les lignes masquées par un filtre.\n\n'
+    + 'Le souligné, les couleurs et le surlignage seront perdus (le texte reste).\n'
+    + 'Le widget Notepad ne saura plus les afficher.\n\nContinuer ?');
+  if (!ok) return;
+
+  const bouton = document.getElementById('bandeau-notepad-bouton');
+  bouton.disabled = true;
+  try {
+    // Une seule action : un Ctrl+Z dans Grist annule toute la conversion.
+    await grist.docApi.applyUserActions([['BulkUpdateRecord', ETAT.table, ids, { [col]: textes }]]);
+    afficherToast(`✓ ${ids.length} texte(s) converti(s) en Markdown`, 3000);
+  } catch (err) {
+    // Le pare-feu devant Grist peut refuser un envoi contenant du SQL : on
+    // repasse ligne par ligne, pour convertir tout ce qui peut l'être.
+    console.warn('Galerie – conversion groupée refusée, essai ligne par ligne :', err);
+    const echecs = [];
+    for (let i = 0; i < ids.length; i++) {
+      try {
+        await grist.docApi.applyUserActions([['UpdateRecord', ETAT.table, ids[i], { [col]: textes[i] }]]);
+      } catch (e) {
+        echecs.push(ids[i]);
+        console.error(`Galerie – ligne ${ids[i]} non convertie :`, e);
+      }
+    }
+    afficherToast(echecs.length
+      ? `⚠️ ${ids.length - echecs.length} converti(s), ${echecs.length} refusé(s) : lignes ${echecs.join(', ')}`
+      : `✓ ${ids.length} texte(s) converti(s) en Markdown`, 6000);
+  } finally {
+    bouton.disabled = false;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   6. ÉVÉNEMENTS DE LA PAGE
    ══════════════════════════════════════════════════════════════ */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -377,6 +473,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('fiche-fermer').addEventListener('click', () => fermerFiche());
   document.getElementById('fiche-annuler').addEventListener('click', () => fermerFiche());
   document.getElementById('fiche-sauver').addEventListener('click', sauverFiche);
+  document.getElementById('bandeau-notepad-bouton').addEventListener('click', () =>
+    convertirNotepad().catch(err => afficherToast(`⚠️ Erreur : ${err.message || err}`, 4000)));
   document.getElementById('recherche').addEventListener('input', (e) => {
     ETAT.recherche = e.target.value.trim().toLowerCase();
     afficherGrille();

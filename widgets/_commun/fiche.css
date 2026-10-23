@@ -51,6 +51,7 @@
 }
 .fiche-titre:focus { outline: none; border-bottom-color: var(--accent, #667eea); }
 .fiche-titre[readonly] { cursor: default; }
+.fiche-titre-note { margin-top: -4px; font-size: 11.5px; color: var(--text-muted, #718096); }
 
 /* En-tête de contexte : paires « libellé : valeur » */
 .fiche-contexte {

@@ -74,11 +74,25 @@ body { display: flex; flex-direction: column; overflow: hidden; }
   background: var(--col-bg); color: var(--text-muted);
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+.pastille-erreur { background: #fff5f5; color: #c53030; }
 .carte-texte {
   font-size: 12px; line-height: 1.5; color: var(--text-muted);
   /* Aperçu limité à 4 lignes */
   display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
 }
+
+/* Bandeau de conversion des anciens textes Notepad */
+.bandeau {
+  display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+  padding: 8px 16px; background: #fffaf0; border-bottom: 1px solid #fbd38d;
+  font-size: 12.5px; color: #744210;
+}
+.bandeau[hidden] { display: none; }
+.bandeau button {
+  margin-left: auto; flex-shrink: 0; padding: 5px 12px; border: none; border-radius: 6px;
+  background: #dd6b20; color: #fff; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.bandeau button:disabled { opacity: .6; cursor: wait; }
 
 /* Messages (aucune carte, colonnes à associer) */
 .message {
@@ -102,6 +116,12 @@ body { display: flex; flex-direction: column; overflow: hidden; }
     <span class="barre-compte" id="compte">0</span>
     <input type="search" class="recherche" id="recherche" placeholder="Rechercher…" />
   </header>
+
+  <!-- Affiché seulement s'il reste des textes de l'ancien widget Notepad -->
+  <div class="bandeau" id="bandeau-notepad" hidden>
+    <span id="bandeau-notepad-texte"></span>
+    <button type="button" id="bandeau-notepad-bouton">Convertir en Markdown</button>
+  </div>
 
   <main class="grille" id="grille"></main>
 
