@@ -50,6 +50,28 @@ body { display: flex; flex-direction: column; overflow: hidden; }
   font-family: inherit; font-size: 13px; color: var(--text);
 }
 .recherche:focus { outline: none; border-color: var(--accent); }
+.bouton-barre {
+  flex-shrink: 0; padding: 6px 12px; border-radius: 8px; cursor: pointer;
+  border: 1.5px solid var(--border); background: var(--surface);
+  font-family: inherit; font-size: 13px; color: var(--text);
+}
+.bouton-barre:hover { border-color: var(--accent); }
+.bouton-nouvelle { border: none; background: var(--accent); color: #fff; font-weight: 600; }
+
+/* Fenêtre des réglages (élément <dialog> du navigateur) */
+.reglages {
+  width: min(640px, 92vw); margin: auto; padding: 20px 22px;
+  border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, .28); color: var(--text);
+}
+.reglages[open] { display: flex; flex-direction: column; gap: 10px; }
+.reglages::backdrop { background: rgba(15, 23, 42, .38); }
+.reglages-titre { font-size: 15px; }
+.reglages-libelle { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.reglages .reglages-modele { display: block; min-height: 40vh; }
+.reglages #reglages-reprendre { align-self: flex-start; }
+.reglages #reglages-reprendre:disabled { opacity: .5; cursor: default; }
+.reglages-pied { display: flex; gap: 8px; margin-top: 6px; }
 
 /* Grille de cartes : autant de colonnes que la largeur le permet */
 .grille {
@@ -110,7 +132,23 @@ body { display: flex; flex-direction: column; overflow: hidden; }
     <span class="barre-titre" id="titre-table">🖼️ Galerie</span>
     <span class="barre-compte" id="compte">0</span>
     <input type="search" class="recherche" id="recherche" placeholder="Rechercher…" />
+    <button type="button" class="bouton-barre bouton-nouvelle" id="btn-nouvelle">+ Nouvelle carte</button>
+    <button type="button" class="bouton-barre" id="btn-reglages" title="Réglages de la Galerie">⚙</button>
   </header>
+
+  <!-- Réglages : modèle de texte des nouvelles cartes, enregistré dans le
+       document Grist (propre à chaque Galerie). -->
+  <dialog class="reglages" id="reglages">
+    <h2 class="reglages-titre">Réglages de la Galerie</h2>
+    <label class="reglages-libelle" for="reglages-modele">Modèle de texte des nouvelles cartes (Markdown)</label>
+    <textarea class="fiche-md-saisie reglages-modele" id="reglages-modele"
+              placeholder="## 1- Source de l'idée&#10;&#10;## 2- …"></textarea>
+    <button type="button" class="fiche-md-bouton" id="reglages-reprendre"></button>
+    <div class="reglages-pied">
+      <button type="button" class="fiche-btn-principal" id="reglages-enregistrer">✓ Enregistrer</button>
+      <button type="button" class="fiche-btn-secondaire" id="reglages-annuler">Annuler</button>
+    </div>
+  </dialog>
 
   <!-- Affiché seulement s'il reste des textes de l'ancien widget Notepad -->
   <div class="bandeau" id="bandeau-notepad" hidden>
@@ -123,7 +161,7 @@ body { display: flex; flex-direction: column; overflow: hidden; }
   <!-- La fiche : sur le côté ou au centre (bouton ⤢ / ⇥, voir ../_commun/fiche.js) -->
   <aside id="fiche" class="fiche-panneau" role="dialog" aria-label="Fiche">
     <div class="fiche-panneau-entete">
-      <span class="fiche-panneau-libelle">Fiche</span>
+      <span class="fiche-panneau-libelle" id="fiche-libelle">Fiche</span>
       <div class="fiche-panneau-actions" id="fiche-actions">
         <span class="fiche-modifie" id="fiche-modifie" title="Modifications non sauvegardées"></span>
         <button type="button" class="fiche-fermer" id="fiche-fermer" title="Fermer">✕</button>

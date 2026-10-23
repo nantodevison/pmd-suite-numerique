@@ -37,7 +37,10 @@ const ETAT = {
   references: {},     // 'table|colonne affichée' → { numéro de ligne: nom affiché }
   recherche:  '',
   selection:  null,   // numéro de la ligne sélectionnée dans Grist
-  fiche:      { id: null, modifs: {} },   // carte affichée, et colonnes modifiées
+  // Carte affichée dans la fiche : numéro de ligne (null pour une nouvelle
+  // carte, pas encore créée dans Grist) et colonnes modifiées.
+  fiche:      { id: null, nouvelle: false, modifs: {} },
+  modele:     '',     // texte de départ des nouvelles cartes (réglage ⚙)
 };
 
 /* ══════════════════════════════════════════════════════════════
@@ -76,6 +79,12 @@ grist.onRecords(async (lignes, colonnes) => {
   // Fiche ouverte sans modification en cours : on la rafraîchit avec les
   // nouvelles valeurs (par exemple juste après une sauvegarde).
   if (ETAT.fiche.id !== null && !ficheModifiee()) remplirFiche(ETAT.fiche.id);
+});
+
+// Réglages du widget, enregistrés dans le document Grist (grist.setOption) :
+// chaque Galerie (EPICs, OKR…) garde les siens.
+grist.onOptions((options) => {
+  ETAT.modele = (options && options.modele) || '';
 });
 
 grist.onRecord((ligne) => {
@@ -301,8 +310,10 @@ function afficherGrille() {
       + '(section « Colonnes » du widget), puis, si vous le souhaitez, le texte principal et le contexte.'));
     document.getElementById('compte').textContent = '0';
     document.getElementById('bandeau-notepad').hidden = true;
+    document.getElementById('btn-nouvelle').disabled = true;
     return;
   }
+  document.getElementById('btn-nouvelle').disabled = false;
 
   majBandeauNotepad();
 
@@ -368,7 +379,7 @@ function ouvrirFiche(id) {
   if (ficheModifiee() && ETAT.fiche.id !== id) {
     if (!confirm('Des modifications non sauvegardées seront perdues. Continuer ?')) return;
   }
-  ETAT.fiche = { id, modifs: {} };
+  ETAT.fiche = { id, nouvelle: false, modifs: {} };
   remplirFiche(id);
   Fiche.ouvrir(panneau());
   // Déplace le curseur de Grist sur la ligne : les vues liées à ce widget
@@ -376,10 +387,31 @@ function ouvrirFiche(id) {
   grist.setCursorPos({ rowId: id }).catch(() => {});
 }
 
+/**
+ * Ouvre une fiche vide pour une nouvelle carte, avec le modèle de texte.
+ * Rien n'est créé dans Grist avant « Sauvegarder » : fermer la fiche ne
+ * laisse donc aucune ligne vide.
+ */
+function ouvrirNouvelleFiche() {
+  if (ficheModifiee()) {
+    if (!confirm('Des modifications non sauvegardées seront perdues. Continuer ?')) return;
+  }
+  ETAT.fiche = { id: null, nouvelle: true, modifs: {} };
+  remplirFiche(null);
+  Fiche.ouvrir(panneau());
+  const titre = document.querySelector('#fiche-corps .fiche-titre');
+  if (titre && !titre.readOnly) titre.focus();
+}
+
 function remplirFiche(id) {
-  const ligne = ETAT.lignes.find(l => l.id === id);
+  const nouvelle = ETAT.fiche.nouvelle;
+  // Nouvelle carte : une ligne « vierge », avec le modèle comme texte.
+  const ligne = nouvelle
+    ? { id: null, [ETAT.colonnes.Description]: ETAT.modele }
+    : ETAT.lignes.find(l => l.id === id);
   if (!ligne) { fermerFiche(true); return; }   // ligne supprimée ou filtrée entre-temps
 
+  document.getElementById('fiche-libelle').textContent = nouvelle ? 'Nouvelle carte' : 'Fiche';
   const corps = document.getElementById('fiche-corps');
   corps.innerHTML = '';
 
@@ -389,6 +421,7 @@ function remplirFiche(id) {
   titre.type = 'text';
   titre.className = 'fiche-titre';
   titre.value = ligne[colTitre] ?? '';
+  if (nouvelle) titre.placeholder = 'Titre de la nouvelle carte';
   // En-tête (styles dans ../_commun/fiche.css) :
   //   à gauche, le titre puis les objets liés ;
   //   à droite (au centre) ou dessous (sur le côté), les pastilles.
@@ -413,6 +446,33 @@ function remplirFiche(id) {
     titre.addEventListener('input', () => noterModif(colTitre, titre.value));
   }
 
+  // Une nouvelle carte n'a encore ni objets liés, ni pastilles, ni contexte
+  // (non modifiables dans la fiche pour l'instant) : on passe au texte.
+  if (!nouvelle) remplirEntete(ligne, principal, encart, corps);
+
+  // Texte principal en Markdown
+  const colTexte = ETAT.colonnes.Description;
+  if (colTexte) {
+    const lib = document.createElement('div');
+    lib.className = 'fiche-libelle-texte';
+    lib.textContent = libelle(colTexte);
+    corps.appendChild(lib);
+    if (estFormule(colTexte)) {
+      const rendu = document.createElement('div');
+      rendu.className = 'fiche-md-rendu';
+      rendu.innerHTML = Fiche.markdownVersHtml(ligne[colTexte]);   // HTML déjà nettoyé
+      corps.appendChild(rendu);
+    } else {
+      corps.appendChild(Fiche.champMarkdown(ligne[colTexte], (texte) => noterModif(colTexte, texte)));
+    }
+  }
+
+  ETAT.fiche.modifs = {};
+  majIndicateur();
+}
+
+/** En-tête d'une carte existante : objets liés, pastilles et contexte. */
+function remplirEntete(ligne, principal, encart, corps) {
   // Objets liés : une ligne par colonne, « LIBELLÉ  [élément] [élément]… »
   colonnesObjetsLies().forEach(colId => {
     const ligneLies = document.createElement('div');
@@ -442,26 +502,6 @@ function remplirFiche(id) {
     contexte.forEach(colId => liste.append(...ligneEntete(colId, valeurContexte(colId, ligne[colId]))));
     corps.appendChild(liste);
   }
-
-  // Texte principal en Markdown
-  const colTexte = ETAT.colonnes.Description;
-  if (colTexte) {
-    const lib = document.createElement('div');
-    lib.className = 'fiche-libelle-texte';
-    lib.textContent = libelle(colTexte);
-    corps.appendChild(lib);
-    if (estFormule(colTexte)) {
-      const rendu = document.createElement('div');
-      rendu.className = 'fiche-md-rendu';
-      rendu.innerHTML = Fiche.markdownVersHtml(ligne[colTexte]);   // HTML déjà nettoyé
-      corps.appendChild(rendu);
-    } else {
-      corps.appendChild(Fiche.champMarkdown(ligne[colTexte], (texte) => noterModif(colTexte, texte)));
-    }
-  }
-
-  ETAT.fiche.modifs = {};
-  majIndicateur();
 }
 
 /** Une ligne de l'en-tête de la fiche : libellé, puis les éléments donnés (ou « — »). */
@@ -500,10 +540,13 @@ function noterModif(colId, valeur) {
 
 function majIndicateur() {
   document.getElementById('fiche-modifie').classList.toggle('visible', ficheModifiee());
-  document.getElementById('fiche-sauver').disabled = !ficheModifiee();
+  // Une nouvelle carte peut être créée telle quelle (avec le modèle) ;
+  // une carte existante seulement s'il y a quelque chose à enregistrer.
+  document.getElementById('fiche-sauver').disabled = !(ficheModifiee() || ETAT.fiche.nouvelle);
 }
 
 async function sauverFiche() {
+  if (ETAT.fiche.nouvelle) { await creerCarte(); return; }
   if (!ficheModifiee() || ETAT.fiche.id === null) return;
   const bouton = document.getElementById('fiche-sauver');
   bouton.disabled = true;
@@ -521,12 +564,68 @@ async function sauverFiche() {
   }
 }
 
+/**
+ * Crée dans Grist la carte de la fiche « nouvelle carte » : titre saisi,
+ * texte principal (le modèle, éventuellement modifié). La fiche reste
+ * ouverte sur la carte créée.
+ */
+async function creerCarte() {
+  const colTitre = ETAT.colonnes.Titre;
+  const colTexte = ETAT.colonnes.Description;
+  if (!estFormule(colTitre) && !String(ETAT.fiche.modifs[colTitre] || '').trim()) {
+    afficherToast('⚠️ Saisissez un titre avant de sauvegarder', 3000);
+    const titre = document.querySelector('#fiche-corps .fiche-titre');
+    if (titre) titre.focus();
+    return;
+  }
+  // Le modèle d'abord, puis ce qui a été saisi (qui l'emporte).
+  const champs = {};
+  if (colTexte && !estFormule(colTexte) && ETAT.modele) champs[colTexte] = ETAT.modele;
+  Object.assign(champs, ETAT.fiche.modifs);
+
+  const bouton = document.getElementById('fiche-sauver');
+  bouton.disabled = true;
+  bouton.textContent = '…';
+  try {
+    const resultat = await grist.docApi.applyUserActions([['AddRecord', ETAT.table, null, champs]]);
+    const id = resultat.retValues[0];   // numéro de la ligne créée
+    ETAT.fiche = { id, nouvelle: false, modifs: {} };
+    grist.setCursorPos({ rowId: id }).catch(() => {});
+    if (await attendreLigne(id)) {
+      remplirFiche(id);
+      afficherToast('✓ Carte créée');
+    } else {
+      // Grist ne l'a pas renvoyée : un filtre de la vue la masque.
+      fermerFiche(true);
+      afficherToast(`✓ Carte créée (ligne n° ${id}) ; elle est peut-être masquée par un filtre de la vue`, 6000);
+    }
+  } catch (err) {
+    afficherToast(`⚠️ Erreur : ${err.message || err}`, 4000);
+    console.error('Galerie – erreur de création :', err);
+  } finally {
+    bouton.textContent = '✓ Sauvegarder';
+    majIndicateur();
+  }
+}
+
+/**
+ * Attend que Grist renvoie (par onRecords) une ligne qui vient d'être
+ * créée. Renvoie false si elle n'arrive pas : elle est alors filtrée.
+ */
+async function attendreLigne(id, delaiMax = 2000) {
+  for (let attente = 0; attente < delaiMax; attente += 100) {
+    if (ETAT.lignes.some(l => l.id === id)) return true;
+    await new Promise(r => setTimeout(r, 100));
+  }
+  return ETAT.lignes.some(l => l.id === id);
+}
+
 function fermerFiche(force = false) {
   if (ficheModifiee() && !force) {
     if (!confirm('Des modifications non sauvegardées seront perdues. Continuer ?')) return;
   }
   Fiche.fermer(panneau());
-  ETAT.fiche = { id: null, modifs: {} };
+  ETAT.fiche = { id: null, nouvelle: false, modifs: {} };
   majIndicateur();
 }
 
@@ -539,7 +638,52 @@ function afficherToast(texte, duree = 2200) {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   6. CONVERSION DES ANCIENS TEXTES « NOTEPAD »
+   6. RÉGLAGES (bouton ⚙) : MODÈLE DES NOUVELLES CARTES
+   ══════════════════════════════════════════════════════════════ */
+
+const fenetreReglages = () => document.getElementById('reglages');
+
+/** Carte dont on peut reprendre le texte : celle ouverte, sinon celle sélectionnée. */
+function carteSource() {
+  const id = ETAT.fiche.id ?? ETAT.selection;
+  return ETAT.lignes.find(l => l.id === id) || null;
+}
+
+function ouvrirReglages() {
+  document.getElementById('reglages-modele').value = ETAT.modele;
+  const bouton = document.getElementById('reglages-reprendre');
+  const source = carteSource();
+  const colTexte = ETAT.colonnes && ETAT.colonnes.Description;
+  bouton.disabled = !(source && colTexte);
+  bouton.textContent = bouton.disabled
+    ? 'Reprendre le texte d\'une carte : ouvrez ou sélectionnez-la d\'abord'
+    : `↧ Reprendre le texte de « ${source[ETAT.colonnes.Titre] || '(sans titre)'} »`;
+  fenetreReglages().showModal();
+}
+
+function reprendreTexteCarte() {
+  const source = carteSource();
+  const colTexte = ETAT.colonnes && ETAT.colonnes.Description;
+  if (!source || !colTexte) return;
+  // Un ancien texte Notepad est repris directement en Markdown.
+  document.getElementById('reglages-modele').value = Fiche.notepadVersMarkdown(String(source[colTexte] || ''));
+}
+
+async function enregistrerReglages() {
+  const modele = document.getElementById('reglages-modele').value;
+  try {
+    await grist.setOption('modele', modele);
+    ETAT.modele = modele;
+    fenetreReglages().close();
+    afficherToast('✓ Modèle enregistré');
+  } catch (err) {
+    afficherToast(`⚠️ Erreur : ${err.message || err}`, 4000);
+    console.error('Galerie – enregistrement des réglages impossible :', err);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   7. CONVERSION DES ANCIENS TEXTES « NOTEPAD »
    Le widget Notepad de Grist enregistrait ses textes en JSON. Ils sont
    déjà affichés convertis ; ce bandeau propose de les réécrire en
    Markdown dans Grist, une fois pour toutes. Il disparaît de lui-même
@@ -613,7 +757,7 @@ async function convertirNotepad() {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   7. ÉVÉNEMENTS DE LA PAGE
+   8. ÉVÉNEMENTS DE LA PAGE
    ══════════════════════════════════════════════════════════════ */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -624,6 +768,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('fiche-fermer').addEventListener('click', () => fermerFiche());
   document.getElementById('fiche-annuler').addEventListener('click', () => fermerFiche());
   document.getElementById('fiche-sauver').addEventListener('click', sauverFiche);
+  document.getElementById('btn-nouvelle').addEventListener('click', ouvrirNouvelleFiche);
+  document.getElementById('btn-reglages').addEventListener('click', ouvrirReglages);
+  document.getElementById('reglages-reprendre').addEventListener('click', reprendreTexteCarte);
+  document.getElementById('reglages-enregistrer').addEventListener('click', enregistrerReglages);
+  document.getElementById('reglages-annuler').addEventListener('click', () => fenetreReglages().close());
   document.getElementById('bandeau-notepad-bouton').addEventListener('click', () =>
     convertirNotepad().catch(err => afficherToast(`⚠️ Erreur : ${err.message || err}`, 4000)));
   document.getElementById('recherche').addEventListener('input', (e) => {
@@ -631,6 +780,8 @@ document.addEventListener('DOMContentLoaded', () => {
     afficherGrille();
   });
   document.addEventListener('keydown', (e) => {
+    // Réglages ouverts : Échap ferme seulement leur fenêtre (géré par le navigateur).
+    if (fenetreReglages().open) return;
     if (e.key === 'Escape' && panneau().classList.contains('open')) fermerFiche();
   });
 });

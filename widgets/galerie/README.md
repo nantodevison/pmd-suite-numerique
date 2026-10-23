@@ -81,6 +81,20 @@ l'EPIC ouvert).
   affichés convertis en Markdown ; un bandeau propose de les réécrire en
   Markdown dans Grist, une fois pour toutes.
 
+## Nouvelle carte et modèle de texte
+
+- **« + Nouvelle carte »** ouvre une fiche vide : titre à saisir, texte
+  principal prérempli avec le modèle. Rien n'est créé dans Grist avant
+  « ✓ Sauvegarder » (un titre est alors exigé) ; fermer la fiche ne laisse
+  aucune ligne vide. La fiche reste ensuite ouverte sur la carte créée.
+- **⚙** : modèle de texte des nouvelles cartes, en Markdown, enregistré dans
+  le document Grist (chaque Galerie a le sien ; rien dans le dépôt).
+  « Reprendre le texte de … » copie le texte de la carte ouverte ou
+  sélectionnée, pour en faire un squelette.
+- Les pastilles, objets liés et contexte ne se remplissent pas à la création :
+  à saisir dans Grist. Si la vue est filtrée (« Sélectionner par » un
+  projet…), la carte créée peut être aussitôt masquée ; un message le signale.
+
 ## Limites connues (v1)
 
 - Les noms affichés des références sont lus au premier affichage : un
