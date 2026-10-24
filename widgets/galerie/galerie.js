@@ -417,11 +417,11 @@ function remplirFiche(id) {
 
   // Titre (en lecture seule si la colonne est calculée par une formule)
   const colTitre = ETAT.colonnes.Titre;
-  const titre = document.createElement('input');
-  titre.type = 'text';
-  titre.className = 'fiche-titre';
-  titre.value = ligne[colTitre] ?? '';
-  if (nouvelle) titre.placeholder = 'Titre de la nouvelle carte';
+  const titre = Fiche.champTitre(ligne[colTitre] ?? '', {
+    placeholder:   nouvelle ? 'Titre de la nouvelle carte' : '',
+    lectureSeule:  estFormule(colTitre),
+    surChangement: (texte) => noterModif(colTitre, texte),
+  });
   // En-tête (styles dans ../_commun/fiche.css) :
   //   à gauche, le titre puis les objets liés ;
   //   à droite (au centre) ou dessous (sur le côté), les pastilles.
@@ -437,13 +437,10 @@ function remplirFiche(id) {
   principal.appendChild(titre);
   if (estFormule(colTitre)) {
     // Une infobulle ne se découvre qu'en survolant : on l'écrit en clair.
-    titre.readOnly = true;
     const note = document.createElement('div');
     note.className = 'fiche-titre-note';
     note.textContent = '🔒 Calculé par une formule : non modifiable ici';
     principal.appendChild(note);
-  } else {
-    titre.addEventListener('input', () => noterModif(colTitre, titre.value));
   }
 
   // Une nouvelle carte n'a encore ni objets liés, ni pastilles, ni contexte

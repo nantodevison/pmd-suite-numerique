@@ -313,20 +313,13 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 .card-edit-btn:hover { background: #e2e8f0; color: var(--text); }
 .card-delete-btn:hover {opacity: 1;}
 
-.card-title { font-weight: 600; font-size: 13px; line-height: 1.45; word-break: break-word; padding-right: 30px; color: var(--text); }
-.card-description {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 6px;
-  line-height: 1.5;
-    /* Troncature à 3 lignes avec ellipsis */
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-height: calc(1.5em * 3); /* fallback si line-clamp non supporté */
-  word-break: break-word;}
+/* Titre et ligne de rattachement : mêmes règles visuelles que les cartes de
+   la Galerie (titre 14 px gras) et que la fiche (EPIC petit, en italique). */
+.card-title { font-weight: 700; font-size: 14px; line-height: 1.35; word-break: break-word; padding-right: 30px; color: var(--text); }
+.card-epic {
+  margin-top: 4px; font-size: 12px; font-style: italic; color: var(--text-muted);
+  word-break: break-word;
+}
 
 .card-footer { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; align-items: center; }
 

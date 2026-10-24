@@ -26,6 +26,8 @@
    5. Un petit menu (choix simple ou multiple, ou date) qui s'ouvre au clic
       sur une pastille de la fiche, pour en changer la valeur.
 
+   6. Un champ de titre qui passe à la ligne au lieu de couper le texte.
+
    DÉPENDANCES (à charger AVANT ce fichier, depuis cdnjs) :
      - marked     : transforme le Markdown en HTML ;
      - DOMPurify  : nettoie ce HTML. Indispensable : le widget a l'accès
@@ -238,7 +240,55 @@
     return bloc;
   }
 
-  /* ── 3. Petit menu ouvert au clic sur une pastille ─────────── */
+  /* ── 3. Titre sur plusieurs lignes ─────────────────────────── */
+
+  /*
+   * Un <input> coupe un titre trop long ; une zone de texte (<textarea>)
+   * passe à la ligne. On l'agrandit à la hauteur de son contenu, et l'on
+   * interdit les sauts de ligne : un titre reste une seule phrase.
+   */
+
+  /** Donne à une zone de titre la hauteur de son texte. */
+  function ajusterHauteur(zone) {
+    zone.style.height = 'auto';                    // repart de zéro (le texte a pu raccourcir)
+    zone.style.height = zone.scrollHeight + 'px';  // hauteur réelle du texte
+  }
+
+  // Une largeur qui change (fenêtre, passage côté ↔ centre) change le nombre
+  // de lignes : on réajuste tous les titres affichés.
+  function ajusterTitres(conteneur = document) {
+    conteneur.querySelectorAll('textarea.fiche-titre').forEach(ajusterHauteur);
+  }
+  window.addEventListener('resize', () => ajusterTitres());
+
+  /**
+   * Champ de titre.
+   *   valeur        : titre de départ
+   *   placeholder   : texte affiché quand le champ est vide
+   *   lectureSeule  : true pour une colonne calculée par une formule
+   *   classe        : classe CSS en plus de « fiche-titre » (style du widget)
+   *   surChangement : fonction appelée à chaque frappe, avec le nouveau titre
+   */
+  function champTitre(valeur, { placeholder = '', lectureSeule = false, classe = '', surChangement } = {}) {
+    const zone = document.createElement('textarea');
+    zone.className = 'fiche-titre' + (classe ? ' ' + classe : '');
+    zone.rows = 1;
+    zone.value = valeur || '';
+    zone.placeholder = placeholder;
+    zone.readOnly = lectureSeule;
+    zone.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
+    zone.addEventListener('input', () => {
+      // Un texte collé peut contenir des retours à la ligne : on les remplace.
+      if (zone.value.includes('\n')) zone.value = zone.value.replace(/\s*\n\s*/g, ' ');
+      ajusterHauteur(zone);
+      if (surChangement) surChangement(zone.value);
+    });
+    // La hauteur ne se mesure qu'une fois la zone affichée dans la page.
+    requestAnimationFrame(() => ajusterHauteur(zone));
+    return zone;
+  }
+
+  /* ── 4. Petit menu ouvert au clic sur une pastille ─────────── */
 
   /*
    * Un seul menu à la fois, flottant sous la pastille cliquée (ou au-dessus
@@ -352,7 +402,7 @@
     return menu;
   }
 
-  /* ── 4. Dispositions « côté » / « centre » ─────────────────── */
+  /* ── 5. Dispositions « côté » / « centre » ─────────────────── */
 
   function dispositionMemorisee() {
     // try/catch : le stockage du navigateur peut être bloqué (navigation
@@ -383,6 +433,8 @@
       bouton.textContent = d === 'centre' ? '⇥' : '⤢';
       bouton.title = d === 'centre' ? 'Afficher sur le côté' : 'Agrandir au centre';
     }
+    // La largeur du titre a changé : son nombre de lignes aussi.
+    requestAnimationFrame(() => ajusterTitres(panneau));
   }
 
   /**
@@ -433,7 +485,7 @@
   window.Fiche = {
     markdownVersHtml, markdownVersTexte, champMarkdown,
     estNotepad, notepadVersMarkdown,
-    menuChoix, menuDate, fermerMenu,
+    menuChoix, menuDate, fermerMenu, champTitre,
     installer, ouvrir, fermer, disposition,
   };
 })();

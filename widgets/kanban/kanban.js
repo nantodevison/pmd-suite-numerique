@@ -659,14 +659,16 @@ function buildCard(record, palette) {
   titleEl.textContent = titre;
   card.appendChild(titleEl);
 
-  // Aperçu de la description en texte brut : la description est en Markdown,
-  // et l'on ne veut voir sur la carte ni « ** » ni « # ».
-  const desc = Fiche.markdownVersTexte(getField(record, 'description'));
-  if (desc) {
-    const descEl = document.createElement('div');
-    descEl.className   = 'card-description';
-    descEl.textContent = desc;
-    card.appendChild(descEl);
+  // La carte est un aperçu : titre, EPIC, puis priorité, personne(s) et
+  // échéance. Le détail (dont la description) se lit dans la fiche.
+
+  // EPIC : sous le titre, en petit et en italique, comme dans la fiche
+  const epic = getField(record, 'epic');
+  if (epic) {
+    const epicEl = document.createElement('div');
+    epicEl.className   = 'card-epic';
+    epicEl.textContent = '🏷️ ' + (typeof epic === 'number' ? getReferenceName('epic', epic) : epic);
+    card.appendChild(epicEl);
   }
 
   const footer = document.createElement('div');
@@ -674,16 +676,6 @@ function buildCard(record, palette) {
 
   const priorite = getField(record, 'priorite');
   if (priorite) footer.appendChild(buildPrioBadge(priorite));
-
-  // EPIC : afficher le nom si c'est une référence
-  const epic = getField(record, 'epic');
-  if (epic) {
-    const epicDisplay = typeof epic === 'number' ? getReferenceName('epic', epic) : epic;
-    footer.appendChild(buildBadge(epicDisplay, 'badge-epic'));
-  }
-
-  const millesime = getField(record, 'millesime');
-  if (millesime) footer.appendChild(buildBadge('🗓️ ' + millesime, 'badge-millesime'));
 
   // Assigné : afficher le nom si c'est une référence
   const assigne = getField(record, 'assigne');
@@ -694,6 +686,11 @@ function buildCard(record, palette) {
 
   const date = getField(record, 'date');
   if (date) footer.appendChild(buildBadge('📅 ' + formatDate(date), 'badge-date'));
+
+  // Millésime : seulement s'il est associé dans ⚙ (propre à l'Observatoire,
+  // appelé à disparaître avec les onglets Standardiser et Linéariser)
+  const millesime = getField(record, 'millesime');
+  if (millesime) footer.appendChild(buildBadge('🗓️ ' + millesime, 'badge-millesime'));
 
   if (footer.children.length > 0) card.appendChild(footer);
 
@@ -1012,11 +1009,12 @@ function populateEditPanel(record) {
   entete.append(principal, encart);
   body.appendChild(entete);
 
-  const titleInput = document.createElement('input');
-  titleInput.type = 'text'; titleInput.className = 'edit-title-field';
-  titleInput.placeholder = 'Titre de la carte…';
-  titleInput.value = getField(record, 'titre') || '';
-  titleInput.addEventListener('input', () => markDirty('titre', titleInput.value));
+  // Titre sur plusieurs lignes si besoin (voir champTitre dans _commun/fiche.js)
+  const titleInput = Fiche.champTitre(getField(record, 'titre') || '', {
+    placeholder:   'Titre de la carte…',
+    classe:        'edit-title-field',
+    surChangement: (texte) => markDirty('titre', texte),
+  });
   const ligneEpic = document.createElement('div');
   principal.append(titleInput, ligneEpic);
   STATE.editPanel.zones = { encart, ligneEpic };

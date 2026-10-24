@@ -68,11 +68,19 @@ Tant qu'aucun projet n'est choisi, le Kanban affiche toutes les tâches, signale
 > **À l'installation (ou après la mise à jour du 2026-10-02 pour un Kanban
 > existant) : ouvrir ⚙, choisir le projet, puis « Appliquer ».**
 
+## Carte
+
+Une carte est un **aperçu** : le titre, l'EPIC dessous (petit, en italique),
+puis une ligne de badges : priorité, personne(s), échéance, et le millésime
+s'il est associé dans ⚙. La description se lit dans la fiche. Le titre et les
+badges suivent les mêmes règles visuelles que les cartes de la Galerie.
+
 ## Fiche d'une carte
 
 Un **clic sur une carte** ouvre sa fiche (le bouton ✏️ fait de même) ; un
 glissement, lui, déplace la carte sans ouvrir la fiche. Son contenu est dense :
-- le **titre**, et dessous l'**EPIC** en petit et en italique : non modifiable,
+- le **titre** (sur plusieurs lignes si besoin), et dessous l'**EPIC** en petit
+  et en italique : non modifiable,
   sauf s'il manque (« 🏷️ + Choisir un EPIC ») ;
 - des **pastilles** Statut, Priorité, 👤 Assigné(s) et 📅 Échéance : un clic
   ouvre un petit menu pour changer la valeur (cases à cocher pour plusieurs
@@ -86,8 +94,8 @@ c'est un champ propre à l'Observatoire, appelé à disparaître du widget.
 La fiche s'affiche, avec le même contenu :
 - **sur le côté** : panneau étroit, le tableau reste visible ; les pastilles
   sont sous le titre ;
-- **au centre** : grande fenêtre ; les pastilles sont dans un encart à droite
-  du titre, la description en grand dessous.
+- **au centre** : grande fenêtre ; les pastilles sont à droite du titre, côte
+  à côte, la description en grand dessous.
 
 Le bouton ⤢ / ⇥ de l'en-tête passe d'une disposition à l'autre ; le dernier
 choix est mémorisé dans le navigateur (chacun garde le sien). Échap, ✕ ou un
@@ -96,7 +104,7 @@ des modifications n'ont pas été sauvegardées.
 
 La **description est en Markdown** (`**gras**`, `*italique*`, `# titre`,
 `- liste`, `[lien](url)`…) : affichée mise en forme, modifiable en brut avec
-« ✏️ Modifier ». Sur les cartes, son aperçu est en texte simple. Le HTML produit
+« ✏️ Modifier ». Le HTML produit
 est nettoyé par DOMPurify avant affichage.
 
 ## Limites connues
