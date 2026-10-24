@@ -6,27 +6,40 @@ Ce fichier liste ce qui reste à faire. Il est lu par la compétence
 Gardez-le court : quelques lignes par section suffisent.
 -->
 
-<!-- début grist : section régénérée depuis Grist, ne pas modifier à la main -->
+<!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Kanban » — toutes les tâches ouvertes — lu le 2026-10-06 23:10_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-10-24 01:16_
 
 ### 🖐️ À faire
 - [ ] #146 Supprimer les onglets Standardiser et Linéariser (Haute, EPIC « Supprimer les spécifité OTV »)
-- [ ] #150 Ouvrir la carte au centre, en plus grand (Haute, EPIC « Améliorer l'interface »)
 - [ ] #147 Chercher les autres spécificités OTV dans le code (Moyenne, EPIC « Supprimer les spécifité OTV »)
 - [ ] #148 Généraliser la liste des contacts assignables du Kanban (Moyenne, EPIC « Supprimer les spécifité OTV »)
+- [ ] #185 Rendre les pastilles modifiables dans la fiche de la Galerie (Moyenne, EPIC « Améliorer l'interface »)
+- [ ] #184 Ouvrir un objet lié (tâche, EPIC…) d'un clic depuis la fiche de la Galerie (Basse, EPIC « Améliorer l'interface »)
+- [ ] #186 Préremplir une nouvelle carte de la Galerie avec le filtre de la vue (Sélectionner par) (Basse, EPIC « Améliorer l'interface »)
+- [ ] #187 Réparer le glisser-déposer des colonnes (en-têtes) du Kanban (Basse, EPIC « Améliorer la qualité du code »)
+
+### ♻️ En cours
+- [ ] #150 Ouvrir la carte au centre, en plus grand (Haute, EPIC « Améliorer l'interface »)
 - [ ] #149 Ouvrir la carte au clic (Moyenne, EPIC « Améliorer l'interface »)
+- [ ] #176 Créer le widget Galerie (EPICs, OKR) avec fiche centrale (Moyenne, EPIC « Améliorer l'interface »)
+- [ ] #177 Afficher et saisir les descriptions en Markdown (Moyenne, EPIC « Améliorer l'interface »)
 - [ ] #153 Supprimer l'appel en double à grist.ready() dans le Kanban (Basse, EPIC « Améliorer la qualité du code »)
 - [ ] #154 Placer le fetchTable('EPICs') du Kanban dans le bloc de gestion d'erreur (Basse, EPIC « Améliorer la qualité du code »)
 - [ ] #155 Corriger le préréglage « Millésime » en « Millesime » dans le Kanban (Basse, EPIC « Améliorer la qualité du code »)
 
-<!-- fin grist -->
+### (sans statut)
+- [ ] #182 Creer une nouvelle carte après une autre  création (Haute, EPIC « Améliorer la qualité du code »)
+- [ ] #183 Ajouter les ref interne (EPIC « Améliorer la qualité du code »)
+
+<!-- fin kanban -->
 
 ## ⚠️ Urgent
 (rien)
 
 ## En cours
 - [x] Fusionner la branche feat/restructuration (nouvelle structure widgets/ python/ espaces/ projets/) — PR #10, 2026-09-23
+- [ ] Tester la fiche dense du Kanban (étape 4, liste de tests dans la séance du 2026-10-24), puis fusionner feat/fiche-centrale = mise en production du Kanban ; ensuite, refaire le modèle ⚙ de la Galerie dans le document réel
 
 ## Prochaines étapes
 (Les étapes du projet sont désormais suivies dans Grist : voir « Kanban (Grist) » ci-dessus.)
@@ -63,4 +76,8 @@ _Projet « Kanban » — toutes les tâches ouvertes — lu le 2026-10-06 23:10_
 - 2026-10-05 — mémoires de projet non versionnées, propres à chaque poste — chemins de projet différents d'un poste à l'autre et contenus divergents ; les règles importantes vont dans le CLAUDE.md du projet
 - 2026-10-05 — etat-des-lieux et cloture-session suivent aussi le dépôt .claude (pull proposé en début de séance, commit et push séparés en fin de séance) — éviter que les deux postes divergent
 - 2026-10-06 — état des lieux : la feuille de route n'est plus écrite tant que des commits du serveur restent à récupérer, ni réécrite si seule la date « lu le … » change ; la copie du kanban reste versionnée (repli hors ligne) — l'état des lieux faisait échouer le git pull qu'il recommandait
+- 2026-10-24 — les textes de l'ancien widget Notepad (JSON) sont convertis en Markdown, à l'affichage et dans Grist (bandeau de la Galerie) — Notepad n'est plus utilisé
+- 2026-10-24 — Galerie : champs Pastilles (carte et fiche), Objets liés (listes de références) et Contexte (fiche seulement) ; la carte ne montre plus le texte principal — cartes concises, la recherche porte toujours sur le texte
+- 2026-10-24 — le modèle de texte des nouvelles cartes est rangé dans les options du widget (document Grist) — propre à chaque Galerie, hors dépôt public ; à refaire dans le document réel
+- 2026-10-24 — fiche du Kanban dense : mêmes propriétés côté et centre (Statut, Priorité, Assigné, Échéance en pastilles cliquables), millésime retiré de la fiche, EPIC modifiable seulement s'il manque — priorité au contenu, généricité
 - 2026-10-06 — clôture : git pull (fusion classique, jamais --rebase) avant d'écrire la feuille de route, repère CONFLIT_PROBABLE dans les deux collectes — le serveur peut avancer pendant la séance (PR fusionnées sur GitHub, images de la sync, autre poste)

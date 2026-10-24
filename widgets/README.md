@@ -26,13 +26,14 @@ https://nantodevison.github.io/pmd-suite-numerique/widgets/<nom-du-dossier>/
 | **Projet(s)** | projets qui l'utilisent | noms de dossiers de [`../projets/`](../projets/), ou `—` |
 | **Données** | générique : colonnes à associer ; spécifique : tables lues ou écrites | texte court |
 | **Accès** | niveau demandé à Grist | `read table` · `full` |
-| **Statut** | où en est-il ? | `en développement` · `en service` · `archivé` |
+| **Statut** | où en est-il ? | `en développement` · `en test` (publié, en cours de prise en main) · `en service` · `archivé` |
 
 ### Widgets
 
 | Widget | Rôle | Portée | Projet(s) | Données | Accès | Statut |
 |---|---|---|---|---|---|---|
-| [kanban](kanban/) | Suivre des tâches en colonnes par statut : glisser-déposer, création, modification, filtres EPIC et personne | spécifique | observatoire-trafics | lit et écrit la table de la vue (colonnes associées via ⚙) ; lit `Projets2`, `Contacts`, `EPICs` | `full` | en service |
+| [kanban](kanban/) | Suivre des tâches en colonnes par statut : glisser-déposer, création, fiche (côté ou centre) avec pastilles modifiables et description en Markdown, filtres EPIC et personne | spécifique | observatoire-trafics | lit et écrit la table de la vue (colonnes associées via ⚙) ; lit `Projets2`, `Contacts`, `EPICs` | `full` | en service |
+| [galerie](galerie/) | Afficher une table en cartes avec pastilles colorées ; fiche (côté ou centre) pour lire et modifier le titre et le texte principal en Markdown ; création de carte avec modèle de texte | générique | gestion-de-projet | colonnes à associer : Titre, Texte principal (Markdown), Pastilles (plusieurs), Objets liés (plusieurs), Contexte (plusieurs) ; lit la structure du document | `full` | en test |
 | [parcours-doc](parcours-doc/) | Parcourir les chapitres d'un document Docs synchronisé | spécifique | gt-cbs-bruit | lit `Chapitres` | `full` | archivé |
 | [questions](questions/) | Poser des questions sur le document et les classer par thème | spécifique | gt-cbs-bruit | lit et écrit `Questions`, `Question_Theme_Link`, `Enum_Themes`, `Widget_Session` ; lit `Users` | `full` | archivé |
 | [echanges](echanges/) | Répondre aux questions, voter, lier les réponses aux chapitres ; notifications email (désactivées) | spécifique | gt-cbs-bruit | lit et écrit `Questions`, `Reponses`, `Votes`, `Reponse_Chapitre_Link`, `Conversations`… ; lit `Chapitres`, `Users` | `full` | archivé |
@@ -43,7 +44,8 @@ https://nantodevison.github.io/pmd-suite-numerique/widgets/<nom-du-dossier>/
 - Pas de dépendances npm : seules des CDN publics sont utilisés (chargés via `<script src="...">`).
 - La bibliothèque `grist-plugin-api.js` est toujours chargée depuis `https://docs.getgrist.com/grist-plugin-api.js`.
 - Toujours appeler `grist.ready()` **avant** tout appel à l'API Grist (évite l'erreur `RPC_UNKNOWN_FORWARD_DEST`).
-- Les dossiers dont le nom commence par `_` (futurs `_gabarit/`, `_lib/`) ne sont pas des widgets : ce sont des ressources partagées. Ils sont publiés grâce au fichier `.nojekyll` à la racine du dépôt.
+- Les dossiers dont le nom commence par `_` ne sont pas des widgets : ce sont des ressources partagées. Ils sont publiés grâce au fichier `.nojekyll` à la racine du dépôt.
+  - [`_commun/`](_commun/) : la **fiche** partagée par `kanban` et `galerie` (`fiche.js`, `fiche.css`) : disposition côté / centre, Markdown. Un widget qui l'utilise ne fonctionne qu'en mode URL. Modifier ces fichiers touche **tous** ces widgets, y compris ceux en service : tester chacun avant de fusionner.
 
 ## Workflow : modifier un widget
 
@@ -63,7 +65,9 @@ https://nantodevison.github.io/pmd-suite-numerique/widgets/<nom-du-dossier>/
 3. Dans le panneau de droite, **Niveau d'accès** → **Accès complet au document**. Sinon, le widget affiche « Access not granted ».
 
 Le code servi est public (dépôt GitHub public). Chaque widget charge aussi
-`grist-plugin-api.js` (getgrist.com) et, pour `parcours-doc`, `marked` (jsDelivr).
+`grist-plugin-api.js` (getgrist.com) ; `parcours-doc` charge `marked` (jsDelivr),
+`kanban` et `galerie` chargent `marked` et `DOMPurify` (cdnjs, avec contrôle
+d'intégrité `integrity`).
 
 ## Notes de sécurité
 

@@ -1,0 +1,258 @@
+/* ══════════════════════════════════════════════════════════════
+   FICHE — styles communs (voir fiche.js)
+   Les couleurs reprennent les variables du widget (--surface, --text…)
+   quand elles existent, sinon les valeurs par défaut indiquées.
+   Les sélecteurs commencent par « body » pour l'emporter sur les styles
+   propres à chaque widget (par exemple .edit-panel du Kanban).
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Panneau de fiche générique ─────────────────────────────────
+   Utilisé par les widgets qui n'ont pas leur propre panneau (Galerie).
+   Le Kanban garde son .edit-panel, auquel s'appliquent seulement la
+   disposition « centre » et le champ Markdown ci-dessous. */
+.fiche-panneau {
+  position: fixed; top: 0; right: 0;
+  width: 420px; max-width: 100vw; height: 100vh;
+  background: var(--surface, #fff);
+  border-left: 1px solid var(--border, #e2e8f0);
+  box-shadow: -6px 0 30px rgba(9, 30, 66, .1);
+  z-index: 500;
+  display: flex; flex-direction: column; overflow: hidden;
+  transform: translateX(100%); transition: transform .28s cubic-bezier(.4, 0, .2, 1);
+}
+.fiche-panneau.open { transform: translateX(0); }
+
+.fiche-panneau-entete {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px 16px; border-bottom: 1px solid var(--border, #e2e8f0); flex-shrink: 0;
+}
+.fiche-panneau-libelle {
+  font-size: 12px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
+  color: var(--text-muted, #718096);
+}
+.fiche-panneau-actions { display: flex; align-items: center; gap: 6px; }
+.fiche-fermer {
+  background: none; border: none; cursor: pointer; font-size: 18px; line-height: 1;
+  padding: 4px 8px; border-radius: 6px; color: var(--text-muted, #718096);
+}
+.fiche-fermer:hover { background: var(--col-bg, #eef0f5); color: var(--text, #2d3748); }
+/* Pastille « modifications non sauvegardées » */
+.fiche-modifie { width: 7px; height: 7px; border-radius: 50%; background: #d69e2e; visibility: hidden; }
+.fiche-modifie.visible { visibility: visible; }
+
+.fiche-panneau-corps {
+  flex: 1; overflow-y: auto;
+  padding: 20px 18px 28px; display: flex; flex-direction: column; gap: 16px;
+}
+.fiche-titre {
+  width: 100%; font-size: 17px; font-weight: 700; line-height: 1.3;
+  padding: 4px 0 8px; border: none; border-bottom: 2px solid transparent;
+  background: none; color: var(--text, #2d3748); font-family: inherit;
+}
+.fiche-titre:focus { outline: none; border-bottom-color: var(--accent, #667eea); }
+/* Titre en zone de texte (champTitre) : passe à la ligne, hauteur ajustée par fiche.js */
+textarea.fiche-titre { display: block; resize: none; overflow: hidden; }
+.fiche-titre[readonly] { cursor: default; }
+.fiche-titre-note { margin-top: -4px; font-size: 11.5px; color: var(--text-muted, #718096); }
+
+/* ── En-tête de la fiche ────────────────────────────────────────
+   .fiche-entete
+     .fiche-entete-principal : titre, puis les objets liés (.fiche-lies)
+     .fiche-entete-pastilles : pastilles colorées, sans libellé
+   Sur le côté, tout s'empile ; au centre, les pastilles passent dans un
+   encart à droite du titre (voir « Disposition centre » plus bas). */
+.fiche-entete { display: flex; flex-direction: column; gap: 10px; }
+.fiche-entete-principal { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.fiche-entete-pastilles { display: flex; flex-wrap: wrap; gap: 4px; }
+.fiche-entete-pastilles:empty { display: none; }
+
+/* Objets liés : « LIBELLÉ  [élément] [élément]… » */
+.fiche-lies { display: flex; align-items: baseline; gap: 10px; }
+.fiche-lies-libelle {
+  flex-shrink: 0;
+  font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase;
+  color: var(--text-muted, #718096);
+}
+.fiche-lies-vide { font-size: 12.5px; color: var(--text-muted, #718096); }
+
+/* Liste d'éléments en petites pastilles blanches (objets liés, contexte) */
+.fiche-liste { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.fiche-liste-element {
+  font-size: 11.5px; padding: 2px 8px; border-radius: 6px;
+  background: var(--surface, #fff); border: 1px solid var(--border, #e2e8f0); color: var(--text, #2d3748);
+}
+
+/* Pastille cliquable de la fiche (ouvre un menu pour changer la valeur) */
+.fiche-pastille {
+  display: inline-flex; align-items: center; gap: 4px; max-width: 100%;
+  padding: 3px 10px; border-radius: 999px; border: 1px solid transparent;
+  font-family: inherit; font-size: 12px; font-weight: 600; line-height: 1.3;
+  background: var(--col-bg, #eef0f5); color: var(--text, #2d3748);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+button.fiche-pastille { cursor: pointer; }
+button.fiche-pastille:hover { border-color: var(--accent, #667eea); }
+/* Valeur absente : pastille en pointillés « + … » */
+.fiche-pastille-vide {
+  background: transparent; border: 1px dashed var(--border, #cbd5e0);
+  color: var(--text-muted, #718096); font-weight: 500;
+}
+/* Rappel discret (ex. l'EPIC d'une tâche) : petit, en italique */
+.fiche-rappel { font-size: 12px; font-style: italic; color: var(--text-muted, #718096); }
+
+/* Menu ouvert au clic sur une pastille (voir menuChoix dans fiche.js) */
+.fiche-menu {
+  position: fixed; z-index: 1100;
+  min-width: 190px; max-width: 320px; max-height: 280px; overflow-y: auto;
+  display: flex; flex-direction: column; padding: 4px;
+  background: var(--surface, #fff); border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px; box-shadow: 0 10px 30px rgba(15, 23, 42, .18);
+}
+.fiche-menu-item {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  padding: 6px 10px; border: none; border-radius: 6px; background: none;
+  font-family: inherit; font-size: 12.5px; color: var(--text, #2d3748);
+  text-align: left; cursor: pointer;
+}
+.fiche-menu-item:hover { background: var(--col-bg, #eef0f5); }
+.fiche-menu-item.choisi { font-weight: 700; }
+.fiche-menu-item-vide { font-style: italic; color: var(--text-muted, #718096); }
+.fiche-menu-vide { padding: 6px 10px; font-size: 12px; color: var(--text-muted, #718096); }
+.fiche-menu-date {
+  margin: 4px; padding: 6px 8px; font-family: inherit; font-size: 13px;
+  border: 1.5px solid var(--border, #e2e8f0); border-radius: 6px;
+}
+
+/* En-tête de contexte : paires « libellé : valeur » */
+.fiche-contexte {
+  display: grid; grid-template-columns: max-content 1fr; gap: 7px 12px;
+  margin: 0; padding: 12px 14px; border-radius: 10px;
+  background: var(--col-bg, #eef0f5); font-size: 12.5px;
+}
+.fiche-contexte dt {
+  font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase;
+  color: var(--text-muted, #718096); padding-top: 1px;
+}
+.fiche-contexte dd { margin: 0; color: var(--text, #2d3748); overflow-wrap: anywhere; }
+body .fiche-centre .fiche-contexte { grid-template-columns: max-content 1fr max-content 1fr; column-gap: 16px; }
+
+.fiche-libelle-texte {
+  font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+  color: var(--text-muted, #718096);
+}
+
+.fiche-panneau-pied {
+  display: flex; gap: 8px; flex-shrink: 0;
+  padding: 12px 16px; border-top: 1px solid var(--border, #e2e8f0);
+}
+.fiche-btn-principal, .fiche-btn-secondaire {
+  padding: 9px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.fiche-btn-principal { flex: 1; border: none; background: var(--accent, #667eea); color: #fff; }
+.fiche-btn-principal:disabled { opacity: .45; cursor: default; }
+.fiche-btn-secondaire {
+  border: 1.5px solid var(--border, #e2e8f0); background: none; color: var(--text-muted, #718096);
+}
+
+/* ── Disposition « centre » ─────────────────────────────────── */
+body .fiche-centre {
+  position: fixed;
+  top: 50%; left: 50%; right: auto;
+  width: min(880px, 94vw);
+  height: min(88vh, 940px);
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, .28);
+  z-index: 1000;
+  transition: none;
+}
+/* Fermée, la fiche centrée disparaît simplement (pas de glissement). */
+body .fiche-centre:not(.open) { display: none; }
+body .fiche-centre.open { transform: translate(-50%, -50%); }
+
+/* Fond assombri derrière la fiche centrée ; un clic dessus la ferme. */
+.fiche-voile {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(15, 23, 42, .38);
+  z-index: 999;
+}
+.fiche-voile.visible { display: block; }
+
+/* Bouton de bascule ⤢ / ⇥ */
+.fiche-bascule {
+  background: none; border: none; cursor: pointer;
+  font-size: 16px; line-height: 1; padding: 4px 8px; border-radius: 6px;
+  color: var(--text-muted, #718096);
+}
+.fiche-bascule:hover { background: var(--col-bg, #eef0f5); color: var(--text, #2d3748); }
+
+/* ── Champ Markdown ─────────────────────────────────────────── */
+.fiche-md { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.fiche-md-barre { display: flex; align-items: center; gap: 10px; }
+.fiche-md-bouton {
+  font-size: 12px; padding: 3px 10px; cursor: pointer;
+  border: 1.5px solid var(--border, #e2e8f0); border-radius: 6px;
+  background: var(--surface, #fff); color: var(--text, #2d3748);
+}
+.fiche-md-bouton:hover { border-color: var(--accent, #667eea); }
+.fiche-md-aide { font-size: 11px; color: var(--text-muted, #718096); }
+
+.fiche-md-saisie {
+  display: none;
+  width: 100%; min-height: 160px; resize: vertical;
+  padding: 8px 10px; line-height: 1.5;
+  font-family: Consolas, 'Courier New', monospace; font-size: 12.5px;
+  color: var(--text, #2d3748); background: var(--surface, #fff);
+  border: 1.5px solid var(--border, #e2e8f0); border-radius: 7px;
+}
+.fiche-md-saisie:focus { outline: none; border-color: var(--accent, #667eea); }
+.fiche-md.en-saisie .fiche-md-saisie { display: block; }
+.fiche-md.en-saisie .fiche-md-rendu  { display: none; }
+
+/* Texte mis en forme */
+.fiche-md-rendu {
+  font-size: 13.5px; line-height: 1.6; color: var(--text, #2d3748);
+  overflow-wrap: anywhere;
+  cursor: text;
+}
+.fiche-md-rendu > :first-child { margin-top: 0; }
+.fiche-md-rendu h1, .fiche-md-rendu h2, .fiche-md-rendu h3 { margin: 14px 0 6px; line-height: 1.3; }
+.fiche-md-rendu h1 { font-size: 18px; }
+.fiche-md-rendu h2 { font-size: 16px; }
+.fiche-md-rendu h3 { font-size: 14px; }
+.fiche-md-rendu p, .fiche-md-rendu ul, .fiche-md-rendu ol { margin: 0 0 8px; }
+.fiche-md-rendu ul, .fiche-md-rendu ol { padding-left: 22px; }
+.fiche-md-rendu a { color: var(--accent, #667eea); }
+.fiche-md-rendu code {
+  font-family: Consolas, 'Courier New', monospace; font-size: 12px;
+  background: var(--col-bg, #eef0f5); padding: 1px 4px; border-radius: 4px;
+}
+.fiche-md-rendu pre { background: var(--col-bg, #eef0f5); padding: 8px 10px; border-radius: 6px; overflow-x: auto; }
+.fiche-md-rendu pre code { background: none; padding: 0; }
+.fiche-md-rendu blockquote {
+  margin: 0 0 8px; padding: 2px 12px;
+  border-left: 3px solid var(--border, #e2e8f0); color: var(--text-muted, #718096);
+}
+.fiche-md-rendu table { border-collapse: collapse; margin-bottom: 8px; }
+.fiche-md-rendu th, .fiche-md-rendu td { border: 1px solid var(--border, #e2e8f0); padding: 4px 8px; }
+.fiche-md-rendu img { max-width: 100%; }
+.fiche-md-vide { color: var(--text-muted, #718096); font-style: italic; }
+
+/* En disposition « centre », le texte dispose de plus de place. */
+body .fiche-centre .fiche-md-saisie { min-height: 40vh; }
+body .fiche-centre .fiche-md-rendu  { font-size: 14px; }
+body .fiche-centre .fiche-panneau-corps { padding: 24px 30px 32px; }
+body .fiche-centre .fiche-titre { font-size: 21px; }
+
+/* Au centre : titre et objets liés à gauche, pastilles à droite, côte à
+   côte et alignées à droite (passage à la ligne seulement si nécessaire),
+   sans cadre, pour laisser la place au titre. */
+body .fiche-centre .fiche-entete { flex-direction: row; align-items: flex-start; gap: 20px; }
+body .fiche-centre .fiche-entete-principal { flex: 1; }
+body .fiche-centre .fiche-entete-pastilles {
+  flex: 0 1 auto; max-width: 40%;
+  justify-content: flex-end; align-content: flex-start; gap: 5px;
+  padding-top: 6px;
+}

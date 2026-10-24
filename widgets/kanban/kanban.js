@@ -147,12 +147,6 @@ const REFS = { epic: null, assigne: null, projet: null };
 
 grist.ready({ requiredAccess: 'full' });
 
-/* ══════════════════════════════════════════════════════════════
-   1. INITIALISATION GRIST
-   ══════════════════════════════════════════════════════════════ */
-
-grist.ready({ requiredAccess: 'full' });
-
 // ✅ Correctif : récupérer le nom réel de la table liée au widget.
 // Sans cela, getTableName() retombe sur 'Taches' et les écritures partent
 // dans la table Taches même quand le widget affiche une autre table.
@@ -195,6 +189,9 @@ const _tableNamePret = (async () => {
         nom: tableEpics.Titre?.[idx] || `EPIC ${id}`
       }));
       console.log('✓ EPICs chargés:', STATE.referenceData.epics.length);
+      // Messages de diagnostic, désormais dans le bloc de gestion d'erreur :
+      // sans table EPICs, ils ne provoquent plus d'erreur non rattrapée.
+      console.log('Colonnes disponibles dans EPICs:', Object.keys(tableEpics));
     } catch (err) {
       console.log('ℹ️ Pas de table EPICs séparée (champ texte)');
     }
@@ -202,9 +199,6 @@ const _tableNamePret = (async () => {
   } catch (err) {
     console.error('⚠️ Erreur récupération données référence:', err);
   }
-  const tableEpics = await grist.docApi.fetchTable('EPICs');
-  console.log('Colonnes disponibles dans EPICs:', Object.keys(tableEpics));
-  console.log('Exemple de données brutes:', tableEpics);
 })();
 
 grist.onRecords((records, _mappings, tableId) => {
@@ -236,7 +230,7 @@ grist.onOptions((options) => {
   Object.assign(STATE.mapping, {
     titre:'Nom', statut:'statut', description:'Description',
     priorite:'Priorite', assigne:'qui_', date:'date_cible',
-    epic:'EPIC', millesime:'Millésime', projet:'Projet',
+    epic:'EPIC', millesime:'Millesime', projet:'Projet',
   });
   if (options && options.mapping)      { Object.assign(STATE.mapping, options.mapping); syncSelectsToMapping(); }
   if (options && options.columnOrder)  STATE.columnOrder = options.columnOrder;
@@ -506,6 +500,7 @@ function renderBoard() {
 
   const statutList = getOrderedStatuts(Object.keys(groups), view);
   board.innerHTML = '';
+  STATE.couleursStatut = {};   // reprises par la pastille Statut de la fiche
 
   const totalFiltered = filteredRecords.length;
 
@@ -528,6 +523,7 @@ function renderBoard() {
       ? STATE.columnOrder.indexOf(statut)
       : statutList.indexOf(statut);
     const palette = PASTEL_PALETTE[colorIdx % PASTEL_PALETTE.length];
+    STATE.couleursStatut[statut] = palette;
 
     const col = buildColumn(statut, groups[statut] || [], palette, totalFiltered, view);
     board.appendChild(col);
@@ -663,12 +659,16 @@ function buildCard(record, palette) {
   titleEl.textContent = titre;
   card.appendChild(titleEl);
 
-  const desc = getField(record, 'description');
-  if (desc) {
-    const descEl = document.createElement('div');
-    descEl.className   = 'card-description';
-    descEl.textContent = desc;
-    card.appendChild(descEl);
+  // La carte est un aperçu : titre, EPIC, puis priorité, personne(s) et
+  // échéance. Le détail (dont la description) se lit dans la fiche.
+
+  // EPIC : sous le titre, en petit et en italique, comme dans la fiche
+  const epic = getField(record, 'epic');
+  if (epic) {
+    const epicEl = document.createElement('div');
+    epicEl.className   = 'card-epic';
+    epicEl.textContent = '🏷️ ' + (typeof epic === 'number' ? getReferenceName('epic', epic) : epic);
+    card.appendChild(epicEl);
   }
 
   const footer = document.createElement('div');
@@ -676,16 +676,6 @@ function buildCard(record, palette) {
 
   const priorite = getField(record, 'priorite');
   if (priorite) footer.appendChild(buildPrioBadge(priorite));
-
-  // EPIC : afficher le nom si c'est une référence
-  const epic = getField(record, 'epic');
-  if (epic) {
-    const epicDisplay = typeof epic === 'number' ? getReferenceName('epic', epic) : epic;
-    footer.appendChild(buildBadge(epicDisplay, 'badge-epic'));
-  }
-
-  const millesime = getField(record, 'millesime');
-  if (millesime) footer.appendChild(buildBadge('🗓️ ' + millesime, 'badge-millesime'));
 
   // Assigné : afficher le nom si c'est une référence
   const assigne = getField(record, 'assigne');
@@ -697,11 +687,19 @@ function buildCard(record, palette) {
   const date = getField(record, 'date');
   if (date) footer.appendChild(buildBadge('📅 ' + formatDate(date), 'badge-date'));
 
+  // Millésime : seulement s'il est associé dans ⚙ (propre à l'Observatoire,
+  // appelé à disparaître avec les onglets Standardiser et Linéariser)
+  const millesime = getField(record, 'millesime');
+  if (millesime) footer.appendChild(buildBadge('🗓️ ' + millesime, 'badge-millesime'));
+
   if (footer.children.length > 0) card.appendChild(footer);
 
   card.addEventListener('dragstart', onDragStart);
   card.addEventListener('dragend',   onDragEnd);
-  card.addEventListener('click', () => grist.setSelectedRows([record.id]));
+  // Un clic ouvre la fiche de la carte (et sélectionne la ligne dans Grist,
+  // ce que fait openEditPanel). Pas de conflit avec le glisser-déposer : le
+  // navigateur n'émet pas de « click » quand la carte a été déplacée.
+  card.addEventListener('click', () => openEditPanel(record.id));
 
   return card;
 }
@@ -714,12 +712,16 @@ function buildBadge(text, cssClass) {
 }
 
 function buildPrioBadge(val) {
+  return buildBadge('● ' + val, 'badge ' + classePriorite(val));
+}
+
+/** Classe CSS (couleur) d'une priorité : haute, moyenne, basse ou neutre. */
+function classePriorite(val) {
   const v = String(val).toLowerCase();
-  let cls = 'badge-prio-default';
-  if (/haute|high|urgent|critique/i.test(v)) cls = 'badge-prio-haute';
-  else if (/moyen|medium|normal/i.test(v))   cls = 'badge-prio-moyenne';
-  else if (/bas|low|faible/i.test(v))         cls = 'badge-prio-basse';
-  return buildBadge('● ' + val, 'badge ' + cls);
+  if (/haute|high|urgent|critique/i.test(v)) return 'badge-prio-haute';
+  if (/moyen|medium|normal/i.test(v))        return 'badge-prio-moyenne';
+  if (/bas|low|faible/i.test(v))             return 'badge-prio-basse';
+  return 'badge-prio-default';
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -962,108 +964,232 @@ async function deleteCard(recordId, titre) {
 async function openEditPanel(recordId) {
   const record = STATE.records.find(r => r.id === recordId);
   if (!record) return;
+  // Un clic sur une autre carte remplace le contenu de la fiche : on prévient
+  // si des modifications de la carte affichée n'ont pas été sauvegardées.
+  if (STATE.editPanel.dirty && STATE.editPanel.recordId !== recordId) {
+    if (!confirm('Des modifications non sauvegardées seront perdues. Continuer ?')) return;
+  }
   STATE.editPanel.recordId = recordId;
   STATE.editPanel.dirty    = false;
   STATE.editPanel.fields   = {};
   await assurerReferences(); // ✅ Correctif : correspondances numéro ↔ nom à jour
   populateEditPanel(record);
-  document.getElementById('edit-panel').classList.add('open');
-  document.getElementById('board').classList.add('panel-open');
+  // Fiche « côté » ou « centre » selon le dernier choix (voir _commun/fiche.js).
+  // Sur le côté, on réserve sa place au tableau ; au centre, elle le recouvre.
+  const disposition = Fiche.ouvrir(document.getElementById('edit-panel'));
+  document.getElementById('board').classList.toggle('panel-open', disposition === 'cote');
   grist.setSelectedRows([recordId]);
 }
 
+/*
+ * Fiche d'une carte, en forme « dense » (styles dans ../_commun/fiche.css) :
+ *   - à gauche, le titre, et dessous l'EPIC en petit et en italique
+ *     (non modifiable, sauf s'il manque : on peut alors le choisir) ;
+ *   - à droite (au centre) ou sous le titre (sur le côté), les pastilles
+ *     Statut, Priorité, Assigné(s) et Échéance ; un clic sur l'une d'elles
+ *     ouvre un petit menu pour la changer ;
+ *   - dessous, la description en Markdown.
+ * Le contenu et le comportement sont les mêmes dans les deux dispositions ;
+ * seule la mise en page change. Le millésime, propre à l'Observatoire,
+ * n'apparaît plus dans la fiche (il reste sur les cartes).
+ * Chaque changement est noté (markDirty) et enregistré par « Sauvegarder ».
+ */
 function populateEditPanel(record) {
+  Fiche.fermerMenu();   // un menu resté ouvert viserait l'ancienne fiche
+  STATE.editPanel.record = record;
   const body = document.getElementById('edit-panel-body');
   body.innerHTML = '';
 
-  const titleInput = document.createElement('input');
-  titleInput.type = 'text'; titleInput.className = 'edit-title-field';
-  titleInput.placeholder = 'Titre de la carte…';
-  titleInput.value = getField(record, 'titre') || '';
-  titleInput.addEventListener('input', () => markDirty('titre', titleInput.value));
-  body.appendChild(titleInput);
+  const entete = document.createElement('div');
+  entete.className = 'fiche-entete';
+  const principal = document.createElement('div');
+  principal.className = 'fiche-entete-principal';
+  const encart = document.createElement('div');
+  encart.className = 'fiche-entete-pastilles';
+  entete.append(principal, encart);
+  body.appendChild(entete);
 
-  const divider = document.createElement('div'); divider.className = 'edit-divider';
-  body.appendChild(divider);
-
-  const propsToShow = ['statut', 'priorite', 'assigne', 'millesime', 'date', 'epic', 'description'];
-
-  propsToShow.forEach(key => {
-    if (!STATE.mapping[key]) return;
-    const value = getField(record, key);
-    const row = document.createElement('div'); row.className = 'edit-prop';
-    const label = document.createElement('div'); label.className = 'edit-prop-label';
-    label.innerHTML = `<span class="prop-icon">${PROP_ICONS[key] || '•'}</span>${PROP_LABELS[key] || key}`;
-    row.appendChild(label);
-
-    const wrap = document.createElement('div');
-
-    if (key === 'description') {
-      const ta = document.createElement('textarea'); ta.className = 'edit-control';
-      ta.value = value || ''; ta.placeholder = 'Ajouter une description…'; ta.rows = 4;
-      ta.addEventListener('input', () => markDirty('description', ta.value));
-      wrap.appendChild(ta);
-
-    } else if (key === 'statut') {
-      const sel = document.createElement('select'); sel.className = 'edit-control';
-      getUniqueFieldValues('statut').forEach(s => {
-        const opt = document.createElement('option'); opt.value = s; opt.textContent = s;
-        opt.selected = String(value) === s; sel.appendChild(opt);
-      });
-      sel.addEventListener('change', () => markDirty('statut', sel.value));
-      wrap.appendChild(sel);
-
-    } else if ((key === 'epic' || key === 'assigne') && REFS[key]) {
-      // ✅ Correctif : colonne de référence → liste de choix dont la valeur
-      // est le numéro de ligne (et non le nom affiché)
-      wrap.appendChild(construireChampReference(key, value));
-
-    } else if (['priorite', 'assigne', 'millesime', 'epic'].includes(key)) {
-      const existing = getUniqueFieldValues(key);
-      if (existing.length > 0) {
-        const sorted = key === 'millesime'
-          ? [...existing].sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
-          : [...existing].sort((a, b) => a.localeCompare(b, 'fr'));
-        const sel = document.createElement('select'); sel.className = 'edit-control';
-        const emptyOpt = document.createElement('option'); emptyOpt.value = ''; emptyOpt.textContent = '— aucune —';
-        sel.appendChild(emptyOpt);
-        sorted.forEach(p => {
-          const opt = document.createElement('option'); opt.value = p; opt.textContent = p;
-          opt.selected = String(value) === p; sel.appendChild(opt);
-        });
-        sel.addEventListener('change', () => markDirty(key, sel.value));
-        wrap.appendChild(sel);
-      } else {
-        const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'edit-control';
-        inp.value = value || '';
-        inp.addEventListener('input', () => markDirty(key, inp.value));
-        wrap.appendChild(inp);
-      }
-
-    } else if (key === 'date') {
-      const inp = document.createElement('input'); inp.type = 'date'; inp.className = 'edit-control';
-      if (value) {
-        try {
-          inp.value = typeof value === 'number'
-            ? new Date(value * 1000).toISOString().slice(0, 10)
-            : new Date(value).toISOString().slice(0, 10);
-        } catch (_) {}
-      }
-      inp.addEventListener('change', () => markDirty('date', inp.value));
-      wrap.appendChild(inp);
-
-    } else {
-      const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'edit-control';
-      inp.value = value || '';
-      inp.addEventListener('input', () => markDirty(key, inp.value));
-      wrap.appendChild(inp);
-    }
-
-    row.appendChild(wrap); body.appendChild(row);
+  // Titre sur plusieurs lignes si besoin (voir champTitre dans _commun/fiche.js)
+  const titleInput = Fiche.champTitre(getField(record, 'titre') || '', {
+    placeholder:   'Titre de la carte…',
+    classe:        'edit-title-field',
+    surChangement: (texte) => markDirty('titre', texte),
   });
+  const ligneEpic = document.createElement('div');
+  principal.append(titleInput, ligneEpic);
+  STATE.editPanel.zones = { encart, ligneEpic };
+
+  if (STATE.mapping.description) {
+    // Description en Markdown : affichée mise en forme, modifiable en brut.
+    const row = document.createElement('div'); row.className = 'edit-prop edit-prop-description';
+    const label = document.createElement('div'); label.className = 'edit-prop-label';
+    label.innerHTML = `<span class="prop-icon">${PROP_ICONS.description}</span>${PROP_LABELS.description}`;
+    const wrap = document.createElement('div');
+    wrap.appendChild(Fiche.champMarkdown(getField(record, 'description'),
+      (texte) => markDirty('description', texte)));
+    row.append(label, wrap);
+    body.appendChild(row);
+  }
 
   STATE.editPanel.dirty = false; STATE.editPanel.fields = {};
+  majPastillesFiche();
   updateDirtyIndicator();
+}
+
+/* ── Pastilles de la fiche ───────────────────────────────────── */
+
+/** Valeur d'un champ dans la fiche : la valeur modifiée si elle existe, sinon celle de Grist. */
+function valeurFiche(key) {
+  const f = STATE.editPanel.fields;
+  return key in f ? f[key] : getField(STATE.editPanel.record, key);
+}
+
+/** Pour un champ de référence : numéros de ligne actuels dans la fiche (liste). */
+function idsFiche(key) {
+  const f = STATE.editPanel.fields;
+  if (key in f) return Array.isArray(f[key]) ? f[key] : (f[key] ? [f[key]] : []);
+  return nomsVersIds(key, getField(STATE.editPanel.record, key));
+}
+
+/** (Re)construit les pastilles et la ligne de l'EPIC, d'après les valeurs actuelles. */
+function majPastillesFiche() {
+  const { encart, ligneEpic } = STATE.editPanel.zones;
+  encart.innerHTML = '';
+  if (STATE.mapping.statut)   encart.appendChild(pastilleStatut());
+  if (STATE.mapping.priorite) encart.appendChild(pastillePriorite());
+  if (STATE.mapping.assigne)  encart.append(...pastillesAssigne());
+  if (STATE.mapping.date)     encart.appendChild(pastilleDate());
+  ligneEpic.innerHTML = '';
+  if (STATE.mapping.epic) ligneEpic.appendChild(rappelEpic());
+}
+
+/** Note un changement fait depuis un menu, puis redessine les pastilles. */
+function changerDepuisMenu(key, valeur) {
+  markDirty(key, valeur);
+  majPastillesFiche();
+}
+
+/** Pastille cliquable ; « vide » = valeur absente (pointillés « + … »). */
+function boutonPastille(texte, { vide = false, classe = '', titre = '', surClic }) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'fiche-pastille' + (vide ? ' fiche-pastille-vide' : '') + (classe ? ' ' + classe : '');
+  b.textContent = texte;
+  b.title = titre;
+  b.addEventListener('click', (e) => { e.stopPropagation(); surClic(b); });
+  return b;
+}
+
+/** Options d'un menu pour un champ de référence, ou, à défaut, pour un champ texte. */
+function optionsMenu(key, idsActuels) {
+  if (REFS[key]) {
+    return optionsProposees(key, idsActuels).map(o => ({ valeur: o.id, libelle: o.nom || `(ligne ${o.id})` }));
+  }
+  return getUniqueFieldValues(key).map(v => ({ valeur: v, libelle: v }));
+}
+
+function pastilleStatut() {
+  const statut = String(valeurFiche('statut') || '');
+  const b = boutonPastille(statut || '+ Statut', {
+    vide: !statut, titre: 'Statut — cliquer pour changer',
+    surClic: (ancre) => Fiche.menuChoix(ancre, {
+      options: getUniqueFieldValues('statut').map(s => ({ valeur: s, libelle: s })),
+      selection: [statut],
+      surChoix: (v) => changerDepuisMenu('statut', v),
+    }),
+  });
+  // Même couleur que la colonne du tableau
+  const palette = statut && couleurStatut(statut);
+  if (palette) { b.style.background = palette.bg; b.style.color = palette.text; }
+  return b;
+}
+
+/** Couleurs de la colonne d'un statut (relevées au dernier affichage du tableau). */
+function couleurStatut(statut) {
+  if (STATE.couleursStatut && STATE.couleursStatut[statut]) return STATE.couleursStatut[statut];
+  const i = getUniqueFieldValues('statut').indexOf(statut);
+  return PASTEL_PALETTE[Math.max(i, 0) % PASTEL_PALETTE.length];
+}
+
+function pastillePriorite() {
+  const prio = String(valeurFiche('priorite') || '');
+  return boutonPastille(prio ? '● ' + prio : '+ Priorité', {
+    vide: !prio, classe: prio ? classePriorite(prio) : '', titre: 'Priorité — cliquer pour changer',
+    surClic: (ancre) => Fiche.menuChoix(ancre, {
+      options: getUniqueFieldValues('priorite').map(p => ({ valeur: p, libelle: p })),
+      selection: [prio], vide: '— aucune —',
+      surChoix: (v) => changerDepuisMenu('priorite', v),
+    }),
+  });
+}
+
+/** Une pastille « 👤 Nom » par personne assignée ; un clic sur l'une ouvre le choix. */
+function pastillesAssigne() {
+  const ref = REFS.assigne;
+  const ids = ref ? idsFiche('assigne') : [];
+  const ouvrir = (ancre) => Fiche.menuChoix(ancre, {
+    options: optionsMenu('assigne', ids),
+    selection: ref ? ids : [valeurFiche('assigne')],
+    multiple: Boolean(ref && ref.estListe),
+    vide: '— personne —', valeurVide: ref ? 0 : '',
+    surChoix: (v) => changerDepuisMenu('assigne', v),
+  });
+  const noms = ref
+    ? ids.map(id => nomAffiche('assigne', id) || `(ligne ${id})`)
+    : (valeurFiche('assigne') ? [String(valeurFiche('assigne'))] : []);
+  if (!noms.length) return [boutonPastille('👤 + Assigner', { vide: true, titre: 'Assigné à', surClic: ouvrir })];
+  return noms.map(nom => boutonPastille('👤 ' + nom, {
+    classe: 'badge-assigne', titre: 'Assigné à — cliquer pour changer', surClic: ouvrir,
+  }));
+}
+
+function pastilleDate() {
+  const iso = dateVersIso(valeurFiche('date'));
+  // « T00:00:00 » : date lue comme une date locale (sans décalage horaire)
+  const texte = iso ? '📅 ' + new Date(iso + 'T00:00:00').toLocaleDateString('fr-FR') : '📅 + Échéance';
+  return boutonPastille(texte, {
+    vide: !iso, classe: iso ? 'badge-date' : '', titre: 'Échéance — cliquer pour changer',
+    surClic: (ancre) => Fiche.menuDate(ancre, { valeur: iso, surChoix: (d) => changerDepuisMenu('date', d) }),
+  });
+}
+
+/** Date de Grist (secondes depuis 1970) ou texte → « AAAA-MM-JJ » ('' si aucune). */
+function dateVersIso(v) {
+  if (!v) return '';
+  if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  try {
+    return (typeof v === 'number' ? new Date(v * 1000) : new Date(v)).toISOString().slice(0, 10);
+  } catch (_) { return ''; }
+}
+
+/**
+ * EPIC de la carte, en petit et en italique. Non modifiable s'il est déjà
+ * enregistré dans Grist ; s'il manque, une pastille permet de le choisir
+ * (parmi les EPICs du projet du Kanban).
+ */
+function rappelEpic() {
+  const ref = REFS.epic;
+  const enregistre = getField(STATE.editPanel.record, 'epic');
+  const aUnEpic = ref ? nomsVersIds('epic', enregistre).length > 0 : Boolean(enregistre);
+  const ids = ref ? idsFiche('epic') : [];
+  const nom = ref ? (ids.length ? nomAffiche('epic', ids[0]) : '') : String(valeurFiche('epic') || '');
+
+  if (aUnEpic) {
+    const rappel = document.createElement('span');
+    rappel.className = 'fiche-rappel';
+    rappel.textContent = '🏷️ ' + nom;
+    rappel.title = 'EPIC';
+    return rappel;
+  }
+  return boutonPastille(nom ? '🏷️ ' + nom : '🏷️ + Choisir un EPIC', {
+    vide: !nom, classe: 'fiche-rappel', titre: 'EPIC — cliquer pour choisir',
+    surClic: (ancre) => Fiche.menuChoix(ancre, {
+      options: optionsMenu('epic', ids),
+      selection: ref ? ids : [valeurFiche('epic')],
+      vide: '— aucun —', valeurVide: ref ? 0 : '',
+      surChoix: (v) => changerDepuisMenu('epic', v),
+    }),
+  });
 }
 
 function markDirty(key, value) {
@@ -1083,7 +1209,7 @@ function closeEditPanel(force = false) {
   if (STATE.editPanel.dirty && !force) {
     if (!confirm('Des modifications non sauvegardées seront perdues. Continuer ?')) return;
   }
-  document.getElementById('edit-panel').classList.remove('open');
+  Fiche.fermer(document.getElementById('edit-panel'));
   document.getElementById('board').classList.remove('panel-open');
   STATE.editPanel.recordId = null; STATE.editPanel.dirty = false; STATE.editPanel.fields = {};
 }
@@ -1093,9 +1219,10 @@ async function saveEditPanel() {
   const updates = {};
   Object.entries(STATE.editPanel.fields).forEach(([key, value]) => {
     const col = STATE.mapping[key]; if (!col) return;
-    if (key === 'date' && value) {
+    if (key === 'date') {
+      // Date effacée (menu « Effacer la date ») : cellule vidée
       const d = new Date(value);
-      updates[col] = isNaN(d) ? value : Math.floor(d.getTime() / 1000);
+      updates[col] = !value ? null : (isNaN(d) ? value : Math.floor(d.getTime() / 1000));
     } else if (REFS[key] && REFS[key].estListe) {
       // ✅ Correctif : une liste de références s'écrit ['L', n1, n2, …] (null si vide)
       updates[col] = value.length ? ['L', ...value] : null;
@@ -1394,50 +1521,6 @@ function optionsProposees(key, idsActuels) {
   return ref.options;
 }
 
-/** Construit la liste de choix (simple ou multiple) d'un champ de référence du panneau d'édition. */
-function construireChampReference(key, valeurRecue) {
-  const ref = REFS[key];
-  const idsActuels = nomsVersIds(key, valeurRecue);
-
-  const sel = document.createElement('select');
-  sel.className = 'edit-control';
-
-  if (ref.estListe) {
-    // Liste de références : sélection multiple (Ctrl + clic)
-    sel.multiple = true;
-    sel.style.backgroundImage = 'none'; // pas de flèche de liste déroulante
-  } else {
-    const vide = document.createElement('option');
-    vide.value = '0'; vide.textContent = '— aucun —';
-    sel.appendChild(vide);
-  }
-
-  const options = optionsProposees(key, idsActuels);
-  options.forEach(o => {
-    const opt = document.createElement('option');
-    opt.value = String(o.id); opt.textContent = o.nom || `(ligne ${o.id})`;
-    opt.selected = idsActuels.includes(o.id);
-    sel.appendChild(opt);
-  });
-  if (ref.estListe) sel.size = Math.min(Math.max(options.length, 2), 6);
-
-  // À chaque changement, on mémorise des NUMÉROS : liste pour RefList, nombre pour Ref (0 = vide)
-  sel.addEventListener('change', () => {
-    const ids = [...sel.selectedOptions].map(o => Number(o.value)).filter(n => n > 0);
-    markDirty(key, ref.estListe ? ids : (ids[0] || 0));
-  });
-
-  if (!ref.estListe) return sel;
-
-  // Pour la sélection multiple, une aide discrète sous la liste
-  const bloc = document.createElement('div');
-  const aide = document.createElement('div');
-  aide.textContent = 'Ctrl + clic pour choisir plusieurs personnes';
-  aide.style.cssText = 'font-size:11px;color:var(--text-muted);margin-top:4px';
-  bloc.appendChild(sel); bloc.appendChild(aide);
-  return bloc;
-}
-
 /* ══════════════════════════════════════════════════════════════
    9. UTILITAIRES
    ══════════════════════════════════════════════════════════════ */
@@ -1560,7 +1643,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape') closeAddCardModal();
   });
 
-  // Panneau édition
+  // Panneau édition = « fiche » : bouton ⤢ / ⇥ pour passer du côté au centre,
+  // clic sur le fond assombri pour fermer (voir _commun/fiche.js).
+  const panneau = document.getElementById('edit-panel');
+  Fiche.installer(panneau, {
+    actions:    panneau.querySelector('.edit-panel-header-actions'),
+    fermer:     () => closeEditPanel(),
+    surBascule: (d) => document.getElementById('board')
+                        .classList.toggle('panel-open', d === 'cote' && panneau.classList.contains('open')),
+  });
   document.getElementById('edit-panel-close')?.addEventListener('click', () => closeEditPanel());
   document.getElementById('edit-save-btn')   ?.addEventListener('click', saveEditPanel);
   document.getElementById('edit-cancel-btn') ?.addEventListener('click', () => closeEditPanel());

@@ -19,6 +19,10 @@ EPIC et par personne, tri par priorité.
 |---|---|
 | `index.html` | Structure HTML et styles ; charge `kanban.js` |
 | `kanban.js` | Logique Grist : réception des données, rendu, glisser-déposer, écriture |
+| [`../_commun/fiche.js`](../_commun/fiche.js), [`fiche.css`](../_commun/fiche.css) | Fiche partagée avec la Galerie : disposition côté / centre, Markdown |
+
+Le Kanban dépend du dossier `_commun/` : il ne fonctionne donc qu'**en mode
+URL** (en copier-coller, il faudrait aussi coller `fiche.js` et `fiche.css`).
 
 ## Déploiement
 
@@ -53,9 +57,9 @@ un autre projet, on ajoute un **autre** widget Kanban avec son propre réglage.
 
 Une fois le projet choisi, le Kanban :
 - n'affiche que les tâches de ce projet (barre du haut : « Projet : … ») ;
-- ne propose que les EPICs de ce projet, dans le panneau ✏️ et à la création
-  d'une carte (l'EPIC actuel d'une carte reste visible s'il appartient à un
-  autre projet) ;
+- ne propose que les EPICs de ce projet, dans la fiche (pour une carte sans
+  EPIC) et à la création d'une carte (l'EPIC actuel d'une carte reste
+  visible s'il appartient à un autre projet) ;
 - attribue ce projet aux nouvelles cartes.
 
 Tant qu'aucun projet n'est choisi, le Kanban affiche toutes les tâches, signale
@@ -63,6 +67,45 @@ Tant qu'aucun projet n'est choisi, le Kanban affiche toutes les tâches, signale
 
 > **À l'installation (ou après la mise à jour du 2026-10-02 pour un Kanban
 > existant) : ouvrir ⚙, choisir le projet, puis « Appliquer ».**
+
+## Carte
+
+Une carte est un **aperçu** : le titre, l'EPIC dessous (petit, en italique),
+puis une ligne de badges : priorité, personne(s), échéance, et le millésime
+s'il est associé dans ⚙. La description se lit dans la fiche. Le titre et les
+badges suivent les mêmes règles visuelles que les cartes de la Galerie.
+
+## Fiche d'une carte
+
+Un **clic sur une carte** ouvre sa fiche (le bouton ✏️ fait de même) ; un
+glissement, lui, déplace la carte sans ouvrir la fiche. Son contenu est dense :
+- le **titre** (sur plusieurs lignes si besoin), et dessous l'**EPIC** en petit
+  et en italique : non modifiable,
+  sauf s'il manque (« 🏷️ + Choisir un EPIC ») ;
+- des **pastilles** Statut, Priorité, 👤 Assigné(s) et 📅 Échéance : un clic
+  ouvre un petit menu pour changer la valeur (cases à cocher pour plusieurs
+  personnes, calendrier et « Effacer » pour la date) ; une valeur absente
+  apparaît en pointillés (« + Priorité »…) ;
+- la **description**, en grand.
+
+Le millésime n'est plus dans la fiche (il reste sur les cartes et dans ⚙) :
+c'est un champ propre à l'Observatoire, appelé à disparaître du widget.
+
+La fiche s'affiche, avec le même contenu :
+- **sur le côté** : panneau étroit, le tableau reste visible ; les pastilles
+  sont sous le titre ;
+- **au centre** : grande fenêtre ; les pastilles sont à droite du titre, côte
+  à côte, la description en grand dessous.
+
+Le bouton ⤢ / ⇥ de l'en-tête passe d'une disposition à l'autre ; le dernier
+choix est mémorisé dans le navigateur (chacun garde le sien). Échap, ✕ ou un
+clic sur le fond assombri ferment la fiche ; une confirmation est demandée si
+des modifications n'ont pas été sauvegardées.
+
+La **description est en Markdown** (`**gras**`, `*italique*`, `# titre`,
+`- liste`, `[lien](url)`…) : affichée mise en forme, modifiable en brut avec
+« ✏️ Modifier ». Le HTML produit
+est nettoyé par DOMPurify avant affichage.
 
 ## Limites connues
 
@@ -95,9 +138,9 @@ Les cellules abîmées par la version d'origine se réparent dans Grist en
 resélectionnant la valeur (ou via le panneau corrigé, si le texte correspond à
 un nom connu).
 
-**Autres défauts relevés à la lecture du code :**
-- `grist.ready()` est appelé deux fois, et un `fetchTable('EPICs')` est placé
-  hors du bloc de gestion d'erreur ;
-- le préréglage cherche une colonne `Millésime`, alors qu'elle s'appelle
-  `Millesime` ;
+**Corrigé le 2026-10-22** (#153, #154, #155) : `grist.ready()` appelé deux
+fois ; un `fetchTable('EPICs')` hors du bloc de gestion d'erreur ; préréglage
+`Millésime` au lieu de `Millesime`.
+
+**Autre défaut relevé à la lecture du code :**
 - si la table est vide, le panneau ⚙ ne propose aucune colonne.
