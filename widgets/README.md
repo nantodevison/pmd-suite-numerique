@@ -26,14 +26,14 @@ https://nantodevison.github.io/pmd-suite-numerique/widgets/<nom-du-dossier>/
 | **Projet(s)** | projets qui l'utilisent | noms de dossiers de [`../projets/`](../projets/), ou `—` |
 | **Données** | générique : colonnes à associer ; spécifique : tables lues ou écrites | texte court |
 | **Accès** | niveau demandé à Grist | `read table` · `full` |
-| **Statut** | où en est-il ? | `en développement` · `en service` · `archivé` |
+| **Statut** | où en est-il ? | `en développement` · `en test` (publié, en cours de prise en main) · `en service` · `archivé` |
 
 ### Widgets
 
 | Widget | Rôle | Portée | Projet(s) | Données | Accès | Statut |
 |---|---|---|---|---|---|---|
-| [kanban](kanban/) | Suivre des tâches en colonnes par statut : glisser-déposer, création, fiche (côté ou centre) avec description en Markdown, filtres EPIC et personne | spécifique | observatoire-trafics | lit et écrit la table de la vue (colonnes associées via ⚙) ; lit `Projets2`, `Contacts`, `EPICs` | `full` | en service |
-| [galerie](galerie/) | Afficher une table en cartes ; fiche (côté ou centre) pour lire et modifier le titre et le texte principal en Markdown | générique | gestion-de-projet | colonnes à associer : Titre, Texte principal (Markdown), Pastilles (plusieurs), Objets liés (plusieurs), Contexte (plusieurs) ; lit la structure du document | `full` | en développement |
+| [kanban](kanban/) | Suivre des tâches en colonnes par statut : glisser-déposer, création, fiche (côté ou centre) avec pastilles modifiables et description en Markdown, filtres EPIC et personne | spécifique | observatoire-trafics | lit et écrit la table de la vue (colonnes associées via ⚙) ; lit `Projets2`, `Contacts`, `EPICs` | `full` | en service |
+| [galerie](galerie/) | Afficher une table en cartes avec pastilles colorées ; fiche (côté ou centre) pour lire et modifier le titre et le texte principal en Markdown ; création de carte avec modèle de texte | générique | gestion-de-projet | colonnes à associer : Titre, Texte principal (Markdown), Pastilles (plusieurs), Objets liés (plusieurs), Contexte (plusieurs) ; lit la structure du document | `full` | en test |
 | [parcours-doc](parcours-doc/) | Parcourir les chapitres d'un document Docs synchronisé | spécifique | gt-cbs-bruit | lit `Chapitres` | `full` | archivé |
 | [questions](questions/) | Poser des questions sur le document et les classer par thème | spécifique | gt-cbs-bruit | lit et écrit `Questions`, `Question_Theme_Link`, `Enum_Themes`, `Widget_Session` ; lit `Users` | `full` | archivé |
 | [echanges](echanges/) | Répondre aux questions, voter, lier les réponses aux chapitres ; notifications email (désactivées) | spécifique | gt-cbs-bruit | lit et écrit `Questions`, `Reponses`, `Votes`, `Reponse_Chapitre_Link`, `Conversations`… ; lit `Chapitres`, `Users` | `full` | archivé |
