@@ -69,5 +69,6 @@ serveur: https://grist.numerique.gouv.fr
 document: env:GRIST_KANBAN_DOC_ID  # identifiant gardé dans le .env (dépôt public)
 table: Taches
 projet: 15                         # Kanban
+qui_par_defaut: 20                 # Martin Schoreisz
 statuts_ouverts: 🖐️ À faire, ♻️ En cours
 statuts_termines: ✅ Fait, ❌ Annulé, 🗃️ Archivé
