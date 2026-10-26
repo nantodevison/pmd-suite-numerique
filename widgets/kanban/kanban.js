@@ -737,6 +737,11 @@ async function openAddCardModal(statut) {
   }
   STATE.addModal.statut = statut;
   document.getElementById('modal-statut-badge').textContent = statut;
+  // ✅ Correctif #182 : le bouton « Créer la carte » est désactivé pendant l'envoi
+  // et ne fait pas partie du formulaire reconstruit ; on le réactive à chaque
+  // ouverture, sinon la création suivante reste bloquée jusqu'au rechargement.
+  const confirmBtn = document.getElementById('modal-confirm');
+  if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Créer la carte'; }
   await assurerReferences(); // ✅ Correctif : correspondances numéro ↔ nom à jour
   buildModalForm(statut);
   document.getElementById('add-card-modal').classList.remove('hidden');
