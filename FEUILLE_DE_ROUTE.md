@@ -8,12 +8,10 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-10-26 01:49_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-10-27 00:38_
 
 ### 🖐️ À faire
 - [ ] #183 Ajouter les ref interne (Haute, EPIC « Améliorer la qualité du code »)
-- [ ] #195 Kanban : filtres combinables (est / n'est pas, plusieurs valeurs) (Haute, EPIC « Supprimer les spécifité OTV »)
-- [ ] #196 Kanban : vues enregistrées (filtres + colonnes, liste et ordre) (Haute, EPIC « Supprimer les spécifité OTV »)
 - [ ] #197 Kanban : supprimer VIEWS, les onglets codés en dur et la colonne « Disponible » spéciale (Haute, EPIC « Supprimer les spécifité OTV »)
 - [ ] #198 Migrer l'Observatoire : recréer Tâches, Standardiser et Linéariser en vues (Haute, EPIC « Supprimer les spécifité OTV »)
 - [ ] #199 Kanban : mettre à jour le README et le catalogue des widgets (Haute, EPIC « Supprimer les spécifité OTV »)
@@ -32,24 +30,30 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 
 ### ♻️ En cours
 - [ ] #146 Supprimer les onglets Standardiser et Linéariser (Haute, EPIC « Supprimer les spécifité OTV »)
-
-### (sans statut)
-- [ ] #194  (EPIC « sans EPIC »)
+- [ ] #196 Kanban : vues enregistrées (filtres + colonnes, liste et ordre) (Haute, EPIC « Supprimer les spécifité OTV »)
 
 <!-- fin kanban -->
 
 ## ⚠️ Urgent
-### 👉 À faire par Martin (noté le 2026-10-26, pour le 2026-10-27)
-- [ ] **Grist, ligne #146** : remplir « Bloquée par » = 195, 196, 197, 198, 199 (Grist remplit « Bloque » tout seul)
-- [ ] **Grist, facultatif** : chaîner les tâches dans « Bloquée par » : #196 ← 195 ; #197 ← 196 ; #198 ← 197 ; #199 ← 197
-- [ ] **Grist, tâche #194** : ligne vide (sans nom, statut ni EPIC), probablement créée par erreur → vérifier et supprimer
-- [ ] **Kanban de l'Observatoire** : Ctrl + F5, puis créer deux cartes de suite pour confirmer en production le correctif #182 (PR #16)
-- [ ] **Rémi** : le prévenir du plan #146 (onglets Standardiser / Linéariser remplacés par des vues enregistrées équivalentes) avant la tâche #197
-- [ ] **GitHub, branche `fix/kanban-barre`** : vérifier si elle est fusionnée ou abandonnée, puis la garder ou la supprimer
+### 👉 À faire en priorité le 2026-10-28 : tester #196 (vues enregistrées)
+Code sur la branche `feat/vues-enregistrees`, non testé. Fichier unique à coller dans l'onglet HTML
+du Custom Widget Builder, sur une copie du document : `kanban-builder-196.html` dans le scratchpad
+de Claude ; s'il a disparu, demander à Claude de le régénérer (assemblage index.html + _commun + kanban.js).
+- [ ] 1. Création : sur « 🔗 Linéariser », « ＋ Vue » nommée « Linéariser 2 » → mêmes cartes et colonnes, filtre « EPIC est Linéariser… » visible
+- [ ] 2. Filtres : ajouter un filtre → • et « Enregistrer la vue » ; enregistrer, changer d'onglet, revenir → filtre présent ; modifier puis changer d'onglet sans enregistrer → modification abandonnée
+- [ ] 3. Menu ⋯ : « Annuler les modifications » et « Renommer »
+- [ ] 4. Colonnes… : cocher une colonne vide, la déplacer avec ↑ ↓, la décocher, puis « Tous les statuts présents »
+- [ ] 5. Glisser-déposer des colonnes dans une vue à liste de colonnes → l'ordre change et reste après rechargement (si oui, #187 réglée)
+- [ ] 6. Persistance : recharger la page Grist → vues et vue active conservées
+- [ ] 7. Suppression en deux clics → retour sur « Tâches »
+- [ ] 8. Non-régression : les trois onglets codés en dur fonctionnent comme avant, sans filtre au départ
+Ensuite : PR vers master (= mise en production), puis #198 (recréer les vues de l'Observatoire), puis #197.
 
 ## En cours
 - [x] Fiche dense du Kanban fusionnée sur master (PR #15, feat/fiche-centrale), 2026-10-24 = mise en production du Kanban, vérifiée dans le document de l'Observatoire
 - [ ] Refaire le modèle ⚙ de la Galerie dans le document réel
+- [x] Filtres combinables du Kanban (#195), PR #17 fusionnée le 2026-10-26, vérifiée sur les données réelles
+- [ ] Vues enregistrées (#196) : codées sur feat/vues-enregistrees, à tester (voir Urgent)
 
 ## Prochaines étapes
 (Les étapes du projet sont désormais suivies dans Grist : voir « Kanban (Grist) » ci-dessus.)
@@ -95,4 +99,10 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - 2026-10-26 — les onglets Standardiser / Linéariser seront remplacés par des vues enregistrées (filtres combinables est / n'est pas + colonnes et leur ordre), stockées dans les options du widget — généricité, et les noms d'EPIC de l'Observatoire quittent le dépôt public
 - 2026-10-26 — filtres proposés d'abord sur les colonnes Choix, Choix multiple, Référence et Liste de références, puis sur toutes les colonnes (#200) — couvrir l'essentiel d'abord
 - 2026-10-26 — dépendances entre tâches dans les colonnes Grist Bloque / Bloquee_par plutôt qu'un préfixe « #146 · » dans le nom — remplies à la main tant que taches.py ne les gère pas
+- 2026-10-26 — branche fix/kanban-barre supprimée — son contenu avait été repris par la PR #14
+- 2026-10-26 — filtres : valeurs vides ou équivalentes (null, "", espaces, liste vide, référence 0) regroupées sous « (vide) », majuscules conservées ; recherche + cases à cocher pour les longues listes — éviter les doublons de sens
+- 2026-10-26 — barre des filtres : seules les étiquettes défilent, « ＋ Filtre » et « Réinitialiser (n) » restent visibles — plus simple qu'un regroupement des filtres
+- 2026-10-27 — ordre 196 → 198 → 197 (dépendance changée dans Grist) : les vues cohabitent avec les onglets codés en dur jusqu'à leur recréation — ne pas perdre Standardiser / Linéariser en production
+- 2026-10-27 — vues : changer de vue abandonne les filtres non enregistrés (• modifiée comme garde-fou) ; colonnes et ordre enregistrés aussitôt ; le glisser-déposer des colonnes modifie la vue active — fonctionnement de Notion
+- 2026-10-27 — vue active et vues lues dans les options à l'ouverture seulement — Grist rappelle onOptions après chaque setOption, parfois dans le désordre
 - 2026-10-26 — test dans le Custom Widget Builder : Claude assemble un fichier unique (index.html + _commun + JS) dans son scratchpad, à coller dans l'onglet HTML — les chemins relatifs ne fonctionnent pas dans le builder
