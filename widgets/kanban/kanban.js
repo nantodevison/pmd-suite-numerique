@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════════════════════════════
    KANBAN GRIST — kanban.js v3
    • 3 vues : Tâches / Standardiser / Linéariser
-   • Filtre EPIC (remplace millésime dans la barre)
+   • Filtres combinables sur les colonnes Choix et Référence (#195)
    • Colonne Dispo uniquement en vue Linéariser
    • Tri des cartes par priorité : haute → moyenne → basse
    • Hauteur cartes fixe (flex-shrink:0)
@@ -32,10 +32,14 @@ const STATE = {
   columnOrder: [],
   activeView: 'taches',
 
-  filters: {
-    epic:    '',
-    assigne: '',
-  },
+  // Filtres combinables (#195) : liste de conditions { col, op, valeurs },
+  // voir la section 3. Non mémorisés : ce sera le rôle des vues (#196).
+  filters: [],
+  // Colonnes proposées dans les filtres : [{ colId, label, type }]
+  colonnesFiltrables: [],
+  // Filtre en cours de modification dans le panneau, et ordre de ses valeurs
+  filtreEdite: null,
+  ordreValeurs: [],
 
   drag: { cardId: null, fromStatut: null, placeholder: null },
   colDrag: { statut: null },
@@ -241,7 +245,7 @@ grist.onOptions((options) => {
   renderBoard();
   // Les noms des projets et des EPICs sont nécessaires pour filtrer les cartes :
   // on les charge, puis on redessine le tableau.
-  assurerReferences().then(renderBoard);
+  assurerReferences().then(chargerColonnesFiltrables).then(renderBoard);
 });
 
 /* ══════════════════════════════════════════════════════════════
@@ -344,57 +348,332 @@ function recordsDuProjet() {
   return STATE.records.filter(estDuProjet);
 }
 
-function updateEpicFilterOptions() {
-  const sel = document.getElementById('filter-epic');
-  if (!sel) return;
-  if (!STATE.mapping.epic) { sel.innerHTML = '<option value="">Tous les EPICs</option>'; sel.disabled = true; return; }
-  sel.disabled = false;
+/* ── Filtres combinables (#195) ─────────────────────────────────
+   Un filtre est une condition { col, op, valeurs } :
+     col     : identifiant Grist de la colonne (ex. 'EPIC', 'qui_')
+     op      : 'est' ou 'nestpas'
+     valeurs : valeurs cochées ; VIDE désigne les cellules vides.
+   Une carte respecte une condition si l'UNE de ses valeurs est cochée
+   (« ou » entre les valeurs) ; elle doit respecter TOUTES les conditions
+   (« et » entre les filtres). Une condition sans valeur cochée est ignorée.
+   Seules les colonnes Choix, Choix multiple, Référence et Liste de
+   références sont proposées (les autres types viendront avec #200). */
 
-  const current = sel.value;
-  const epics = new Set();
-  recordsDuProjet().forEach(r => { // ✅ seulement les EPICs des cartes du projet
-    const v = getField(r, 'epic');
-    if (v && String(v).trim()) epics.add(String(v));
-  });
-  const sorted = [...epics].sort((a, b) => a.localeCompare(b, 'fr'));
+/** Valeur qui représente une cellule vide (jamais produite par une vraie valeur). */
+const VIDE = '';
+const LIBELLE_VIDE = '(vide)';
 
-  sel.innerHTML = '<option value="">Tous les EPICs</option>' +
-    sorted.map(e => `<option value="${escHtml(e)}">${escHtml(e)}</option>`).join('');
-
-  if (sorted.includes(current)) sel.value = current;
-  else if (current) { sel.value = ''; STATE.filters.epic = ''; }
+/** Lit dans les métadonnées Grist les colonnes de la table qui peuvent servir de filtre. */
+async function chargerColonnesFiltrables() {
+  STATE.colonnesFiltrables = [];
+  try {
+    await _tableNamePret;
+    const tables   = await grist.docApi.fetchTable('_grist_Tables');
+    const colonnes = await grist.docApi.fetchTable('_grist_Tables_column');
+    const idxTable = tables.tableId.indexOf(getTableName());
+    if (idxTable === -1) return;
+    const numeroTable = tables.id[idxTable];
+    colonnes.id.forEach((_, i) => {
+      const colId = colonnes.colId[i];
+      const type  = String(colonnes.type[i]);
+      if (colonnes.parentId[i] !== numeroTable) return;
+      if (colId.startsWith('gristHelper_') || colId === 'manualSort') return; // colonnes internes
+      if (!/^(Choice|ChoiceList|Ref:.+|RefList:.+)$/.test(type)) return;
+      const rapporte = libelleRapporte(i, numeroTable, tables, colonnes);
+      STATE.colonnesFiltrables.push({
+        colId, type,
+        label: rapporte ? rapporte.label : (colonnes.label[i] || colId),
+        via:   rapporte ? rapporte.via : null,
+      });
+    });
+    // Un libellé rapporté qui en double un autre (ex. « Projet ») reçoit sa
+    // colonne d'origine entre parenthèses : « Projet (EPIC) »
+    const doublons = STATE.colonnesFiltrables.map(c => c.label)
+      .filter((l, i, tous) => tous.indexOf(l) !== i);
+    STATE.colonnesFiltrables.forEach(c => {
+      if (c.via && doublons.includes(c.label)) c.label += ` (${c.via})`;
+    });
+    STATE.colonnesFiltrables.sort((a, b) => a.label.localeCompare(b.label, 'fr'));
+  } catch (err) {
+    console.error('Kanban – lecture des colonnes filtrables impossible:', err);
+  }
 }
 
-function updatePersonFilterOptions() {
-  const sel = document.getElementById('filter-personne');
-  if (!sel) return;
-  if (!STATE.mapping.assigne) { sel.innerHTML = '<option value="">Toutes</option>'; sel.disabled = true; return; }
-  sel.disabled = false;
+/**
+ * Colonne « rapportée » d'une autre table, c'est-à-dire dont la formule est
+ * exactement « $EPIC.objectif_resultat_cle » : Grist la nomme
+ * « EPIC_objectifs résultats clé », on préfère le libellé de la colonne d'origine.
+ * @param {number} i - position de la colonne dans `colonnes` (_grist_Tables_column)
+ * @returns {{label:string, via:string}|null} libellé d'origine et libellé de la
+ *          colonne de référence (ex. 'EPIC') ; null si ce n'est pas une colonne rapportée.
+ */
+function libelleRapporte(i, numeroTable, tables, colonnes) {
+  const m = /^\$(\w+)\.(\w+)$/.exec(String(colonnes.formula[i] || '').trim());
+  if (!colonnes.isFormula[i] || !m) return null;
+  const [, colRef, colSource] = m;
 
-  const current = sel.value;
-  const names = new Set();
-  recordsDuProjet().forEach(r => { // ✅ seulement les personnes des cartes du projet
-    const v = getField(r, 'assigne');
-    if (v && String(v).trim()) names.add(String(v));
+  // La colonne de référence (EPIC) et la table qu'elle vise (EPICs)
+  const idxRef = colonnes.id.findIndex((_, j) =>
+    colonnes.parentId[j] === numeroTable && colonnes.colId[j] === colRef);
+  if (idxRef === -1) return null;
+  const cible = /^Ref:(.+)$/.exec(String(colonnes.type[idxRef]));
+  const idxTableCible = cible ? tables.tableId.indexOf(cible[1]) : -1;
+  if (idxTableCible === -1) return null;
+
+  // La colonne d'origine dans la table visée, et son libellé
+  const idxSource = colonnes.id.findIndex((_, j) =>
+    colonnes.parentId[j] === tables.id[idxTableCible] && colonnes.colId[j] === colSource);
+  if (idxSource === -1) return null;
+  return {
+    label: colonnes.label[idxSource] || colSource,
+    via:   colonnes.label[idxRef] || colRef,
+  };
+}
+
+function libelleColonne(colId) {
+  const c = STATE.colonnesFiltrables.find(c => c.colId === colId);
+  return c ? c.label : colId;
+}
+
+/**
+ * Valeurs d'une cellule, nettoyées, sous forme de liste ([] = cellule vide).
+ * Rend équivalentes les valeurs dont le sens est le même :
+ *   null, '', '   ', [] et 0 (référence vide) → [] ;
+ *   ' Martin  Schoreisz ' → 'Martin Schoreisz' (espaces en trop retirés).
+ * Les majuscules sont conservées : deux choix « Fait » et « fait » restent distincts.
+ */
+function valeursCellule(valeur) {
+  const brutes = Array.isArray(valeur) ? valeur : [valeur];
+  const propres = brutes
+    .filter(v => v !== null && v !== undefined && v !== 0)
+    .map(v => String(v).replace(/\s+/g, ' ').trim())
+    .filter(v => v !== '');
+  return [...new Set(propres)];
+}
+
+/** Une carte respecte-t-elle un filtre ? */
+function carteRespecte(record, filtre) {
+  if (filtre.valeurs.length === 0) return true; // condition incomplète : ignorée
+  const vals = valeursCellule(record[filtre.col]);
+  const cochee = vals.length === 0
+    ? filtre.valeurs.includes(VIDE)
+    : vals.some(v => filtre.valeurs.includes(v));
+  return filtre.op === 'nestpas' ? !cochee : cochee;
+}
+
+/**
+ * Valeurs proposées pour une colonne : celles présentes dans les cartes du
+ * projet, avec leur nombre de cartes, plus les valeurs déjà cochées (pour
+ * pouvoir les décocher même si plus aucune carte ne les porte).
+ * @returns {Array<{valeur:string, nb:number}>} « (vide) » en tête, puis ordre alphabétique
+ */
+function valeursProposees(colId, dejaCochees) {
+  const comptes = new Map();
+  recordsDuProjet().forEach(r => {
+    const vals = valeursCellule(r[colId]);
+    (vals.length ? vals : [VIDE]).forEach(v => comptes.set(v, (comptes.get(v) || 0) + 1));
   });
-  const sorted = [...names].sort((a, b) => a.localeCompare(b, 'fr'));
+  dejaCochees.forEach(v => { if (!comptes.has(v)) comptes.set(v, 0); });
+  return [...comptes.entries()]
+    .map(([valeur, nb]) => ({ valeur, nb }))
+    .sort((a, b) => a.valeur === VIDE ? -1 : b.valeur === VIDE ? 1 : a.valeur.localeCompare(b.valeur, 'fr'));
+}
 
-  sel.innerHTML = '<option value="">Toutes</option>' +
-    sorted.map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('');
-
-  if (sorted.includes(current)) sel.value = current;
-  else if (current) { sel.value = ''; STATE.filters.assigne = ''; }
+/** Texte comparable pour la recherche : sans accents ni majuscules. */
+function pourRecherche(texte) {
+  return texte.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 }
 
 function resetFilters() {
-  STATE.filters = { epic: '', assigne: '' };
-  const selE = document.getElementById('filter-epic');    if (selE) selE.value = '';
-  const selP = document.getElementById('filter-personne'); if (selP) selP.value = '';
+  fermerFiltre();
+  STATE.filters = [];
   renderBoard();
 }
 
 function isAnyUserFilterActive() {
-  return !!(STATE.filters.epic || STATE.filters.assigne);
+  return STATE.filters.some(f => f.valeurs.length > 0);
+}
+
+/** EPIC à préremplir dans une nouvelle carte : seulement si un filtre dit « EPIC est X » (une seule valeur). */
+function epicDuFiltre() {
+  const f = STATE.filters.find(f =>
+    f.col === STATE.mapping.epic && f.op === 'est' && f.valeurs.length === 1 && f.valeurs[0] !== VIDE);
+  return f ? f.valeurs[0] : '';
+}
+
+/* ── Étiquettes des filtres dans la barre ── */
+
+/** Redessine une étiquette par filtre (« EPIC n'est pas : A, B ✕ »). */
+function renderFilterChips() {
+  const zone = document.getElementById('filtres-actifs');
+  if (!zone) return;
+  zone.innerHTML = '';
+  STATE.filters.forEach(filtre => {
+    const noms = filtre.valeurs.map(v => v === VIDE ? LIBELLE_VIDE : v);
+    const resume = noms.length === 0 ? '…'
+                 : noms.length <= 2  ? noms.join(', ')
+                 : `${noms.length} valeurs`;
+    const chip = document.createElement('button');
+    chip.className = 'filtre-chip' + (filtre === STATE.filtreEdite ? ' actif' : '');
+    chip.title = `${libelleColonne(filtre.col)} ${filtre.op === 'est' ? 'est' : "n'est pas"} : ${noms.join(', ') || '—'}`;
+    chip.textContent = `${libelleColonne(filtre.col)} ${filtre.op === 'est' ? 'est' : "n'est pas"} : ${resume}`;
+    chip.addEventListener('click', () => ouvrirFiltre(filtre, chip));
+
+    const croix = document.createElement('span');
+    croix.className = 'filtre-chip-x';
+    croix.textContent = '✕';
+    croix.title = 'Retirer ce filtre';
+    croix.addEventListener('click', (e) => { e.stopPropagation(); supprimerFiltre(filtre); });
+    chip.appendChild(croix);
+    zone.appendChild(chip);
+  });
+
+  // Nombre de filtres actifs sur le bouton : on sait qu'ils existent même
+  // quand des étiquettes sont hors de vue (zone qui défile)
+  const nbActifs = STATE.filters.filter(f => f.valeurs.length > 0).length;
+  const reset = document.getElementById('filter-reset');
+  if (reset) reset.textContent = nbActifs ? `✕ Réinitialiser (${nbActifs})` : '✕ Réinitialiser';
+
+  const ajouter = document.getElementById('filtre-ajouter');
+  if (ajouter) {
+    ajouter.disabled = STATE.colonnesFiltrables.length === 0;
+    ajouter.title = ajouter.disabled ? 'Aucune colonne Choix ou Référence dans la table' : 'Ajouter un filtre';
+  }
+}
+
+/* ── Panneau de modification d'un filtre ── */
+
+/** Crée un filtre sur la première colonne pas encore filtrée, puis ouvre le panneau. */
+function ajouterFiltre(ancre) {
+  if (STATE.colonnesFiltrables.length === 0) return;
+  fermerFiltre();
+  const dejaFiltrees = STATE.filters.map(f => f.col);
+  const colonne = STATE.colonnesFiltrables.find(c => !dejaFiltrees.includes(c.colId)) || STATE.colonnesFiltrables[0];
+  const filtre = { col: colonne.colId, op: 'est', valeurs: [] };
+  STATE.filters.push(filtre);
+  ouvrirFiltre(filtre, ancre);
+}
+
+function supprimerFiltre(filtre) {
+  if (STATE.filtreEdite === filtre) fermerFiltre();
+  STATE.filters = STATE.filters.filter(f => f !== filtre);
+  renderBoard();
+}
+
+/** Ouvre le panneau sous l'élément `ancre` (bouton « ＋ Filtre » ou étiquette). */
+function ouvrirFiltre(filtre, ancre) {
+  if (STATE.filtreEdite && STATE.filtreEdite !== filtre) fermerFiltre();
+  STATE.filtreEdite = filtre;
+
+  // Liste des colonnes
+  const sel = document.getElementById('filtre-colonne');
+  sel.innerHTML = '';
+  STATE.colonnesFiltrables.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.colId; opt.textContent = c.label;
+    sel.appendChild(opt);
+  });
+  sel.value = filtre.col;
+
+  document.getElementById('filtre-recherche').value = '';
+  calculerOrdreValeurs();
+  remplirPanneauFiltre();
+
+  // Le panneau est placé en position fixe sous l'ancre : la barre des filtres
+  // défile horizontalement et couperait tout ce qui dépasse d'elle.
+  const pop = document.getElementById('filtre-popover');
+  pop.classList.remove('hidden');
+  const r = ancre.getBoundingClientRect();
+  pop.style.top  = `${r.bottom + 6}px`;
+  pop.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - pop.offsetWidth - 8))}px`;
+  document.getElementById('filtre-recherche').focus();
+  renderFilterChips();
+}
+
+/** Ferme le panneau ; un filtre laissé sans valeur cochée est retiré. */
+function fermerFiltre() {
+  const pop = document.getElementById('filtre-popover');
+  if (pop) pop.classList.add('hidden');
+  if (!STATE.filtreEdite) return;
+  STATE.filtreEdite = null;
+  STATE.filters = STATE.filters.filter(f => f.valeurs.length > 0);
+  renderFilterChips();
+}
+
+/**
+ * Fige l'ordre d'affichage des valeurs : les valeurs cochées d'abord, puis
+ * les autres. Calculé à l'ouverture seulement, pour que la liste ne saute
+ * pas sous la souris à chaque case cochée.
+ */
+function calculerOrdreValeurs() {
+  const f = STATE.filtreEdite;
+  const proposees = valeursProposees(f.col, f.valeurs);
+  STATE.ordreValeurs = [
+    ...proposees.filter(p => f.valeurs.includes(p.valeur)),
+    ...proposees.filter(p => !f.valeurs.includes(p.valeur)),
+  ];
+}
+
+/** Valeurs affichées compte tenu du texte de recherche. */
+function valeursVisibles() {
+  const texte = pourRecherche(document.getElementById('filtre-recherche').value.trim());
+  if (!texte) return STATE.ordreValeurs;
+  return STATE.ordreValeurs.filter(p => pourRecherche(p.valeur === VIDE ? LIBELLE_VIDE : p.valeur).includes(texte));
+}
+
+/** (Re)dessine opérateur, cases à cocher et compteur du panneau. */
+function remplirPanneauFiltre() {
+  const f = STATE.filtreEdite;
+  document.querySelectorAll('.filtre-op').forEach(b => b.classList.toggle('actif', b.dataset.op === f.op));
+
+  const liste = document.getElementById('filtre-valeurs');
+  liste.innerHTML = '';
+  const visibles = valeursVisibles();
+  visibles.forEach(({ valeur, nb }) => {
+    const ligne = document.createElement('label');
+    ligne.className = 'filtre-valeur' + (valeur === VIDE ? ' vide' : '');
+    const caseACocher = document.createElement('input');
+    caseACocher.type = 'checkbox';
+    caseACocher.checked = f.valeurs.includes(valeur);
+    caseACocher.addEventListener('change', () => basculerValeur(valeur, caseACocher.checked));
+    const nom = document.createElement('span');
+    nom.className = 'filtre-valeur-nom';
+    nom.textContent = valeur === VIDE ? LIBELLE_VIDE : valeur;
+    const compte = document.createElement('span');
+    compte.className = 'filtre-valeur-nb';
+    compte.textContent = nb;
+    ligne.append(caseACocher, nom, compte);
+    liste.appendChild(ligne);
+  });
+  if (visibles.length === 0) {
+    liste.innerHTML = '<div class="filtre-aucune">Aucune valeur ne correspond.</div>';
+  }
+  majCompteFiltre();
+}
+
+/** Compteur « n cochées sur m » du panneau. */
+function majCompteFiltre() {
+  const n = STATE.filtreEdite.valeurs.length;
+  document.getElementById('filtre-compte').textContent =
+    `${n} cochée${n > 1 ? 's' : ''} sur ${STATE.ordreValeurs.length}`;
+}
+
+function basculerValeur(valeur, cochee) {
+  const f = STATE.filtreEdite;
+  f.valeurs = f.valeurs.filter(v => v !== valeur);
+  if (cochee) f.valeurs.push(valeur);
+  majCompteFiltre();
+  renderBoard();
+}
+
+/** « Tout cocher » / « Aucun » : n'agit que sur les valeurs visibles (après recherche). */
+function cocherVisibles(cochee) {
+  const f = STATE.filtreEdite;
+  const visibles = valeursVisibles().map(p => p.valeur);
+  f.valeurs = f.valeurs.filter(v => !visibles.includes(v));
+  if (cochee) f.valeurs.push(...visibles);
+  remplirPanneauFiltre();
+  renderBoard();
 }
 
 /* Filtre combiné : vue + filtres utilisateur */
@@ -419,19 +698,8 @@ function getFilteredRecords() {
       if (isExcluded) return false;
     }
 
-    // Filtre EPIC manuel
-    if (STATE.filters.epic && STATE.mapping.epic) {
-      const val = getField(r, 'epic');
-      if (!val || String(val) !== STATE.filters.epic) return false;
-    }
-
-    // Filtre personne
-    if (STATE.filters.assigne) {
-      const val = getField(r, 'assigne');
-      if (!val || String(val) !== STATE.filters.assigne) return false;
-    }
-
-    return true;
+    // Filtres choisis par l'utilisateur : tous doivent être respectés
+    return STATE.filters.every(f => carteRespecte(r, f));
   });
 }
 
@@ -441,8 +709,7 @@ function getFilteredRecords() {
 
 function renderBoard() {
   const board = document.getElementById('board');
-  updateEpicFilterOptions();
-  updatePersonFilterOptions();
+  renderFilterChips();
 
   if (!STATE.mapping.titre || !STATE.mapping.statut) {
     board.innerHTML = `<div class="empty-state"><div class="empty-icon">⚙️</div><p>Configuration requise</p><p class="empty-hint">Cliquez sur ⚙ pour associer les colonnes.</p></div>`;
@@ -801,9 +1068,10 @@ function buildModalForm(statut) {
       const labels = ['— aucun —', ...epicOptions.map(e => e.nom)];
       const sel = makeSelect(values, labels, 'modal-epic');
 
-      // Pré-remplir si filtre actif
-      if (STATE.filters.epic) {
-        const matchedOption = epicOptions.find(e => e.nom === STATE.filters.epic || e.id === STATE.filters.epic);
+      // Pré-remplir si un filtre « EPIC est X » est actif
+      const epicFiltre = epicDuFiltre();
+      if (epicFiltre) {
+        const matchedOption = epicOptions.find(e => e.nom === epicFiltre || e.id === epicFiltre);
         if (matchedOption) sel.value = matchedOption.id;
       }
 
@@ -811,7 +1079,7 @@ function buildModalForm(statut) {
     } else {
       // Fallback : champ texte
       const inp = makeInput('text', 'modal-epic', 'EPIC…');
-      if (STATE.filters.epic) inp.value = STATE.filters.epic;
+      inp.value = epicDuFiltre();
       f.appendChild(inp);
     }
     row2.appendChild(f);
@@ -1633,10 +1901,40 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => switchView(btn.dataset.view));
   });
 
-  // Filtres
-  document.getElementById('filter-epic')    ?.addEventListener('change', (e) => { STATE.filters.epic    = e.target.value; renderBoard(); });
-  document.getElementById('filter-personne')?.addEventListener('change', (e) => { STATE.filters.assigne = e.target.value; renderBoard(); });
-  document.getElementById('filter-reset')   ?.addEventListener('click', resetFilters);
+  // Filtres combinables (#195)
+  document.getElementById('filtre-ajouter')  ?.addEventListener('click', (e) => ajouterFiltre(e.currentTarget));
+  document.getElementById('filter-reset')    ?.addEventListener('click', resetFilters);
+  document.getElementById('filtre-colonne')  ?.addEventListener('change', (e) => {
+    // Nouvelle colonne : les valeurs cochées n'ont plus de sens, on repart de zéro
+    STATE.filtreEdite.col = e.target.value;
+    STATE.filtreEdite.valeurs = [];
+    document.getElementById('filtre-recherche').value = '';
+    calculerOrdreValeurs();
+    remplirPanneauFiltre();
+    renderBoard();
+  });
+  document.querySelectorAll('.filtre-op').forEach(b => b.addEventListener('click', () => {
+    STATE.filtreEdite.op = b.dataset.op;
+    remplirPanneauFiltre();
+    renderBoard();
+  }));
+  document.getElementById('filtre-recherche')?.addEventListener('input', remplirPanneauFiltre);
+  // Molette sur les étiquettes : défilement horizontal (sinon il faut Maj + molette)
+  document.getElementById('filtres-actifs')?.addEventListener('wheel', (e) => {
+    const zone = e.currentTarget;
+    if (zone.scrollWidth <= zone.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+    zone.scrollLeft += e.deltaY;
+    e.preventDefault();
+  }, { passive: false });
+  document.getElementById('filtre-tout')     ?.addEventListener('click', () => cocherVisibles(true));
+  document.getElementById('filtre-aucun')    ?.addEventListener('click', () => cocherVisibles(false));
+  document.getElementById('filtre-supprimer')?.addEventListener('click', () => supprimerFiltre(STATE.filtreEdite));
+  // Un clic ailleurs ferme le panneau (sauf sur une étiquette ou « ＋ Filtre », qui en ouvrent un)
+  document.addEventListener('mousedown', (e) => {
+    if (!STATE.filtreEdite) return;
+    if (e.target.closest('#filtre-popover, .filtre-chip, #filtre-ajouter')) return;
+    fermerFiltre();
+  });
 
   // Modal ajout
   document.getElementById('modal-close')  ?.addEventListener('click', closeAddCardModal);
@@ -1662,6 +1960,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('edit-cancel-btn') ?.addEventListener('click', () => closeEditPanel());
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      if (STATE.filtreEdite) { fermerFiltre(); return; }
       const panel = document.getElementById('edit-panel');
       if (panel?.classList.contains('open')) { closeEditPanel(); return; }
       const modal = document.getElementById('add-card-modal');
