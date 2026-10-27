@@ -1,8 +1,8 @@
 # Widget Kanban (`kanban`)
 
 Suivi de tâches en colonnes, une colonne par statut : glisser-déposer des cartes
-et des colonnes, création, modification et suppression de cartes, filtres par
-EPIC et par personne, tri par priorité.
+et des colonnes, création, modification et suppression de cartes, filtres
+combinables, vues enregistrées (filtres + colonnes), tri par priorité.
 
 **Auteur : Rémi** ([@Rmemb](https://github.com/Rmemb)), développé pour le projet
 [Observatoire des trafics](../../projets/observatoire-trafics/).
@@ -10,8 +10,9 @@ EPIC et par personne, tri par priorité.
 > **Version d'origine** reprise depuis le Custom Widget Builder de Grist (commit
 > `4f45af5`), plus un correctif des références (repérable aux commentaires
 > « ✅ Correctif » dans `kanban.js`). Elle reste **spécifique** à l'Observatoire
-> (voir « Limites connues ») ; sa généralisation à d'autres projets (Écoute
-> client, Valorisation) est prévue.
+> (voir « Limites connues »). Sa généralisation est en cours : les onglets
+> propres à l'Observatoire ont été remplacés par des vues enregistrées le
+> 2026-10-27 ; il reste les points de « Limites connues ».
 
 ## Fichiers
 
@@ -42,8 +43,11 @@ l'avertissement et le niveau d'accès (**accès complet** requis).
 
 Le bouton ⚙ ouvre un panneau qui associe les colonnes de la table aux champs du
 Kanban : Titre et Statut (obligatoires), Description, Priorité, Assigné à,
-Date / Échéance, EPIC, Millésime, Projet. Ce réglage, l'ordre des colonnes et
-l'onglet actif sont mémorisés dans les options du widget (`grist.setOption`).
+Date / Échéance, EPIC, Millésime, Projet. Ce réglage, le projet, l'ordre des
+colonnes, les vues et l'onglet actif sont mémorisés dans les options du widget
+(`grist.setOption`), donc dans le document. **Ils ne sont écrits dans le
+document qu'après un clic sur « Enregistrer », en haut à droite de Grist** :
+sinon, ils ne restent visibles que pour vous.
 
 Par défaut, l'association est préremplie pour la table `Taches` de l'espace
 [gestion de projets](../../espaces/gestion-projets/).
@@ -67,6 +71,42 @@ Tant qu'aucun projet n'est choisi, le Kanban affiche toutes les tâches, signale
 
 > **À l'installation (ou après la mise à jour du 2026-10-02 pour un Kanban
 > existant) : ouvrir ⚙, choisir le projet, puis « Appliquer ».**
+
+## Accueil
+
+L'onglet **🏠 Accueil**, en haut à côté de « Kanban », est fixe : on ne peut ni
+le supprimer ni le renommer. Il affiche un court mode d'emploi, un bouton pour
+créer une vue et un lien vers cette page. C'est aussi l'onglet de repli : le
+Kanban s'y ouvre au premier lancement, ou quand la vue mémorisée n'existe plus.
+
+## Vues
+
+Une vue est un onglet de la deuxième ligne. Elle a un nom, des filtres et une
+liste de colonnes (statuts affichés et leur ordre). Les vues sont propres à
+chaque widget Kanban.
+
+- **＋ Vue** crée une vue à partir de l'affichage actuel (filtres et colonnes).
+  Depuis l'Accueil, la vue n'a aucun filtre et affiche tous les statuts présents.
+- **Menu ⋯** de l'onglet actif : enregistrer ou annuler les modifications des
+  filtres, renommer, choisir les colonnes (**Colonnes…**), supprimer (deux clics
+  pour confirmer).
+- **Filtres** : une vue modifiée affiche **•**. **💾 Enregistrer la vue** garde
+  les filtres ; si on change d'onglet sans enregistrer, les modifications sont
+  abandonnées.
+- **Colonnes** : « Colonnes… » permet d'afficher un statut même sans carte, de
+  changer l'ordre (↑ ↓) ou de revenir à « Tous les statuts présents ». Glisser
+  un en-tête de colonne change aussi l'ordre de la vue. Ces changements sont
+  enregistrés aussitôt dans la vue.
+
+## Filtres
+
+**＋ Filtre** ajoute une condition « colonne **est** / **n'est pas** valeurs » sur
+une colonne Choix, Choix multiple, Référence ou Liste de références. Entre les
+valeurs d'un même filtre, c'est un « ou » ; entre filtres, c'est un « et ». Les
+valeurs vides (cellule vide, liste vide…) sont regroupées sous « (vide) ». Le
+panneau propose une recherche (sans accents ni majuscules) et « Tout cocher » /
+« Aucun ». Une nouvelle carte reprend l'EPIC d'un filtre « EPIC est X » à une
+seule valeur.
 
 ## Carte
 
@@ -113,14 +153,23 @@ Relevées à la lecture du code, puis en partie vérifiées lors du test par URL
 du 2026-09-24 (sur une copie du document de gestion de projets).
 
 **Valeurs propres à l'Observatoire, encore codées en dur** (à généraliser) :
-- les personnes assignables sont limitées aux contacts n° 20, 21, 23 et 360 ;
-- les onglets Standardiser et Linéariser reposent sur les noms exacts de deux
-  EPICs, et sur des listes de statuts propres au projet ;
+- les personnes assignables sont limitées aux contacts n° 20, 21, 23 et 360 (#148) ;
 - les tables `Contacts` et `EPICs` sont encore lues par leur nom (pour la liste
-  des contacts autorisés et l'ancienne liste d'EPICs).
+  des contacts autorisés et l'ancienne liste d'EPICs) ;
+- le millésime (badge et colonne `Millesime` proposée par défaut) (#147).
 
 Le projet OTV codé en dur (6ᵉ ligne de `Projets2`) a été remplacé le
-2026-10-02 par le réglage « Projet du Kanban ».
+2026-10-02 par le réglage « Projet du Kanban ». Les onglets Standardiser et
+Linéariser, qui reposaient sur les noms exacts de deux EPICs, ont été remplacés
+le 2026-10-27 par des vues enregistrées dans le document (#196, #197).
+
+**Vues partagées par tout le document** (amélioration prévue : #202) :
+- l'onglet actif est commun à tous : si quelqu'un change d'onglet puis
+  enregistre, chacun arrivera sur cet onglet au prochain chargement. Chaque
+  changement d'onglet rallume aussi « Enregistrer » dans Grist ;
+- les vues sont lues à l'ouverture du widget, puis réécrites en bloc à chaque
+  modification. Si deux personnes modifient les vues en même temps, la dernière
+  enregistrée écrase l'autre.
 
 **Corrigé et validé en test le 2026-09-24 :**
 - les champs de type référence (EPIC, Assigné à) étaient enregistrés comme du
