@@ -8,7 +8,7 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-10-27 00:38_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-10-27 13:40_
 
 ### 🖐️ À faire
 - [ ] #183 Ajouter les ref interne (Haute, EPIC « Améliorer la qualité du code »)
@@ -20,7 +20,6 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [ ] #185 Rendre les pastilles modifiables dans la fiche de la Galerie (Moyenne, EPIC « Améliorer l'interface »)
 - [ ] #184 Ouvrir un objet lié (tâche, EPIC…) d'un clic depuis la fiche de la Galerie (Basse, EPIC « Améliorer l'interface »)
 - [ ] #186 Préremplir une nouvelle carte de la Galerie avec le filtre de la vue (Sélectionner par) (Basse, EPIC « Améliorer l'interface »)
-- [ ] #187 Réparer le glisser-déposer des colonnes (en-têtes) du Kanban (Basse, EPIC « Améliorer la qualité du code »)
 - [ ] #188 Extraire le rendu des cartes et des pastilles dans _commun (carte.js, carte.css), utilisé par la Galerie (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
 - [ ] #189 Ajouter à la Galerie un mode tableau : cartes groupées en colonnes selon une colonne Choix associée (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
 - [ ] #190 Permettre le glisser-déposer des cartes entre colonnes dans le mode tableau (change la valeur de la colonne de regroupement) (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
@@ -30,30 +29,18 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 
 ### ♻️ En cours
 - [ ] #146 Supprimer les onglets Standardiser et Linéariser (Haute, EPIC « Supprimer les spécifité OTV »)
-- [ ] #196 Kanban : vues enregistrées (filtres + colonnes, liste et ordre) (Haute, EPIC « Supprimer les spécifité OTV »)
 
 <!-- fin kanban -->
 
-## ⚠️ Urgent
-### 👉 À faire en priorité le 2026-10-28 : tester #196 (vues enregistrées)
-Code sur la branche `feat/vues-enregistrees`, non testé. Fichier unique à coller dans l'onglet HTML
-du Custom Widget Builder, sur une copie du document : `kanban-builder-196.html` dans le scratchpad
-de Claude ; s'il a disparu, demander à Claude de le régénérer (assemblage index.html + _commun + kanban.js).
-- [ ] 1. Création : sur « 🔗 Linéariser », « ＋ Vue » nommée « Linéariser 2 » → mêmes cartes et colonnes, filtre « EPIC est Linéariser… » visible
-- [ ] 2. Filtres : ajouter un filtre → • et « Enregistrer la vue » ; enregistrer, changer d'onglet, revenir → filtre présent ; modifier puis changer d'onglet sans enregistrer → modification abandonnée
-- [ ] 3. Menu ⋯ : « Annuler les modifications » et « Renommer »
-- [ ] 4. Colonnes… : cocher une colonne vide, la déplacer avec ↑ ↓, la décocher, puis « Tous les statuts présents »
-- [ ] 5. Glisser-déposer des colonnes dans une vue à liste de colonnes → l'ordre change et reste après rechargement (si oui, #187 réglée)
-- [ ] 6. Persistance : recharger la page Grist → vues et vue active conservées
-- [ ] 7. Suppression en deux clics → retour sur « Tâches »
-- [ ] 8. Non-régression : les trois onglets codés en dur fonctionnent comme avant, sans filtre au départ
-Ensuite : PR vers master (= mise en production), puis #198 (recréer les vues de l'Observatoire), puis #197.
+## ⚠️ Prochaine séance
+- [ ] Vérifier dans l'Observatoire (Ctrl + F5) que les vues enregistrées sont en ligne : trois onglets affichés, bouton « ＋ Vue » présent
+- [ ] Puis #198 : recréer Tâches, Standardiser et Linéariser en vues dans l'Observatoire ; ensuite #197 (supprimer les onglets codés en dur)
 
 ## En cours
 - [x] Fiche dense du Kanban fusionnée sur master (PR #15, feat/fiche-centrale), 2026-10-24 = mise en production du Kanban, vérifiée dans le document de l'Observatoire
 - [ ] Refaire le modèle ⚙ de la Galerie dans le document réel
 - [x] Filtres combinables du Kanban (#195), PR #17 fusionnée le 2026-10-26, vérifiée sur les données réelles
-- [ ] Vues enregistrées (#196) : codées sur feat/vues-enregistrees, à tester (voir Urgent)
+- [x] Vues enregistrées (#196) : 8 tests validés dans le builder, PR #18 fusionnée le 2026-10-27 = mise en production ; #187 (glisser-déposer des colonnes) réglée du même coup
 
 ## Prochaines étapes
 (Les étapes du projet sont désormais suivies dans Grist : voir « Kanban (Grist) » ci-dessus.)
@@ -105,4 +92,5 @@ Ensuite : PR vers master (= mise en production), puis #198 (recréer les vues de
 - 2026-10-27 — ordre 196 → 198 → 197 (dépendance changée dans Grist) : les vues cohabitent avec les onglets codés en dur jusqu'à leur recréation — ne pas perdre Standardiser / Linéariser en production
 - 2026-10-27 — vues : changer de vue abandonne les filtres non enregistrés (• modifiée comme garde-fou) ; colonnes et ordre enregistrés aussitôt ; le glisser-déposer des colonnes modifie la vue active — fonctionnement de Notion
 - 2026-10-27 — vue active et vues lues dans les options à l'ouverture seulement — Grist rappelle onOptions après chaque setOption, parfois dans le désordre
+- 2026-10-27 — #187 close sans correctif dédié — le glisser-déposer des en-têtes fonctionne avec les vues enregistrées (test 5 de #196)
 - 2026-10-26 — test dans le Custom Widget Builder : Claude assemble un fichier unique (index.html + _commun + JS) dans son scratchpad, à coller dans l'onglet HTML — les chemins relatifs ne fonctionnent pas dans le builder
