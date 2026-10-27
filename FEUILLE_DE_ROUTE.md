@@ -8,13 +8,14 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-10-27 13:40_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-10-27 16:32_
 
 ### 🖐️ À faire
 - [ ] #183 Ajouter les ref interne (Haute, EPIC « Améliorer la qualité du code »)
 - [ ] #197 Kanban : supprimer VIEWS, les onglets codés en dur et la colonne « Disponible » spéciale (Haute, EPIC « Supprimer les spécifité OTV »)
 - [ ] #198 Migrer l'Observatoire : recréer Tâches, Standardiser et Linéariser en vues (Haute, EPIC « Supprimer les spécifité OTV »)
 - [ ] #199 Kanban : mettre à jour le README et le catalogue des widgets (Haute, EPIC « Supprimer les spécifité OTV »)
+- [ ] #201 Vérifier la sécurité des widgets et du dépôt public (XSS, dépendances CDN, secrets dans l'historique, sync) (Haute, EPIC « Améliorer la qualité du code »)
 - [ ] #147 Chercher les autres spécificités OTV dans le code (Moyenne, EPIC « Supprimer les spécifité OTV »)
 - [ ] #148 Généraliser la liste des contacts assignables du Kanban (Moyenne, EPIC « Supprimer les spécifité OTV »)
 - [ ] #185 Rendre les pastilles modifiables dans la fiche de la Galerie (Moyenne, EPIC « Améliorer l'interface »)
