@@ -200,6 +200,40 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 .filtre-aucune { padding: 8px 4px; font-size: 12px; color: var(--text-muted); font-style: italic; }
 .filtre-pied { border-top: 1px solid var(--border); padding-top: 6px; }
 
+/* ── Vues enregistrées (#196) ── */
+.vues-perso { display: flex; align-items: center; gap: 2px; }
+.view-tab.vue-perso { display: inline-flex; align-items: center; gap: 4px; }
+.vue-modifiee { font-size: 16px; line-height: 1; color: var(--warning); }
+.view-tab.active .vue-modifiee { color: #fde68a; }
+.vue-menu-btn { padding: 0 4px; border-radius: 4px; font-weight: 700; }
+.vue-menu-btn:hover { background: rgba(255,255,255,.25); }
+#vue-ajouter { margin-left: 4px; }
+.vue-enregistrer {
+  flex-shrink: 0; padding: 5px 10px; font-size: 12px; font-family: var(--font);
+  border: 1.5px solid var(--warning); border-radius: 8px; background: #fffbeb;
+  color: #92400e; cursor: pointer; white-space: nowrap;
+}
+.vue-enregistrer:hover { background: #fef3c7; }
+.vue-enregistrer.hidden { display: none; }
+.vue-aide { font-size: 11px; color: var(--text-muted); }
+.vue-valider { padding: 6px 14px; font-size: 12px; align-self: flex-end; }
+.vue-menu { width: 230px; gap: 2px; padding: 6px; }
+.vue-menu-item {
+  text-align: left; padding: 7px 10px; font-size: 12px; font-family: var(--font);
+  border: none; border-radius: 6px; background: none; color: var(--text); cursor: pointer;
+}
+.vue-menu-item:hover:not(:disabled) { background: var(--col-bg); }
+.vue-menu-item:disabled { color: var(--text-muted); opacity: .5; cursor: default; }
+.vue-menu-item.danger { color: var(--danger); }
+.colonnes-toutes { font-weight: 600; }
+.filtre-valeurs.desactivee { opacity: .45; }
+.colonne-fleche {
+  width: 22px; height: 22px; border: 1px solid var(--border); border-radius: 5px;
+  background: var(--surface); color: var(--text-muted); cursor: pointer; font-size: 11px;
+}
+.colonne-fleche:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.colonne-fleche:disabled { opacity: .3; cursor: default; }
+
 /* ── Boutons ── */
 .btn-icon {
   background: none; border: 1.5px solid var(--border); border-radius: 8px;
@@ -636,6 +670,9 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
       <button class="view-tab active" data-view="taches">📋 Tâches</button>
       <button class="view-tab" data-view="standardiser">📊 Standardiser</button>
       <button class="view-tab" data-view="lineariser">🔗 Linéariser</button>
+      <!-- Vues enregistrées (#196) : un onglet par vue, dessiné par renderVueTabs() -->
+      <div id="vues-perso" class="vues-perso"></div>
+      <button id="vue-ajouter" class="filtre-ajouter" title="Créer une vue à partir de l'affichage actuel">＋ Vue</button>
     </div>
 
     <div class="filter-sep"></div>
@@ -643,6 +680,7 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
     <!-- Filtres combinables (#195) : une étiquette par filtre, dessinée par renderFilterChips() -->
     <div id="filtres-actifs" class="filtres-actifs"></div>
     <button id="filtre-ajouter" class="filtre-ajouter">＋ Filtre</button>
+    <button id="vue-enregistrer" class="vue-enregistrer hidden" title="Enregistrer ces filtres dans la vue">💾 Enregistrer la vue</button>
 
     <button id="filter-reset" class="btn-ghost filter-reset">✕ Réinitialiser</button>
   </div>
@@ -666,6 +704,31 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
     <div class="filtre-pied">
       <button id="filtre-supprimer" class="filtre-lien danger">Supprimer le filtre</button>
     </div>
+  </div>
+
+  <!-- Vues enregistrées (#196) : saisie du nom (création ou renommage) -->
+  <div id="vue-nom-popover" class="filtre-popover hidden">
+    <input id="vue-nom" class="filtre-recherche" type="text" placeholder="Nom de la vue" autocomplete="off" />
+    <p id="vue-nom-aide" class="vue-aide">Reprend les filtres et les colonnes affichés.</p>
+    <button id="vue-nom-valider" class="btn-primary vue-valider">Créer la vue</button>
+  </div>
+
+  <!-- Vues enregistrées : menu ⋯ de la vue active -->
+  <div id="vue-menu-popover" class="filtre-popover vue-menu hidden">
+    <button id="vue-menu-enregistrer" class="vue-menu-item">💾 Enregistrer les filtres</button>
+    <button id="vue-menu-annuler" class="vue-menu-item">↩ Annuler les modifications</button>
+    <button id="vue-menu-renommer" class="vue-menu-item">✏️ Renommer</button>
+    <button id="vue-menu-colonnes" class="vue-menu-item">▦ Colonnes…</button>
+    <button id="vue-menu-supprimer" class="vue-menu-item danger">🗑 Supprimer la vue</button>
+  </div>
+
+  <!-- Vues enregistrées : colonnes affichées et leur ordre -->
+  <div id="colonnes-popover" class="filtre-popover hidden">
+    <label class="filtre-valeur colonnes-toutes">
+      <input id="colonnes-toutes" type="checkbox" />
+      <span>Tous les statuts présents</span>
+    </label>
+    <div id="colonnes-liste" class="filtre-valeurs"></div>
   </div>
 
   <!-- Board -->

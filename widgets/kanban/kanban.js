@@ -40,6 +40,13 @@ const STATE = {
   // Filtre en cours de modification dans le panneau, et ordre de ses valeurs
   filtreEdite: null,
   ordreValeurs: [],
+  // Choix déclarés des colonnes Choix / Choix multiple : { colId: [choix…] }
+  choix: {},
+
+  // Vues enregistrées (#196), mémorisées dans les options du widget :
+  // [{ id, nom, filtres: [{col, op, valeurs}], colonnes: [statuts…] | null }]
+  vues: [],
+  optionsChargees: false,
 
   drag: { cardId: null, fromStatut: null, placeholder: null },
   colDrag: { statut: null },
@@ -238,10 +245,21 @@ grist.onOptions((options) => {
   });
   if (options && options.mapping)      { Object.assign(STATE.mapping, options.mapping); syncSelectsToMapping(); }
   if (options && options.columnOrder)  STATE.columnOrder = options.columnOrder;
-  if (options && options.activeView)   STATE.activeView  = options.activeView;
   // ✅ Projet du Kanban mémorisé dans les options du widget
   STATE.projetKanban = (options && options.projetKanban) ? Number(options.projetKanban) : null;
-  syncViewTabs();
+  // Vue active et vues enregistrées (#196) : lues à l'ouverture seulement.
+  // Grist rappelle onOptions après chaque setOption, parfois dans le désordre :
+  // relire ces options ramènerait un état périmé (vue tout juste créée absente,
+  // filtres en cours de modification perdus). Le widget étant seul à les
+  // écrire, sa copie en mémoire fait foi.
+  if (!STATE.optionsChargees) {
+    if (options && options.activeView) STATE.activeView = options.activeView;
+    STATE.vues = (options && Array.isArray(options.vues)) ? options.vues : [];
+    // Vue supprimée entre-temps → retour à « Tâches »
+    if (!VIEWS[STATE.activeView] && !vueEnregistree(STATE.activeView)) STATE.activeView = 'taches';
+    chargerFiltresDeLaVue();
+    STATE.optionsChargees = true;
+  }
   renderBoard();
   // Les noms des projets et des EPICs sont nécessaires pour filtrer les cartes :
   // on les charge, puis on redessine le tableau.
@@ -321,17 +339,317 @@ async function saveConfig() {
    3. VUES & FILTRES
    ══════════════════════════════════════════════════════════════ */
 
-function syncViewTabs() {
-  document.querySelectorAll('.view-tab').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.view === STATE.activeView);
-  });
+/* ── Vues enregistrées (#196) ───────────────────────────────────
+   Une vue enregistrée = un nom, des filtres (même format qu'en #195) et
+   des colonnes : liste ordonnée des statuts affichés (même vides), ou null
+   pour afficher tous les statuts présents. Elles sont gardées dans les
+   options du widget (document Grist), jamais dans le code.
+   Les onglets codés en dur (VIEWS) cohabitent jusqu'à leur suppression (#197).
+   Règles :
+   - changer de vue recharge ses filtres (aucun pour un onglet codé en dur) :
+     des filtres modifiés et non enregistrés sont abandonnés ;
+   - les colonnes et leur ordre sont enregistrés immédiatement ;
+   - les filtres, eux, passent par « Enregistrer » (l'onglet affiche • sinon). */
+
+/** La vue enregistrée d'identifiant `id`, ou undefined. */
+function vueEnregistree(id) {
+  return STATE.vues.find(v => v.id === id);
+}
+
+/** Copie indépendante d'une liste de filtres (pour ne pas modifier la vue par mégarde). */
+function copieFiltres(filtres) {
+  return (filtres || []).map(f => ({ col: f.col, op: f.op, valeurs: [...f.valeurs] }));
+}
+
+/** Filtres de la vue active, ou aucun pour un onglet codé en dur. */
+function chargerFiltresDeLaVue() {
+  const vue = vueEnregistree(STATE.activeView);
+  STATE.filters = vue ? copieFiltres(vue.filtres) : [];
+}
+
+/**
+ * La vue active sous la forme attendue par le rendu (celle de VIEWS) : une vue
+ * enregistrée est traduite, ses colonnes devenant `preferredOrder`.
+ */
+function vueCourante() {
+  const vue = vueEnregistree(STATE.activeView);
+  if (!vue) return VIEWS[STATE.activeView] || VIEWS.taches;
+  return {
+    label: vue.nom,
+    epicFilter: null,
+    epicExclude: [],
+    extraStatuts: [],
+    showDispo: !vue.colonnes || vue.colonnes.includes(DISPO_STATUT),
+    preferredOrder: vue.colonnes || [],
+  };
+}
+
+/** Résumé comparable d'une liste de filtres (ordre des valeurs ignoré). */
+function signatureFiltres(filtres) {
+  return JSON.stringify(filtres
+    .filter(f => f.valeurs.length > 0)
+    .map(f => [f.col, f.op, [...f.valeurs].sort()]));
+}
+
+/** Les filtres affichés diffèrent-ils de ceux enregistrés dans la vue active ? */
+function vueModifiee() {
+  const vue = vueEnregistree(STATE.activeView);
+  return !!vue && signatureFiltres(STATE.filters) !== signatureFiltres(vue.filtres);
+}
+
+/** Mémorise toutes les vues dans les options du widget. */
+function enregistrerVues() {
+  grist.setOption('vues', STATE.vues).catch(() =>
+    showToast('⚠️ Vue non enregistrée : droits de modification du document nécessaires ?', 3500));
 }
 
 function switchView(viewId) {
+  fermerPopovers();
   STATE.activeView = viewId;
-  syncViewTabs();
+  chargerFiltresDeLaVue();
   grist.setOption('activeView', viewId).catch(() => {});
   renderBoard();
+}
+
+/** Onglets : état des onglets codés en dur, puis un onglet par vue enregistrée. */
+function renderVueTabs() {
+  document.querySelectorAll('.view-tab[data-view]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === STATE.activeView);
+  });
+
+  const zone = document.getElementById('vues-perso');
+  if (!zone) return;
+  zone.innerHTML = '';
+  STATE.vues.forEach(vue => {
+    const active = vue.id === STATE.activeView;
+    const onglet = document.createElement('button');
+    onglet.className = 'view-tab vue-perso' + (active ? ' active' : '');
+    onglet.textContent = vue.nom;
+    onglet.addEventListener('click', () => { if (!active) switchView(vue.id); });
+    if (active) {
+      if (vueModifiee()) {
+        const point = document.createElement('span');
+        point.className = 'vue-modifiee';
+        point.textContent = '•';
+        point.title = 'Filtres modifiés, non enregistrés';
+        onglet.appendChild(point);
+      }
+      // Menu ⋯ (seulement sur l'onglet actif : on agit sur la vue affichée)
+      const menu = document.createElement('span');
+      menu.className = 'vue-menu-btn';
+      menu.textContent = '⋯';
+      menu.title = 'Options de la vue';
+      menu.addEventListener('click', (e) => { e.stopPropagation(); ouvrirMenuVue(onglet); });
+      onglet.appendChild(menu);
+    }
+    zone.appendChild(onglet);
+  });
+
+  const enregistrer = document.getElementById('vue-enregistrer');
+  if (enregistrer) enregistrer.classList.toggle('hidden', !vueModifiee());
+}
+
+/* ── Création, renommage, suppression ── */
+
+/**
+ * Nouvelle vue à partir de ce qui est affiché : filtres de l'utilisateur et
+ * colonnes de la vue active. Depuis un onglet codé en dur, son filtre EPIC
+ * est repris sous forme de filtre, pour en faire une copie fidèle (#198).
+ */
+function creerVue(nom) {
+  const source = vueCourante();
+  const filtres = copieFiltres(STATE.filters.filter(f => f.valeurs.length > 0));
+  if (STATE.mapping.epic && source.epicFilter) {
+    filtres.push({ col: STATE.mapping.epic, op: 'est', valeurs: [source.epicFilter] });
+  }
+  if (STATE.mapping.epic && source.epicExclude && source.epicExclude.length) {
+    filtres.push({ col: STATE.mapping.epic, op: 'nestpas', valeurs: [...source.epicExclude] });
+  }
+  const colonnes = source.preferredOrder.length ? [...source.preferredOrder, ...source.extraStatuts
+    .filter(s => !source.preferredOrder.includes(s))] : null;
+  const vue = { id: 'vue-' + Date.now().toString(36), nom, filtres, colonnes };
+  STATE.vues.push(vue);
+  enregistrerVues();
+  switchView(vue.id);
+  showToast(`✓ Vue « ${nom} » créée`);
+}
+
+function renommerVue(nom) {
+  const vue = vueEnregistree(STATE.activeView);
+  if (!vue) return;
+  vue.nom = nom;
+  enregistrerVues();
+  renderVueTabs();
+}
+
+function supprimerVue() {
+  const vue = vueEnregistree(STATE.activeView);
+  if (!vue) return;
+  STATE.vues = STATE.vues.filter(v => v !== vue);
+  enregistrerVues();
+  switchView('taches');
+  showToast(`✓ Vue « ${vue.nom} » supprimée`);
+}
+
+/** Enregistre les filtres affichés dans la vue active. */
+function enregistrerFiltresVue() {
+  const vue = vueEnregistree(STATE.activeView);
+  if (!vue) return;
+  vue.filtres = copieFiltres(STATE.filters.filter(f => f.valeurs.length > 0));
+  enregistrerVues();
+  fermerPopovers();
+  renderBoard();
+  showToast('✓ Filtres enregistrés dans la vue');
+}
+
+/** Revient aux filtres enregistrés de la vue active. */
+function annulerModificationsVue() {
+  fermerPopovers();
+  chargerFiltresDeLaVue();
+  renderBoard();
+}
+
+/* ── Petits panneaux (nom, menu, colonnes) ── */
+
+/** Place un panneau en position fixe sous `ancre`, sans déborder de la fenêtre. */
+function placerSous(pop, ancre) {
+  pop.classList.remove('hidden');
+  const r = ancre.getBoundingClientRect();
+  pop.style.top  = `${r.bottom + 6}px`;
+  pop.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - pop.offsetWidth - 8))}px`;
+}
+
+/** Ferme tous les panneaux ouverts (filtre, nom, menu, colonnes). */
+function fermerPopovers() {
+  fermerFiltre();
+  ['vue-nom-popover', 'vue-menu-popover', 'colonnes-popover'].forEach(id =>
+    document.getElementById(id)?.classList.add('hidden'));
+}
+
+/** Panneau de saisie du nom : mode 'creer' ou 'renommer'. */
+function ouvrirNomVue(mode, ancre) {
+  fermerPopovers();
+  const pop = document.getElementById('vue-nom-popover');
+  const champ = document.getElementById('vue-nom');
+  pop.dataset.mode = mode;
+  champ.value = mode === 'renommer' ? (vueEnregistree(STATE.activeView)?.nom || '') : '';
+  document.getElementById('vue-nom-valider').textContent = mode === 'renommer' ? 'Renommer' : 'Créer la vue';
+  document.getElementById('vue-nom-aide').classList.toggle('hidden', mode === 'renommer');
+  placerSous(pop, ancre);
+  champ.focus();
+  champ.select();
+}
+
+function validerNomVue() {
+  const pop = document.getElementById('vue-nom-popover');
+  const nom = document.getElementById('vue-nom').value.trim();
+  if (!nom) return;
+  pop.classList.add('hidden');
+  if (pop.dataset.mode === 'renommer') renommerVue(nom); else creerVue(nom);
+}
+
+function ouvrirMenuVue(ancre) {
+  fermerPopovers();
+  const modifiee = vueModifiee();
+  document.getElementById('vue-menu-enregistrer').disabled = !modifiee;
+  document.getElementById('vue-menu-annuler').disabled = !modifiee;
+  const suppr = document.getElementById('vue-menu-supprimer');
+  suppr.textContent = '🗑 Supprimer la vue';
+  suppr.dataset.confirmer = '';
+  placerSous(document.getElementById('vue-menu-popover'), ancre);
+}
+
+/* ── Éditeur de colonnes ── */
+
+/**
+ * Statuts proposés dans l'éditeur : choix déclarés de la colonne Statut
+ * (dans l'ordre de Grist), puis statuts présents dans les cartes du projet,
+ * puis ceux déjà retenus par la vue.
+ */
+function statutsConnus(vue) {
+  const liste = [...(STATE.choix[STATE.mapping.statut] || [])];
+  const ajouter = s => { if (s && !liste.includes(s)) liste.push(s); };
+  recordsDuProjet().map(r => getField(r, 'statut')).filter(Boolean).map(String)
+    .sort((a, b) => a.localeCompare(b, 'fr')).forEach(ajouter);
+  (vue.colonnes || []).forEach(ajouter);
+  return liste;
+}
+
+function ouvrirColonnesVue(ancre) {
+  fermerPopovers();
+  remplirColonnesVue();
+  placerSous(document.getElementById('colonnes-popover'), ancre);
+}
+
+/** (Re)dessine l'éditeur : statuts affichés (ordre, ↑ ↓) puis statuts masqués. */
+function remplirColonnesVue() {
+  const vue = vueEnregistree(STATE.activeView);
+  if (!vue) return;
+  const toutes = !vue.colonnes;
+  document.getElementById('colonnes-toutes').checked = toutes;
+
+  const liste = document.getElementById('colonnes-liste');
+  liste.innerHTML = '';
+  liste.classList.toggle('desactivee', toutes);
+  const affichees = vue.colonnes || [];
+  const masquees  = statutsConnus(vue).filter(s => !affichees.includes(s));
+
+  const ligne = (statut, cochee, index) => {
+    const el = document.createElement('div');
+    el.className = 'filtre-valeur colonne-ligne';
+    const caseACocher = document.createElement('input');
+    caseACocher.type = 'checkbox';
+    caseACocher.checked = cochee;
+    caseACocher.disabled = toutes || (cochee && affichees.length === 1); // au moins une colonne
+    caseACocher.addEventListener('change', () => basculerColonne(statut, caseACocher.checked));
+    const nom = document.createElement('span');
+    nom.className = 'filtre-valeur-nom';
+    nom.textContent = statut;
+    el.append(caseACocher, nom);
+    if (cochee && !toutes) {
+      [['↑', -1], ['↓', 1]].forEach(([fleche, sens]) => {
+        const b = document.createElement('button');
+        b.className = 'colonne-fleche';
+        b.textContent = fleche;
+        b.disabled = (sens === -1 && index === 0) || (sens === 1 && index === affichees.length - 1);
+        b.addEventListener('click', () => deplacerColonne(index, sens));
+        el.appendChild(b);
+      });
+    }
+    liste.appendChild(el);
+  };
+  affichees.forEach((s, i) => ligne(s, true, i));
+  masquees.forEach(s => ligne(s, false));
+}
+
+/** Applique et enregistre aussitôt un changement de colonnes. */
+function majColonnesVue(colonnes) {
+  const vue = vueEnregistree(STATE.activeView);
+  vue.colonnes = colonnes;
+  enregistrerVues();
+  remplirColonnesVue();
+  renderBoard();
+}
+
+/**
+ * Case « Tous les statuts présents ». En la décochant, on part des colonnes
+ * affichées à l'écran, dans leur ordre actuel.
+ */
+function basculerToutesColonnes(toutes) {
+  if (toutes) { majColonnesVue(null); return; }
+  const aLEcran = [...document.querySelectorAll('#board .column')].map(c => c.dataset.statut);
+  majColonnesVue(aLEcran.length ? aLEcran : statutsConnus(vueEnregistree(STATE.activeView)));
+}
+
+function basculerColonne(statut, cochee) {
+  const actuelles = vueEnregistree(STATE.activeView).colonnes || [];
+  majColonnesVue(cochee ? [...actuelles, statut] : actuelles.filter(s => s !== statut));
+}
+
+function deplacerColonne(index, sens) {
+  const colonnes = [...vueEnregistree(STATE.activeView).colonnes];
+  [colonnes[index], colonnes[index + sens]] = [colonnes[index + sens], colonnes[index]];
+  majColonnesVue(colonnes);
 }
 
 /* ✅ Projet du Kanban : une carte appartient-elle au projet choisi ?
@@ -366,6 +684,7 @@ const LIBELLE_VIDE = '(vide)';
 /** Lit dans les métadonnées Grist les colonnes de la table qui peuvent servir de filtre. */
 async function chargerColonnesFiltrables() {
   STATE.colonnesFiltrables = [];
+  STATE.choix = {};
   try {
     await _tableNamePret;
     const tables   = await grist.docApi.fetchTable('_grist_Tables');
@@ -379,6 +698,11 @@ async function chargerColonnesFiltrables() {
       if (colonnes.parentId[i] !== numeroTable) return;
       if (colId.startsWith('gristHelper_') || colId === 'manualSort') return; // colonnes internes
       if (!/^(Choice|ChoiceList|Ref:.+|RefList:.+)$/.test(type)) return;
+      // Choix déclarés (pour proposer des colonnes de statut encore vides, #196)
+      if (type === 'Choice' || type === 'ChoiceList') {
+        try { STATE.choix[colId] = JSON.parse(colonnes.widgetOptions[i] || '{}').choices || []; }
+        catch (_) { STATE.choix[colId] = []; }
+      }
       const rapporte = libelleRapporte(i, numeroTable, tables, colonnes);
       STATE.colonnesFiltrables.push({
         colId, type,
@@ -563,6 +887,8 @@ function supprimerFiltre(filtre) {
 /** Ouvre le panneau sous l'élément `ancre` (bouton « ＋ Filtre » ou étiquette). */
 function ouvrirFiltre(filtre, ancre) {
   if (STATE.filtreEdite && STATE.filtreEdite !== filtre) fermerFiltre();
+  ['vue-nom-popover', 'vue-menu-popover', 'colonnes-popover'].forEach(id =>
+    document.getElementById(id)?.classList.add('hidden'));
   STATE.filtreEdite = filtre;
 
   // Liste des colonnes
@@ -581,11 +907,7 @@ function ouvrirFiltre(filtre, ancre) {
 
   // Le panneau est placé en position fixe sous l'ancre : la barre des filtres
   // défile horizontalement et couperait tout ce qui dépasse d'elle.
-  const pop = document.getElementById('filtre-popover');
-  pop.classList.remove('hidden');
-  const r = ancre.getBoundingClientRect();
-  pop.style.top  = `${r.bottom + 6}px`;
-  pop.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - pop.offsetWidth - 8))}px`;
+  placerSous(document.getElementById('filtre-popover'), ancre);
   document.getElementById('filtre-recherche').focus();
   renderFilterChips();
 }
@@ -678,7 +1000,7 @@ function cocherVisibles(cochee) {
 
 /* Filtre combiné : vue + filtres utilisateur */
 function getFilteredRecords() {
-  const view = VIEWS[STATE.activeView] || VIEWS.taches;
+  const view = vueCourante();
 
   return STATE.records.filter(r => {
     // ✅ Projet du Kanban : on ne garde que les cartes du projet choisi
@@ -710,6 +1032,7 @@ function getFilteredRecords() {
 function renderBoard() {
   const board = document.getElementById('board');
   renderFilterChips();
+  renderVueTabs();
 
   if (!STATE.mapping.titre || !STATE.mapping.statut) {
     board.innerHTML = `<div class="empty-state"><div class="empty-icon">⚙️</div><p>Configuration requise</p><p class="empty-hint">Cliquez sur ⚙ pour associer les colonnes.</p></div>`;
@@ -720,7 +1043,7 @@ function renderBoard() {
     return;
   }
 
-  const view = VIEWS[STATE.activeView] || VIEWS.taches;
+  const view = vueCourante();
   const filteredRecords = getFilteredRecords();
   const filterActive = isAnyUserFilterActive() || !!view.epicFilter;
 
@@ -1644,8 +1967,18 @@ function onColumnDrop(e) {
   const to    = order.indexOf(target);
   if (from === -1 || to === -1) return;
   order.splice(from, 1); order.splice(to, 0, source);
-  STATE.columnOrder = order;
-  grist.setOption('columnOrder', STATE.columnOrder).catch(() => {});
+
+  // Vue enregistrée avec une liste de colonnes : c'est son ordre qui change
+  // (#196, #187). Sinon, ordre commun à tout le widget, comme avant.
+  const vue = vueEnregistree(STATE.activeView);
+  if (vue && vue.colonnes) {
+    vue.colonnes = [...order.filter(s => vue.colonnes.includes(s)),
+                    ...vue.colonnes.filter(s => !order.includes(s))];
+    enregistrerVues();
+  } else {
+    STATE.columnOrder = order;
+    grist.setOption('columnOrder', STATE.columnOrder).catch(() => {});
+  }
   renderBoard();
   showToast('✓ Ordre des colonnes mis à jour');
 }
@@ -1897,7 +2230,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('config-panel')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeConfig(); });
 
   // Onglets de vue
-  document.querySelectorAll('.view-tab').forEach(btn => {
+  document.querySelectorAll('.view-tab[data-view]').forEach(btn => { // onglets codés en dur
     btn.addEventListener('click', () => switchView(btn.dataset.view));
   });
 
@@ -1929,11 +2262,30 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('filtre-tout')     ?.addEventListener('click', () => cocherVisibles(true));
   document.getElementById('filtre-aucun')    ?.addEventListener('click', () => cocherVisibles(false));
   document.getElementById('filtre-supprimer')?.addEventListener('click', () => supprimerFiltre(STATE.filtreEdite));
-  // Un clic ailleurs ferme le panneau (sauf sur une étiquette ou « ＋ Filtre », qui en ouvrent un)
+  // Vues enregistrées (#196)
+  document.getElementById('vue-ajouter')     ?.addEventListener('click', (e) => ouvrirNomVue('creer', e.currentTarget));
+  document.getElementById('vue-enregistrer') ?.addEventListener('click', enregistrerFiltresVue);
+  document.getElementById('vue-nom-valider') ?.addEventListener('click', validerNomVue);
+  document.getElementById('vue-nom')         ?.addEventListener('keydown', (e) => { if (e.key === 'Enter') validerNomVue(); });
+  document.getElementById('vue-menu-enregistrer')?.addEventListener('click', enregistrerFiltresVue);
+  document.getElementById('vue-menu-annuler')    ?.addEventListener('click', annulerModificationsVue);
+  document.getElementById('vue-menu-renommer')   ?.addEventListener('click', () =>
+    ouvrirNomVue('renommer', document.querySelector('.vue-perso.active')));
+  document.getElementById('vue-menu-colonnes')   ?.addEventListener('click', () =>
+    ouvrirColonnesVue(document.querySelector('.vue-perso.active')));
+  // Suppression en deux clics : le premier demande confirmation
+  document.getElementById('vue-menu-supprimer')  ?.addEventListener('click', (e) => {
+    const b = e.currentTarget;
+    if (b.dataset.confirmer) { fermerPopovers(); supprimerVue(); return; }
+    b.dataset.confirmer = 'oui';
+    b.textContent = '🗑 Cliquer encore pour confirmer';
+  });
+  document.getElementById('colonnes-toutes')?.addEventListener('change', (e) => basculerToutesColonnes(e.target.checked));
+
+  // Un clic ailleurs ferme les panneaux (sauf sur ce qui en ouvre un)
   document.addEventListener('mousedown', (e) => {
-    if (!STATE.filtreEdite) return;
-    if (e.target.closest('#filtre-popover, .filtre-chip, #filtre-ajouter')) return;
-    fermerFiltre();
+    if (e.target.closest('.filtre-popover, .filtre-chip, #filtre-ajouter, #vue-ajouter, .vue-menu-btn')) return;
+    fermerPopovers();
   });
 
   // Modal ajout
@@ -1960,7 +2312,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('edit-cancel-btn') ?.addEventListener('click', () => closeEditPanel());
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      if (STATE.filtreEdite) { fermerFiltre(); return; }
+      const panneauOuvert = [...document.querySelectorAll('.filtre-popover')].some(p => !p.classList.contains('hidden'));
+      if (panneauOuvert) { fermerPopovers(); return; }
       const panel = document.getElementById('edit-panel');
       if (panel?.classList.contains('open')) { closeEditPanel(); return; }
       const modal = document.getElementById('add-card-modal');
