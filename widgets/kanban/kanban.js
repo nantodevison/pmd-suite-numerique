@@ -24,7 +24,6 @@ const STATE = {
     assigne:     '',
     date:        '',
     epic:        '',
-    millesime:   '',
     projet:      '',
   },
 
@@ -55,14 +54,11 @@ const STATE = {
 
   // ✅ Projet du Kanban : numéro de la ligne du projet choisi dans ⚙
   // (un Kanban = un projet). null tant qu'aucun projet n'est choisi.
-  // Remplace l'ancien projet OTV codé en dur (6ᵉ ligne de Projets2).
   projetKanban: null,
 
-  //cache des tables de référence
+  // Contacts assignables, lus dans la table Contacts (voir #148)
   referenceData: {
     contacts: [],    // Liste des contacts avec id et nom
-    epics: [],       // Liste des EPICs avec id et nom
-    // Ajoutez d'autres tables de référence si nécessaire
     },
 };
 
@@ -75,12 +71,20 @@ const SELECT_IDS = {
   assigne:     'col-assigne',
   date:        'col-date',
   epic:        'col-epic',
-  millesime:   'col-millesime',
   projet:      'col-projet',
 };
 
-const PROP_ICONS  = { statut:'📋', description:'📝', priorite:'🚦', assigne:'👤', date:'📅', epic:'🏷️', millesime:'🗓️' };
-const PROP_LABELS = { statut:'Statut', description:'Description', priorite:'Priorité', assigne:'Assigné à', date:'Échéance', epic:'EPIC', millesime:'Millésime' };
+/* Association proposée par défaut : colonnes de la table Taches de l'espace
+   gestion de projets. Une colonne absente de la table est ignorée (voir
+   oublierColonnesAbsentes). */
+const PREREGLAGE_MAPPING = {
+  titre:'Nom', statut:'statut', description:'Description',
+  priorite:'Priorite', assigne:'qui_', date:'date_cible',
+  epic:'EPIC', projet:'Projet',
+};
+
+const PROP_ICONS  = { statut:'📋', description:'📝', priorite:'🚦', assigne:'👤', date:'📅', epic:'🏷️' };
+const PROP_LABELS = { statut:'Statut', description:'Description', priorite:'Priorité', assigne:'Assigné à', date:'Échéance', epic:'EPIC' };
 
 /* Palette pastel */
 const PASTEL_PALETTE = [
@@ -146,12 +150,10 @@ const _tableNamePret = (async () => {
   }
 })();
 
-// ✨ Récupérer les données de référence après l'initialisation
+// ✨ Récupérer les contacts assignables après l'initialisation. Projets et
+// EPICs, eux, sont lus à partir des colonnes associées (assurerReferences).
 (async () => {
   try {
-    // (Le projet OTV n'est plus lu ici : il est remplacé par le réglage
-    //  « Projet du Kanban » du panneau ⚙, voir STATE.projetKanban.)
-
     const CONTACTS_AUTORISES_IDS = [20, 21 ,23 ,360]; //
 
     //Récupérer la table Contacts
@@ -168,21 +170,6 @@ const _tableNamePret = (async () => {
     `${id} → ${tableContacts.Nom?.[idx] || tableContacts.Name?.[idx]}`
     ));
 
-    // Récupérer la table EPICs (si c'est une table séparée)
-    try {
-      const tableEpics = await grist.docApi.fetchTable('EPICs');
-      STATE.referenceData.epics = tableEpics.id.map((id, idx) => ({
-        id: id,
-        nom: tableEpics.Titre?.[idx] || `EPIC ${id}`
-      }));
-      console.log('✓ EPICs chargés:', STATE.referenceData.epics.length);
-      // Messages de diagnostic, désormais dans le bloc de gestion d'erreur :
-      // sans table EPICs, ils ne provoquent plus d'erreur non rattrapée.
-      console.log('Colonnes disponibles dans EPICs:', Object.keys(tableEpics));
-    } catch (err) {
-      console.log('ℹ️ Pas de table EPICs séparée (champ texte)');
-    }
-
   } catch (err) {
     console.error('⚠️ Erreur récupération données référence:', err);
   }
@@ -194,6 +181,7 @@ grist.onRecords((records, _mappings, tableId) => {
 
   if (records.length > 0 && STATE.columns.length === 0) {
     STATE.columns = Object.keys(records[0]).filter(k => k !== 'id');
+    oublierColonnesAbsentes();
     populateSelects();
     loadSavedMapping();
   }
@@ -214,12 +202,13 @@ grist.onRecord((record) => {
 });
 
 grist.onOptions((options) => {
-  Object.assign(STATE.mapping, {
-    titre:'Nom', statut:'statut', description:'Description',
-    priorite:'Priorite', assigne:'qui_', date:'date_cible',
-    epic:'EPIC', millesime:'Millesime', projet:'Projet',
-  });
-  if (options && options.mapping)      { Object.assign(STATE.mapping, options.mapping); syncSelectsToMapping(); }
+  Object.assign(STATE.mapping, PREREGLAGE_MAPPING);
+  if (options && options.mapping) Object.assign(STATE.mapping, options.mapping);
+  // Le millésime, propre à l'Observatoire, a été retiré (#147) : on oublie
+  // l'association qu'un ancien réglage aurait gardée.
+  delete STATE.mapping.millesime;
+  oublierColonnesAbsentes();
+  syncSelectsToMapping();
   if (options && options.columnOrder)  STATE.columnOrder = options.columnOrder;
   // ✅ Projet du Kanban mémorisé dans les options du widget
   STATE.projetKanban = (options && options.projetKanban) ? Number(options.projetKanban) : null;
@@ -268,6 +257,20 @@ function syncSelectsToMapping() {
 }
 
 function loadSavedMapping() { syncSelectsToMapping(); }
+
+/**
+ * Oublie les colonnes associées qui n'existent pas dans la table : préréglage
+ * pensé pour un autre document, ou colonne renommée depuis. Sans cela, le
+ * widget proposerait ces champs à la création d'une carte et Grist refuserait
+ * l'écriture. Rien n'est fait tant que les colonnes ne sont pas connues
+ * (table vide, ou données pas encore reçues).
+ */
+function oublierColonnesAbsentes() {
+  if (STATE.columns.length === 0) return;
+  Object.keys(STATE.mapping).forEach(key => {
+    if (STATE.mapping[key] && !STATE.columns.includes(STATE.mapping[key])) STATE.mapping[key] = '';
+  });
+}
 function openConfig()  {
   populateSelects(); syncSelectsToMapping();
   remplirChoixProjet(REFS.projet); // ✅ liste « Projet du Kanban »
@@ -1258,11 +1261,6 @@ function buildCard(record, palette) {
   const date = getField(record, 'date');
   if (date) footer.appendChild(buildBadge('📅 ' + formatDate(date), 'badge-date'));
 
-  // Millésime : seulement s'il est associé dans ⚙ (propre à l'Observatoire,
-  // appelé à disparaître avec les onglets Standardiser et Linéariser)
-  const millesime = getField(record, 'millesime');
-  if (millesime) footer.appendChild(buildBadge('🗓️ ' + millesime, 'badge-millesime'));
-
   if (footer.children.length > 0) card.appendChild(footer);
 
   card.addEventListener('dragstart', onDragStart);
@@ -1408,7 +1406,7 @@ function buildModalForm(statut) {
 
   if (row2.children.length) body.appendChild(row2);
 
-  // Ligne 3 : Date + Millésime (inchangé)
+  // Ligne 3 : Date
   const row3 = document.createElement('div'); row3.className = 'modal-row';
   if (STATE.mapping.date) {
     const f = makeModalField('date', 'Échéance', '📅', false);
@@ -1471,7 +1469,6 @@ async function submitAddCardModal() {
   const simpleTextFields = [
     ['description', 'modal-description'],
     ['priorite',    'modal-priorite'],
-    ['millesime',   'modal-millesime'],
   ];
   simpleTextFields.forEach(([key, inputId]) => {
     if (!STATE.mapping[key]) return;
@@ -1567,8 +1564,7 @@ async function openEditPanel(recordId) {
  *     ouvre un petit menu pour la changer ;
  *   - dessous, la description en Markdown.
  * Le contenu et le comportement sont les mêmes dans les deux dispositions ;
- * seule la mise en page change. Le millésime, propre à l'Observatoire,
- * n'apparaît plus dans la fiche (il reste sur les cartes).
+ * seule la mise en page change.
  * Chaque changement est noté (markDirty) et enregistré par « Sauvegarder ».
  */
 function populateEditPanel(record) {
@@ -2124,11 +2120,7 @@ function getReferenceOptions(fieldKey) {
     case 'epic':
       // ✅ Projet du Kanban : si la référence est connue, seuls les EPICs du projet (#144)
       if (REFS.epic) return optionsProposees('epic', []);
-      // Si EPIC est une table de référence
-      if (STATE.referenceData.epics.length > 0) {
-        return STATE.referenceData.epics;
-      }
-      // Sinon, retourner les valeurs uniques existantes (mode texte)
+      // Sinon (colonne texte, ou références pas encore chargées) : valeurs présentes
       return getUniqueFieldValues('epic').map(v => ({ id: v, nom: v }));
     default:
       return [];
