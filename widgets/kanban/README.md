@@ -43,14 +43,16 @@ l'avertissement et le niveau d'accès (**accès complet** requis).
 
 Le bouton ⚙ ouvre un panneau qui associe les colonnes de la table aux champs du
 Kanban : Titre et Statut (obligatoires), Description, Priorité, Assigné à,
-Date / Échéance, EPIC, Millésime, Projet. Ce réglage, le projet, l'ordre des
+Date / Échéance, EPIC, Projet. Ce réglage, le projet, l'ordre des
 colonnes, les vues et l'onglet actif sont mémorisés dans les options du widget
 (`grist.setOption`), donc dans le document. **Ils ne sont écrits dans le
 document qu'après un clic sur « Enregistrer », en haut à droite de Grist** :
 sinon, ils ne restent visibles que pour vous.
 
 Par défaut, l'association est préremplie pour la table `Taches` de l'espace
-[gestion de projets](../../espaces/gestion-projets/).
+[gestion de projets](../../espaces/gestion-projets/). Une colonne associée qui
+n'existe pas dans la table (préréglage d'un autre document, colonne renommée)
+est ignorée : le champ reste vide dans ⚙.
 
 ### Projet du Kanban : un Kanban = un projet
 
@@ -111,8 +113,7 @@ seule valeur.
 ## Carte
 
 Une carte est un **aperçu** : le titre, l'EPIC dessous (petit, en italique),
-puis une ligne de badges : priorité, personne(s), échéance, et le millésime
-s'il est associé dans ⚙. La description se lit dans la fiche. Le titre et les
+puis une ligne de badges : priorité, personne(s), échéance. La description se lit dans la fiche. Le titre et les
 badges suivent les mêmes règles visuelles que les cartes de la Galerie.
 
 ## Fiche d'une carte
@@ -127,9 +128,6 @@ glissement, lui, déplace la carte sans ouvrir la fiche. Son contenu est dense :
   personnes, calendrier et « Effacer » pour la date) ; une valeur absente
   apparaît en pointillés (« + Priorité »…) ;
 - la **description**, en grand.
-
-Le millésime n'est plus dans la fiche (il reste sur les cartes et dans ⚙) :
-c'est un champ propre à l'Observatoire, appelé à disparaître du widget.
 
 La fiche s'affiche, avec le même contenu :
 - **sur le côté** : panneau étroit, le tableau reste visible ; les pastilles
@@ -153,15 +151,15 @@ Relevées à la lecture du code, puis en partie vérifiées lors du test par URL
 du 2026-09-24 (sur une copie du document de gestion de projets).
 
 **Valeurs propres à l'Observatoire, encore codées en dur** (à généraliser) :
-- les personnes assignables sont limitées aux contacts n° 20, 21, 23 et 360 (#148) ;
-- les tables `Contacts` et `EPICs` sont encore lues par leur nom (pour la liste
-  des contacts autorisés et l'ancienne liste d'EPICs) ;
-- le millésime (badge et colonne `Millesime` proposée par défaut) (#147).
+- les personnes assignables sont limitées aux contacts n° 20, 21, 23 et 360,
+  lus dans la table `Contacts` par son nom (#148).
 
 Le projet OTV codé en dur (6ᵉ ligne de `Projets2`) a été remplacé le
 2026-10-02 par le réglage « Projet du Kanban ». Les onglets Standardiser et
 Linéariser, qui reposaient sur les noms exacts de deux EPICs, ont été remplacés
-le 2026-10-27 par des vues enregistrées dans le document (#196, #197).
+le 2026-10-27 par des vues enregistrées dans le document (#196, #197). Le
+millésime et la lecture de la table `EPICs` par son nom ont été retirés le
+2026-10-28 (#147).
 
 **Vues partagées par tout le document** (amélioration prévue : #202) :
 - l'onglet actif est commun à tous : si quelqu'un change d'onglet puis
