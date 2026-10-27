@@ -54,10 +54,12 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
   flex-shrink: 0;
 }
 .toolbar-left { display: flex; align-items: center; gap: 10px; }
+/* Droite : nom du projet, puis ⚙ */
+.toolbar-right { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .toolbar-title { font-weight: 700; font-size: 15px; letter-spacing: -.3px; }
 .toolbar-table-name {
   font-size: 11px; color: var(--text-muted); background: var(--col-bg);
-  border-radius: 5px; padding: 3px 10px; max-width: 420px; /* ✅ place pour « Projet : … · Vue : … » */
+  border-radius: 5px; padding: 3px 10px; max-width: 420px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
@@ -445,6 +447,23 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 .empty-icon { font-size: 44px; line-height: 1; }
 .empty-hint { font-size: 11.5px; opacity: .7; max-width: 300px; }
 
+/* ── Accueil : mode d'emploi (#197) ── */
+.accueil {
+  width: 100%; max-width: 640px; height: 100%; margin: 0 auto; overflow-y: auto;
+  padding: 24px 8px 40px; color: var(--text); font-size: 13px; line-height: 1.5;
+}
+.accueil h2 { font-size: 20px; margin: 0 0 8px; }
+.accueil-intro { color: var(--text-muted); margin: 0 0 16px; }
+.accueil-etapes { margin: 20px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; }
+.accueil-plus { margin-top: 20px; }
+.accueil-plus a { color: var(--accent); }
+/* Sur l'accueil, pas de cartes : les commandes de filtre sont masquées */
+.filterbar.sur-accueil .filter-sep,
+.filterbar.sur-accueil #filtres-actifs,
+.filterbar.sur-accueil #filtre-ajouter,
+.filterbar.sur-accueil #vue-enregistrer,
+.filterbar.sur-accueil #filter-reset { display: none; }
+
 /* ══════════════════════════════════════════════════════════════
    MODAL D'AJOUT DE CARTE
    ══════════════════════════════════════════════════════════════ */
@@ -657,9 +676,12 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
   <header class="toolbar">
     <div class="toolbar-left">
       <span class="toolbar-title">📋 Kanban</span>
-      <span id="toolbar-table-name" class="toolbar-table-name"></span>
+      <!-- Onglet fixe, à part des vues du projet : mode d'emploi, et repli
+           quand aucune vue n'est active (#197) -->
+      <button class="view-tab active" data-view="accueil">🏠 Accueil</button>
     </div>
     <div class="toolbar-right">
+      <span id="toolbar-table-name" class="toolbar-table-name"></span>
       <button id="btn-config" class="btn-icon" title="Configurer">⚙</button>
     </div>
   </header>
@@ -667,9 +689,6 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
   <!-- Filterbar -->
   <div class="filterbar" id="filterbar">
     <div class="view-tabs" id="view-tabs">
-      <button class="view-tab active" data-view="taches">📋 Tâches</button>
-      <button class="view-tab" data-view="standardiser">📊 Standardiser</button>
-      <button class="view-tab" data-view="lineariser">🔗 Linéariser</button>
       <!-- Vues enregistrées (#196) : un onglet par vue, dessiné par renderVueTabs() -->
       <div id="vues-perso" class="vues-perso"></div>
       <button id="vue-ajouter" class="filtre-ajouter" title="Créer une vue à partir de l'affichage actuel">＋ Vue</button>
