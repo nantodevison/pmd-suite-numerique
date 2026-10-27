@@ -1,12 +1,11 @@
 /* ══════════════════════════════════════════════════════════════
-   KANBAN GRIST — kanban.js v3
-   • 3 vues : Tâches / Standardiser / Linéariser
+   KANBAN GRIST — kanban.js v4
+   • Onglet « Accueil » (mode d'emploi), puis les vues enregistrées (#196, #197)
    • Filtres combinables sur les colonnes Choix et Référence (#195)
-   • Colonne Dispo uniquement en vue Linéariser
    • Tri des cartes par priorité : haute → moyenne → basse
    • Hauteur cartes fixe (flex-shrink:0)
    • Curseur horizontal natif
-   • Projet = OTV par défaut (silencieux)
+   • Un Kanban = un projet, choisi dans ⚙
    ══════════════════════════════════════════════════════════════ */
 
 'use strict';
@@ -30,7 +29,7 @@ const STATE = {
   },
 
   columnOrder: [],
-  activeView: 'taches',
+  activeView: 'accueil',
 
   // Filtres combinables (#195) : liste de conditions { col, op, valeurs },
   // voir la section 3. Non mémorisés : ce sera le rôle des vues (#196).
@@ -107,35 +106,12 @@ function getPrioRank(val) {
   return 9;
 }
 
-/* Définition des vues */
-const VIEWS = {
-  taches: {
-    label: 'Tâches',
-    epicFilter: null,
-    epicExclude: ['Standardiser les données gestionnaires', 'Linéariser les départements'],
-    extraStatuts: [],
-    showDispo: false,
-    preferredOrder: ['🖐️ À faire', '♻️ En cours', '✅ Fait'],
-  },
-  standardiser: {
-    label: 'Standardiser',
-    epicFilter: 'Standardiser les données gestionnaires',
-    epicExclude: [],
-    extraStatuts: [],
-    showDispo: false,
-    preferredOrder: ['📧Demande envoyée','💾Data non transmises','💽Data transmises','🔎Data vérifées','✅ Fait'],
-  },
-  lineariser: {
-    label: 'Linéariser',
-    epicFilter: 'Linéariser les départements',
-    epicExclude: [],
-    extraStatuts: ['🆙Disponible'],
-    showDispo: true,
-    preferredOrder: ['🖐️ À faire', '🆙Disponible', '✅ Fait'],
-  },
-};
+/* Onglet fixe « Accueil » : mode d'emploi du widget, sans cartes. C'est aussi
+   l'onglet de repli quand aucune vue enregistrée n'est active (#197). */
+const ACCUEIL = 'accueil';
 
-const DISPO_STATUT = '🆙Disponible';
+/* Adresse du mode d'emploi complet (README du widget sur GitHub) */
+const URL_AIDE = 'https://github.com/nantodevison/pmd-suite-numerique/blob/master/widgets/kanban/README.md';
 
 let _tableName = null;
 
@@ -255,8 +231,9 @@ grist.onOptions((options) => {
   if (!STATE.optionsChargees) {
     if (options && options.activeView) STATE.activeView = options.activeView;
     STATE.vues = (options && Array.isArray(options.vues)) ? options.vues : [];
-    // Vue supprimée entre-temps → retour à « Tâches »
-    if (!VIEWS[STATE.activeView] && !vueEnregistree(STATE.activeView)) STATE.activeView = 'taches';
+    // Vue supprimée entre-temps, ou ancien onglet codé en dur (taches,
+    // standardiser, lineariser, retirés en #197) → retour à l'accueil
+    if (!vueEnregistree(STATE.activeView)) STATE.activeView = ACCUEIL;
     chargerFiltresDeLaVue();
     STATE.optionsChargees = true;
   }
@@ -344,9 +321,9 @@ async function saveConfig() {
    des colonnes : liste ordonnée des statuts affichés (même vides), ou null
    pour afficher tous les statuts présents. Elles sont gardées dans les
    options du widget (document Grist), jamais dans le code.
-   Les onglets codés en dur (VIEWS) cohabitent jusqu'à leur suppression (#197).
+   Seul onglet fixe : « Accueil » (ACCUEIL), qui n'affiche pas de cartes.
    Règles :
-   - changer de vue recharge ses filtres (aucun pour un onglet codé en dur) :
+   - changer de vue recharge ses filtres (aucun pour l'accueil) :
      des filtres modifiés et non enregistrés sont abandonnés ;
    - les colonnes et leur ordre sont enregistrés immédiatement ;
    - les filtres, eux, passent par « Enregistrer » (l'onglet affiche • sinon). */
@@ -361,26 +338,22 @@ function copieFiltres(filtres) {
   return (filtres || []).map(f => ({ col: f.col, op: f.op, valeurs: [...f.valeurs] }));
 }
 
-/** Filtres de la vue active, ou aucun pour un onglet codé en dur. */
+/** Filtres de la vue active, ou aucun pour l'accueil. */
 function chargerFiltresDeLaVue() {
   const vue = vueEnregistree(STATE.activeView);
   STATE.filters = vue ? copieFiltres(vue.filtres) : [];
 }
 
 /**
- * La vue active sous la forme attendue par le rendu (celle de VIEWS) : une vue
- * enregistrée est traduite, ses colonnes devenant `preferredOrder`.
+ * La vue active sous la forme attendue par le rendu : `preferredOrder` est la
+ * liste des colonnes de la vue, ou une liste vide pour « tous les statuts
+ * présents » (vue sans liste de colonnes, et accueil).
  */
 function vueCourante() {
   const vue = vueEnregistree(STATE.activeView);
-  if (!vue) return VIEWS[STATE.activeView] || VIEWS.taches;
   return {
-    label: vue.nom,
-    epicFilter: null,
-    epicExclude: [],
-    extraStatuts: [],
-    showDispo: !vue.colonnes || vue.colonnes.includes(DISPO_STATUT),
-    preferredOrder: vue.colonnes || [],
+    label: vue ? vue.nom : 'Accueil',
+    preferredOrder: (vue && vue.colonnes) || [],
   };
 }
 
@@ -411,7 +384,7 @@ function switchView(viewId) {
   renderBoard();
 }
 
-/** Onglets : état des onglets codés en dur, puis un onglet par vue enregistrée. */
+/** Onglets : état de l'onglet Accueil, puis un onglet par vue enregistrée. */
 function renderVueTabs() {
   document.querySelectorAll('.view-tab[data-view]').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.view === STATE.activeView);
@@ -453,20 +426,13 @@ function renderVueTabs() {
 
 /**
  * Nouvelle vue à partir de ce qui est affiché : filtres de l'utilisateur et
- * colonnes de la vue active. Depuis un onglet codé en dur, son filtre EPIC
- * est repris sous forme de filtre, pour en faire une copie fidèle (#198).
+ * colonnes de la vue active. Depuis l'accueil : aucun filtre, et tous les
+ * statuts présents (colonnes null).
  */
 function creerVue(nom) {
   const source = vueCourante();
   const filtres = copieFiltres(STATE.filters.filter(f => f.valeurs.length > 0));
-  if (STATE.mapping.epic && source.epicFilter) {
-    filtres.push({ col: STATE.mapping.epic, op: 'est', valeurs: [source.epicFilter] });
-  }
-  if (STATE.mapping.epic && source.epicExclude && source.epicExclude.length) {
-    filtres.push({ col: STATE.mapping.epic, op: 'nestpas', valeurs: [...source.epicExclude] });
-  }
-  const colonnes = source.preferredOrder.length ? [...source.preferredOrder, ...source.extraStatuts
-    .filter(s => !source.preferredOrder.includes(s))] : null;
+  const colonnes = source.preferredOrder.length ? [...source.preferredOrder] : null;
   const vue = { id: 'vue-' + Date.now().toString(36), nom, filtres, colonnes };
   STATE.vues.push(vue);
   enregistrerVues();
@@ -487,7 +453,7 @@ function supprimerVue() {
   if (!vue) return;
   STATE.vues = STATE.vues.filter(v => v !== vue);
   enregistrerVues();
-  switchView('taches');
+  switchView(ACCUEIL);
   showToast(`✓ Vue « ${vue.nom} » supprimée`);
 }
 
@@ -998,29 +964,13 @@ function cocherVisibles(cochee) {
   renderBoard();
 }
 
-/* Filtre combiné : vue + filtres utilisateur */
+/* Cartes affichées : celles du projet qui respectent les filtres */
 function getFilteredRecords() {
-  const view = vueCourante();
-
   return STATE.records.filter(r => {
     // ✅ Projet du Kanban : on ne garde que les cartes du projet choisi
     if (!estDuProjet(r)) return false;
 
-    // Filtre EPIC de la vue (automatique, inclusion)
-    if (view.epicFilter && STATE.mapping.epic) {
-      const val = getField(r, 'epic');
-      if (!val || String(val).trim().toLowerCase() !== view.epicFilter.toLowerCase()) return false;
-    }
-
-    // ✨ Filtre EPIC de la vue (automatique, exclusion)
-    if (view.epicExclude && view.epicExclude.length > 0 && STATE.mapping.epic) {
-      const val = getField(r, 'epic');
-      const valNorm = val ? String(val).trim().toLowerCase() : '';
-      const isExcluded = view.epicExclude.some(excluded => valNorm === excluded.toLowerCase());
-      if (isExcluded) return false;
-    }
-
-    // Filtres choisis par l'utilisateur : tous doivent être respectés
+    // Filtres de la vue (ou ajoutés par l'utilisateur) : tous doivent être respectés
     return STATE.filters.every(f => carteRespecte(r, f));
   });
 }
@@ -1033,6 +983,15 @@ function renderBoard() {
   const board = document.getElementById('board');
   renderFilterChips();
   renderVueTabs();
+  majBarreProjet();
+
+  // Accueil : mode d'emploi à la place des cartes, et pas de filtres
+  const accueil = STATE.activeView === ACCUEIL;
+  document.getElementById('filterbar')?.classList.toggle('sur-accueil', accueil);
+  if (accueil) {
+    renderAccueil(board);
+    return;
+  }
 
   if (!STATE.mapping.titre || !STATE.mapping.statut) {
     board.innerHTML = `<div class="empty-state"><div class="empty-icon">⚙️</div><p>Configuration requise</p><p class="empty-hint">Cliquez sur ⚙ pour associer les colonnes.</p></div>`;
@@ -1045,7 +1004,7 @@ function renderBoard() {
 
   const view = vueCourante();
   const filteredRecords = getFilteredRecords();
-  const filterActive = isAnyUserFilterActive() || !!view.epicFilter;
+  const filterActive = isAnyUserFilterActive();
 
   // ✨ Une vue "restreinte" est une vue dont preferredOrder n'est pas vide
   const hasPreferredOrder = view.preferredOrder && view.preferredOrder.length > 0;
@@ -1056,15 +1015,12 @@ function renderBoard() {
     // ✨ Vue restreinte : uniquement les colonnes de preferredOrder
     view.preferredOrder.forEach(s => allStatuts.add(s));
   } else {
-    // Vue libre (ex: Standardiser) : on collecte tous les statuts présents
+    // Vue sans liste de colonnes : on collecte tous les statuts présents
     STATE.records.forEach(r => {
       const s = getField(r, 'statut') ?? 'Sans statut';
       allStatuts.add(String(s));
     });
   }
-
-  // Colonnes extra de la vue (ex: Dispo pour Linéariser)
-  view.extraStatuts.forEach(s => allStatuts.add(s));
 
   // Grouper
   const groups = {};
@@ -1097,17 +1053,11 @@ function renderBoard() {
   statutList.forEach((statut) => {
     const isEmptyCol = (groups[statut] || []).length === 0;
 
-    // Masquer Dispo si pas en vue Linéariser
-    if (statut === DISPO_STATUT && !view.showDispo) return;
-
     // ✨ Colonne "de base" = colonne définie par preferredOrder de la vue active
     const isBaseCol = hasPreferredOrder && view.preferredOrder.includes(statut);
 
-    // Masquer les colonnes vides si filtre actif (sauf colonnes de base et Dispo)
-    if (filterActive && isEmptyCol && !isBaseCol && statut !== DISPO_STATUT) return;
-
-    // Masquer les colonnes vides si vue avec EPIC forcé (réduire le bruit)
-    if (view.epicFilter && isEmptyCol && !isBaseCol && statut !== DISPO_STATUT) return;
+    // Masquer les colonnes vides si filtre actif (sauf colonnes de base, choisies dans la vue)
+    if (filterActive && isEmptyCol && !isBaseCol) return;
 
     const colorIdx = STATE.columnOrder.includes(statut)
       ? STATE.columnOrder.indexOf(statut)
@@ -1122,7 +1072,10 @@ function renderBoard() {
   if (board.children.length === 0) {
     board.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><p>Aucun résultat</p><p class="empty-hint">Aucune carte ne correspond aux filtres actifs.</p></div>`;
   }
+}
 
+/** Barre du haut : nom du projet du Kanban, ou alerte si aucun projet n'est choisi. */
+function majBarreProjet() {
   const tn = document.getElementById('toolbar-table-name');
   // ✅ Barre du haut : projet du Kanban (ou alerte si aucun projet choisi).
   // La vue active n'y figure plus : l'onglet sélectionné l'indique déjà.
@@ -1138,6 +1091,34 @@ function renderBoard() {
     // Pastille grise masquée quand il n'y a rien à afficher
     tn.style.display = tn.textContent ? '' : 'none';
   }
+}
+
+/**
+ * Accueil : court mode d'emploi du widget, à la place des cartes.
+ * Texte fixe (aucune donnée de Grist), d'où l'usage d'innerHTML.
+ */
+function renderAccueil(board) {
+  const premiere = STATE.vues.length === 0;
+  board.innerHTML = `
+    <div class="accueil">
+      <h2>Bienvenue dans le Kanban</h2>
+      <p class="accueil-intro">Les cartes s'affichent dans des <strong>vues</strong> : un onglet = une vue,
+        avec ses filtres et ses colonnes. ${premiere
+          ? 'Ce Kanban n\'a pas encore de vue : créez-en une pour voir les cartes.'
+          : 'Cliquez sur un onglet pour retrouver les cartes.'}</p>
+      <button id="accueil-creer" class="btn-primary">＋ ${premiere ? 'Créer ma première vue' : 'Créer une vue'}</button>
+      <ol class="accueil-etapes">
+        <li><strong>⚙ Configurer</strong> : choisissez le projet du Kanban et associez les colonnes de la table.</li>
+        <li><strong>＋ Vue</strong> : crée une vue à partir de l'affichage actuel. Le menu <strong>⋯</strong> de l'onglet actif permet de la renommer ou de la supprimer.</li>
+        <li><strong>＋ Filtre</strong> : ne garde que certaines cartes (« EPIC est … », « Assigné n'est pas … »). Une vue modifiée affiche <strong>•</strong> : cliquez sur <strong>💾 Enregistrer la vue</strong> pour garder les filtres.</li>
+        <li><strong>⋯ › Colonnes…</strong> : choisit les statuts affichés et leur ordre. On peut aussi glisser les en-têtes de colonnes.</li>
+        <li><strong>Cartes</strong> : glissez une carte dans une autre colonne pour changer son statut ; cliquez dessus pour ouvrir sa fiche.</li>
+        <li><strong>⚠️ Partager ses réglages</strong> : vues, colonnes et onglet actif ne sont enregistrés dans le document qu'après un clic sur <strong>Enregistrer</strong>, en haut à droite de Grist. Sans cela, ils ne restent visibles que pour vous.</li>
+      </ol>
+      <p class="accueil-plus"><a href="${URL_AIDE}" target="_blank" rel="noopener">📖 En savoir plus (mode d'emploi complet)</a></p>
+    </div>`;
+  document.getElementById('accueil-creer')
+    ?.addEventListener('click', (e) => ouvrirNomVue('creer', e.currentTarget));
 }
 
 function getOrderedStatuts(statutList, view) {
