@@ -153,6 +153,17 @@ const _tableNamePret = (async () => {
   }
 })();
 
+// Identifiant du document Grist : sert à distinguer, dans la mémoire du
+// navigateur, les Kanban de documents différents (voir memoireVueActive).
+let _docName = null;
+const _docNamePret = (async () => {
+  try {
+    _docName = await grist.docApi.getDocName();
+  } catch (err) {
+    console.warn('Kanban – identifiant du document introuvable :', err);
+  }
+})();
+
 grist.onRecords((records, _mappings, tableId) => {
   if (tableId) _tableName = tableId;
   STATE.records = records;
@@ -179,7 +190,7 @@ grist.onRecord((record) => {
   });
 });
 
-grist.onOptions((options) => {
+grist.onOptions(async (options) => {
   Object.assign(STATE.mapping, PREREGLAGE_MAPPING);
   if (options && options.mapping) Object.assign(STATE.mapping, options.mapping);
   // Le millésime, propre à l'Observatoire, a été retiré (#147) : on oublie
@@ -198,13 +209,19 @@ grist.onOptions((options) => {
   // filtres en cours de modification perdus). Le widget étant seul à les
   // écrire, sa copie en mémoire fait foi.
   if (!STATE.optionsChargees) {
-    if (options && options.activeView) STATE.activeView = options.activeView;
-    STATE.vues = (options && Array.isArray(options.vues)) ? options.vues : [];
-    // Vue supprimée entre-temps, ou ancien onglet codé en dur (taches,
-    // standardiser, lineariser, retirés en #197) → retour à l'accueil
-    if (!vueEnregistree(STATE.activeView)) STATE.activeView = ACCUEIL;
-    chargerFiltresDeLaVue();
+    // Marqué tout de suite : onOptions peut être rappelé pendant l'attente ci-dessous
     STATE.optionsChargees = true;
+    STATE.vues = (options && Array.isArray(options.vues)) ? options.vues : [];
+    // Onglet d'ouverture (#202) : celui mémorisé par ce navigateur, sinon
+    // l'ancien réglage commun du document (options.activeView, qui n'est plus
+    // écrit), sinon l'accueil. Une vue supprimée entre-temps, ou un ancien
+    // onglet codé en dur (taches, standardiser, lineariser, retirés en #197),
+    // est ignorée. La clé de mémoire dépend du document et de la table : on
+    // attend de les connaître.
+    await Promise.all([_docNamePret, _tableNamePret]);
+    const candidats = [lireVueMemorisee(), options && options.activeView];
+    STATE.activeView = candidats.find(id => vueEnregistree(id)) || ACCUEIL;
+    chargerFiltresDeLaVue();
   }
   renderBoard();
   // Les noms des projets et des EPICs sont nécessaires pour filtrer les cartes :
@@ -446,8 +463,40 @@ function switchView(viewId) {
   fermerPopovers();
   STATE.activeView = viewId;
   chargerFiltresDeLaVue();
-  grist.setOption('activeView', viewId).catch(() => {});
+  memoriserVueActive(viewId);
   renderBoard();
+}
+
+/* ── Onglet actif mémorisé par le navigateur (#202) ─────────────
+   Chacun retrouve l'onglet qu'il regardait en dernier, sans toucher au
+   document : rien n'est écrit dans les options du widget, donc le bouton
+   « Enregistrer » de Grist ne se rallume plus à chaque changement d'onglet.
+   La mémoire (localStorage) est propre au navigateur et au poste. Tous les
+   widgets publiés sur nantodevison.github.io la partagent : la clé contient
+   donc le document, la table et le projet du Kanban.
+   localStorage peut être refusé (navigation privée, Custom Widget Builder…) :
+   chaque accès est protégé, et le widget retombe alors sur l'accueil. */
+
+/** Clé de mémoire de ce Kanban, ou null si le document est inconnu. */
+function memoireVueActive() {
+  if (!_docName) return null;
+  return `kanban.vueActive.${_docName}.${getTableName()}.${STATE.projetKanban || 'sans-projet'}`;
+}
+
+/** Identifiant de l'onglet mémorisé par ce navigateur, ou null. */
+function lireVueMemorisee() {
+  const cle = memoireVueActive();
+  if (!cle) return null;
+  try { return localStorage.getItem(cle); }
+  catch (err) { return null; }
+}
+
+/** Mémorise l'onglet actif dans ce navigateur (sans effet si refusé). */
+function memoriserVueActive(viewId) {
+  const cle = memoireVueActive();
+  if (!cle) return;
+  try { localStorage.setItem(cle, viewId); }
+  catch (err) { /* mémoire indisponible : l'onglet ne sera pas retenu */ }
 }
 
 /** Onglets : état de l'onglet Accueil, puis un onglet par vue enregistrée. */
@@ -1179,7 +1228,7 @@ function renderAccueil(board) {
         <li><strong>＋ Filtre</strong> : ne garde que certaines cartes (« EPIC est … », « Assigné n'est pas … »). Une vue modifiée affiche <strong>•</strong> : cliquez sur <strong>💾 Enregistrer la vue</strong> pour garder les filtres.</li>
         <li><strong>⋯ › Colonnes…</strong> : choisit les statuts affichés et leur ordre. On peut aussi glisser les en-têtes de colonnes.</li>
         <li><strong>Cartes</strong> : glissez une carte dans une autre colonne pour changer son statut ; cliquez dessus pour ouvrir sa fiche.</li>
-        <li><strong>⚠️ Partager ses réglages</strong> : vues, colonnes et onglet actif ne sont enregistrés dans le document qu'après un clic sur <strong>Enregistrer</strong>, en haut à droite de Grist. Sans cela, ils ne restent visibles que pour vous.</li>
+        <li><strong>⚠️ Deux « Enregistrer »</strong> : <strong>💾 Enregistrer la vue</strong> garde les filtres dans la vue ; puis le bouton <strong>Enregistrer</strong> de Grist, en haut à droite, inscrit vues et réglages dans le document, pour tous. Sans ce dernier clic, ils sont perdus au rechargement de la page. Les cartes, elles, sont enregistrées aussitôt, et votre navigateur retient l'onglet actif.</li>
       </ol>
       <p class="accueil-plus"><a href="${URL_AIDE}" target="_blank" rel="noopener">📖 En savoir plus (mode d'emploi complet)</a></p>
     </div>`;
