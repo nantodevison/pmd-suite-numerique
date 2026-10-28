@@ -236,6 +236,20 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 .colonne-fleche:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 .colonne-fleche:disabled { opacity: .3; cursor: default; }
 
+/* ── « Qui suis-je ? » (#202) ── */
+.btn-moi {
+  flex-shrink: 0; max-width: 200px; padding: 4px 10px;
+  font-size: 12px; font-family: var(--font); color: var(--text);
+  border: 1.5px solid var(--border); border-radius: 999px; background: none; cursor: pointer;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.btn-moi:hover { background: var(--col-bg); }
+.btn-moi.hidden { display: none; }
+/* Filtre « Moi » actif sans personne déclarée */
+.btn-moi.a-declarer { border-color: var(--danger); color: var(--danger); }
+.filtre-valeur.moi .filtre-valeur-nom { font-weight: 600; }
+.filtre-lien:disabled { opacity: .4; cursor: default; text-decoration: none; }
+
 /* ── Boutons ── */
 .btn-icon {
   background: none; border: 1.5px solid var(--border); border-radius: 8px;
@@ -695,6 +709,8 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
       <button class="view-tab active" data-view="accueil">🏠 Accueil</button>
     </div>
     <div class="toolbar-right">
+      <!-- « Qui suis-je ? » (#202) : nom de la personne, retenu par le navigateur -->
+      <button id="btn-moi" class="btn-moi hidden">👤 Qui suis-je ?</button>
       <span id="toolbar-table-name" class="toolbar-table-name"></span>
       <button id="btn-config" class="btn-icon" title="Configurer">⚙</button>
     </div>
@@ -762,6 +778,16 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
       <span>Tous les statuts présents</span>
     </label>
     <div id="colonnes-liste" class="filtre-valeurs"></div>
+  </div>
+
+  <!-- « Qui suis-je ? » (#202) : choix de son nom parmi les personnes de « Assigné à » -->
+  <div id="moi-popover" class="filtre-popover hidden">
+    <p class="vue-aide">Votre nom, retenu par ce navigateur seulement. Il sert au filtre « Assigné à est 👤 Moi ».</p>
+    <input id="moi-recherche" class="filtre-recherche" type="search" placeholder="Rechercher…" autocomplete="off" />
+    <div id="moi-liste" class="filtre-valeurs"></div>
+    <div class="filtre-pied">
+      <button id="moi-oublier" class="filtre-lien">Oublier mon nom</button>
+    </div>
   </div>
 
   <!-- Board -->
