@@ -63,6 +63,10 @@ const STATE = {
   // Rubrique « Équipe projet » de ⚙ en cours de modification :
   // référence affichée, numéros cochés, ordre des lignes (figé à l'ouverture)
   equipePanneau: { ref: null, cochees: new Set(), ordre: [] },
+
+  // « Qui suis-je ? » (#202) : numéro de la ligne de la personne déclarée dans
+  // la table visée par « Assigné à », retenu par le navigateur ; null sinon.
+  moi: null,
 };
 
 /* ── Constantes ─────────────────────────────────────────────── */
@@ -226,7 +230,8 @@ grist.onOptions(async (options) => {
   renderBoard();
   // Les noms des projets et des EPICs sont nécessaires pour filtrer les cartes :
   // on les charge, puis on redessine le tableau.
-  assurerReferences().then(chargerColonnesFiltrables).then(renderBoard);
+  // L'identité (« Qui suis-je ? ») se relit ensuite : elle dépend de la table des personnes.
+  assurerReferences().then(chargerColonnesFiltrables).then(chargerMoi).then(renderBoard);
 });
 
 /* ══════════════════════════════════════════════════════════════
@@ -314,6 +319,7 @@ async function saveConfig() {
   grist.setOption('equipe', STATE.equipe).catch(() => {});
   closeConfig();
   await assurerReferences(); // l'association des colonnes a pu changer
+  await chargerMoi();        // … et avec elle la table des personnes
   renderBoard();
   showToast('✓ Configuration sauvegardée');
 }
@@ -499,6 +505,114 @@ function memoriserVueActive(viewId) {
   catch (err) { /* mémoire indisponible : l'onglet ne sera pas retenu */ }
 }
 
+/* ── « Qui suis-je ? » (#202, étape 1) ──────────────────────────
+   Chacun se déclare une fois parmi les personnes de « Assigné à » (l'équipe
+   projet, ou toute la table). Son navigateur retient le numéro de la ligne,
+   sous une clé propre au document et à la table des personnes : la même
+   déclaration sert donc à tous les Kanban du document qui visent cette table.
+   Elle donne son sens au filtre « 👤 Moi » (voir MOI) : une vue partagée
+   « Assigné à est Moi » montre à chacun ses propres cartes.
+   Rien n'est écrit dans le document. */
+
+/** Clé de mémoire de l'identité, ou null si le document ou la table des personnes est inconnu. */
+function memoireMoi() {
+  if (!_docName || !REFS.assigne) return null;
+  return `kanban.moi.${_docName}.${REFS.assigne.tableVisee}`;
+}
+
+/**
+ * Relit l'identité retenue par le navigateur. Elle est oubliée si la personne
+ * n'existe plus dans la table. Si la mémoire est indisponible, on garde le
+ * choix fait pendant la séance.
+ */
+async function chargerMoi() {
+  await _docNamePret;
+  const cle = memoireMoi();
+  if (!cle) { STATE.moi = null; return; }
+  let id;
+  try { id = Number(localStorage.getItem(cle)); }
+  catch (err) { return; }
+  STATE.moi = REFS.assigne.options.some(o => o.id === id) ? id : null;
+}
+
+/** Retient l'identité (numéro de ligne, ou null pour l'oublier), puis redessine. */
+function choisirMoi(id) {
+  STATE.moi = id;
+  const cle = memoireMoi();
+  try {
+    if (!cle)    throw new Error('document inconnu');
+    if (id)      localStorage.setItem(cle, String(id));
+    else         localStorage.removeItem(cle);
+  } catch (err) {
+    showToast('⚠️ Ce navigateur ne peut pas retenir votre nom : il sera oublié au rechargement.', 3500);
+  }
+  fermerPopovers();
+  renderBoard();
+  showToast(id ? `✓ Vous êtes ${nomAffiche('assigne', id)}` : '✓ Nom oublié');
+}
+
+/** Nom de la personne déclarée, nettoyé comme les valeurs des cellules ('' si personne). */
+function nomMoi() {
+  return STATE.moi ? (valeursCellule(nomAffiche('assigne', STATE.moi))[0] || '') : '';
+}
+
+/** Un filtre affiché utilise-t-il la valeur « 👤 Moi » ? */
+function filtreMoiActif() {
+  return STATE.filters.some(f => f.valeurs.includes(MOI));
+}
+
+/** Bouton 👤 de la barre du haut : nom déclaré, ou invitation à se déclarer. */
+function majBoutonMoi() {
+  const btn = document.getElementById('btn-moi');
+  if (!btn) return;
+  // Sans colonne Référence pour « Assigné à », il n'y a personne à choisir
+  btn.classList.toggle('hidden', !REFS.assigne);
+  const nom = STATE.moi ? nomAffiche('assigne', STATE.moi) : '';
+  btn.textContent = nom ? `👤 ${nom}` : '👤 Qui suis-je ?';
+  btn.title = nom
+    ? 'Votre nom, retenu par ce navigateur. Cliquer pour changer.'
+    : 'Indiquez qui vous êtes pour utiliser le filtre « 👤 Moi »';
+  // Un filtre « Moi » est actif mais personne n'est déclaré : on attire l'œil
+  btn.classList.toggle('a-declarer', !STATE.moi && filtreMoiActif());
+}
+
+/** Ouvre le panneau « Qui suis-je ? » sous le bouton 👤. */
+function ouvrirMoi(ancre) {
+  fermerPopovers();
+  document.getElementById('moi-recherche').value = '';
+  remplirMoi();
+  placerSous(document.getElementById('moi-popover'), ancre);
+  document.getElementById('moi-recherche').focus();
+}
+
+/** Liste des personnes (équipe projet, ou toute la table), par nom, selon la recherche. */
+function remplirMoi() {
+  const liste = document.getElementById('moi-liste');
+  const texte = pourRecherche(document.getElementById('moi-recherche').value.trim());
+  const personnes = optionsProposees('assigne', STATE.moi ? [STATE.moi] : [])
+    .filter(o => !texte || pourRecherche(o.nom || '').includes(texte))
+    .sort((a, b) => (a.nom || '').localeCompare(b.nom || '', 'fr'));
+  liste.innerHTML = '';
+  personnes.forEach(o => {
+    const ligne = document.createElement('label');
+    ligne.className = 'filtre-valeur';
+    const choix = document.createElement('input');
+    choix.type = 'radio';
+    choix.name = 'moi';
+    choix.checked = o.id === STATE.moi;
+    choix.addEventListener('change', () => choisirMoi(o.id));
+    const nom = document.createElement('span');
+    nom.className = 'filtre-valeur-nom';
+    nom.textContent = o.nom || `(ligne ${o.id})`;
+    ligne.append(choix, nom);
+    liste.appendChild(ligne);
+  });
+  if (personnes.length === 0) {
+    liste.innerHTML = '<div class="filtre-aucune">Aucune personne ne correspond.</div>';
+  }
+  document.getElementById('moi-oublier').disabled = !STATE.moi;
+}
+
 /** Onglets : état de l'onglet Accueil, puis un onglet par vue enregistrée. */
 function renderVueTabs() {
   document.querySelectorAll('.view-tab[data-view]').forEach(btn => {
@@ -603,7 +717,7 @@ function placerSous(pop, ancre) {
 /** Ferme tous les panneaux ouverts (filtre, nom, menu, colonnes). */
 function fermerPopovers() {
   fermerFiltre();
-  ['vue-nom-popover', 'vue-menu-popover', 'colonnes-popover'].forEach(id =>
+  ['vue-nom-popover', 'vue-menu-popover', 'colonnes-popover', 'moi-popover'].forEach(id =>
     document.getElementById(id)?.classList.add('hidden'));
 }
 
@@ -762,6 +876,24 @@ function recordsDuProjet() {
 const VIDE = '';
 const LIBELLE_VIDE = '(vide)';
 
+/** Valeur « 👤 Moi » du filtre « Assigné à » (#202) : remplacée, au moment de
+    filtrer, par le nom de la personne déclarée (« Qui suis-je ? »). Elle
+    commence par un caractère invisible, qu'aucune vraie valeur ne contient. */
+const MOI = '\u0000moi';
+const LIBELLE_MOI = '👤 Moi';
+
+/**
+ * Texte affiché pour une valeur de filtre. `detaille` ajoute, pour « Moi »,
+ * le nom de la personne déclarée (dans le panneau du filtre).
+ */
+function libelleValeur(valeur, detaille = false) {
+  if (valeur === VIDE) return LIBELLE_VIDE;
+  if (valeur !== MOI) return valeur;
+  if (!detaille) return LIBELLE_MOI;
+  const nom = nomMoi();
+  return nom ? `${LIBELLE_MOI} (${nom})` : `${LIBELLE_MOI} (à déclarer avec 👤)`;
+}
+
 /** Lit dans les métadonnées Grist les colonnes de la table qui peuvent servir de filtre. */
 async function chargerColonnesFiltrables() {
   STATE.colonnesFiltrables = [];
@@ -797,6 +929,15 @@ async function chargerColonnesFiltrables() {
       .filter((l, i, tous) => tous.indexOf(l) !== i);
     STATE.colonnesFiltrables.forEach(c => {
       if (c.via && doublons.includes(c.label)) c.label += ` (${c.via})`;
+    });
+    // Colonne associée dans ⚙ à un champ du Kanban qui porte un autre nom :
+    // on rappelle ce champ, « qui ? (Assigné à) », pour faire le lien avec ⚙
+    // et le mode d'emploi (#202)
+    STATE.colonnesFiltrables.forEach(c => {
+      const champ = Object.keys(PROP_LABELS).find(k => STATE.mapping[k] === c.colId);
+      if (champ && pourRecherche(c.label) !== pourRecherche(PROP_LABELS[champ])) {
+        c.label += ` (${PROP_LABELS[champ]})`;
+      }
     });
     STATE.colonnesFiltrables.sort((a, b) => a.label.localeCompare(b.label, 'fr'));
   } catch (err) {
@@ -859,10 +1000,15 @@ function valeursCellule(valeur) {
 /** Une carte respecte-t-elle un filtre ? */
 function carteRespecte(record, filtre) {
   if (filtre.valeurs.length === 0) return true; // condition incomplète : ignorée
+  // « Moi » devient le nom de la personne déclarée ; si personne n'est
+  // déclaré, il ne correspond à aucune carte
+  const valeurs = filtre.valeurs.includes(MOI)
+    ? filtre.valeurs.filter(v => v !== MOI).concat(nomMoi() || [])
+    : filtre.valeurs;
   const vals = valeursCellule(record[filtre.col]);
   const cochee = vals.length === 0
-    ? filtre.valeurs.includes(VIDE)
-    : vals.some(v => filtre.valeurs.includes(v));
+    ? valeurs.includes(VIDE)
+    : vals.some(v => valeurs.includes(v));
   return filtre.op === 'nestpas' ? !cochee : cochee;
 }
 
@@ -878,10 +1024,17 @@ function valeursProposees(colId, dejaCochees) {
     const vals = valeursCellule(r[colId]);
     (vals.length ? vals : [VIDE]).forEach(v => comptes.set(v, (comptes.get(v) || 0) + 1));
   });
-  dejaCochees.forEach(v => { if (!comptes.has(v)) comptes.set(v, 0); });
-  return [...comptes.entries()]
+  dejaCochees.forEach(v => { if (v !== MOI && !comptes.has(v)) comptes.set(v, 0); });
+  const proposees = [...comptes.entries()]
     .map(([valeur, nb]) => ({ valeur, nb }))
     .sort((a, b) => a.valeur === VIDE ? -1 : b.valeur === VIDE ? 1 : a.valeur.localeCompare(b.valeur, 'fr'));
+  // « 👤 Moi » tout en tête pour la colonne « Assigné à » (#202), avec le
+  // nombre de cartes de la personne déclarée
+  if ((colId === STATE.mapping.assigne && REFS.assigne) || dejaCochees.includes(MOI)) {
+    const nom = nomMoi();
+    proposees.unshift({ valeur: MOI, nb: nom ? (comptes.get(nom) || 0) : 0 });
+  }
+  return proposees;
 }
 
 /** Texte comparable pour la recherche : sans accents ni majuscules. */
@@ -906,6 +1059,18 @@ function epicDuFiltre() {
   return f ? f.valeurs[0] : '';
 }
 
+/**
+ * Personne à préremplir dans « Assigné à » d'une nouvelle carte (#202) : la
+ * personne déclarée, si un filtre dit « Assigné à est … 👤 Moi ». Sans cela,
+ * une carte créée depuis « Mes tâches » disparaîtrait aussitôt de la vue.
+ * @returns {number|null} numéro de ligne de la personne, ou null
+ */
+function moiDuFiltre() {
+  const f = STATE.filters.find(f =>
+    f.col === STATE.mapping.assigne && f.op === 'est' && f.valeurs.includes(MOI));
+  return f ? STATE.moi : null;
+}
+
 /* ── Étiquettes des filtres dans la barre ── */
 
 /** Redessine une étiquette par filtre (« EPIC n'est pas : A, B ✕ »). */
@@ -914,7 +1079,7 @@ function renderFilterChips() {
   if (!zone) return;
   zone.innerHTML = '';
   STATE.filters.forEach(filtre => {
-    const noms = filtre.valeurs.map(v => v === VIDE ? LIBELLE_VIDE : v);
+    const noms = filtre.valeurs.map(v => libelleValeur(v));
     const resume = noms.length === 0 ? '…'
                  : noms.length <= 2  ? noms.join(', ')
                  : `${noms.length} valeurs`;
@@ -968,7 +1133,7 @@ function supprimerFiltre(filtre) {
 /** Ouvre le panneau sous l'élément `ancre` (bouton « ＋ Filtre » ou étiquette). */
 function ouvrirFiltre(filtre, ancre) {
   if (STATE.filtreEdite && STATE.filtreEdite !== filtre) fermerFiltre();
-  ['vue-nom-popover', 'vue-menu-popover', 'colonnes-popover'].forEach(id =>
+  ['vue-nom-popover', 'vue-menu-popover', 'colonnes-popover', 'moi-popover'].forEach(id =>
     document.getElementById(id)?.classList.add('hidden'));
   STATE.filtreEdite = filtre;
 
@@ -1021,7 +1186,7 @@ function calculerOrdreValeurs() {
 function valeursVisibles() {
   const texte = pourRecherche(document.getElementById('filtre-recherche').value.trim());
   if (!texte) return STATE.ordreValeurs;
-  return STATE.ordreValeurs.filter(p => pourRecherche(p.valeur === VIDE ? LIBELLE_VIDE : p.valeur).includes(texte));
+  return STATE.ordreValeurs.filter(p => pourRecherche(libelleValeur(p.valeur, true)).includes(texte));
 }
 
 /** (Re)dessine opérateur, cases à cocher et compteur du panneau. */
@@ -1034,14 +1199,14 @@ function remplirPanneauFiltre() {
   const visibles = valeursVisibles();
   visibles.forEach(({ valeur, nb }) => {
     const ligne = document.createElement('label');
-    ligne.className = 'filtre-valeur' + (valeur === VIDE ? ' vide' : '');
+    ligne.className = 'filtre-valeur' + (valeur === VIDE ? ' vide' : valeur === MOI ? ' moi' : '');
     const caseACocher = document.createElement('input');
     caseACocher.type = 'checkbox';
     caseACocher.checked = f.valeurs.includes(valeur);
     caseACocher.addEventListener('change', () => basculerValeur(valeur, caseACocher.checked));
     const nom = document.createElement('span');
     nom.className = 'filtre-valeur-nom';
-    nom.textContent = valeur === VIDE ? LIBELLE_VIDE : valeur;
+    nom.textContent = libelleValeur(valeur, true);
     const compte = document.createElement('span');
     compte.className = 'filtre-valeur-nb';
     compte.textContent = nb;
@@ -1099,6 +1264,7 @@ function renderBoard() {
   renderFilterChips();
   renderVueTabs();
   majBarreProjet();
+  majBoutonMoi();
 
   // Accueil : mode d'emploi à la place des cartes, et pas de filtres
   const accueil = STATE.activeView === ACCUEIL;
@@ -1185,7 +1351,10 @@ function renderBoard() {
   });
 
   if (board.children.length === 0) {
-    board.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><p>Aucun résultat</p><p class="empty-hint">Aucune carte ne correspond aux filtres actifs.</p></div>`;
+    const aide = (filtreMoiActif() && !STATE.moi)
+      ? 'Le filtre « 👤 Moi » ne retient aucune carte tant que vous n\'avez pas indiqué qui vous êtes : cliquez sur « 👤 Qui suis-je ? », en haut à droite.'
+      : 'Aucune carte ne correspond aux filtres actifs.';
+    board.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><p>Aucun résultat</p><p class="empty-hint">${aide}</p></div>`;
   }
 }
 
@@ -1223,12 +1392,13 @@ function renderAccueil(board) {
           : 'Cliquez sur un onglet pour retrouver les cartes.'}</p>
       <button id="accueil-creer" class="btn-primary">＋ ${premiere ? 'Créer ma première vue' : 'Créer une vue'}</button>
       <ol class="accueil-etapes">
-        <li><strong>⚙ Configurer</strong> : choisissez le projet du Kanban, associez les colonnes de la table et cochez l'équipe projet (personnes proposées dans « Assigné à »).</li>
-        <li><strong>＋ Vue</strong> : crée une vue à partir de l'affichage actuel. Le menu <strong>⋯</strong> de l'onglet actif permet de la renommer ou de la supprimer.</li>
+        <li><strong>⚙ Configurer</strong> : choisissez le projet du Kanban, associez les colonnes de la table et cochez l'équipe projet (personnes proposées dans « Assigné à »). Puis cliquez sur <strong>Enregistrer</strong>, en haut à droite de Grist.</li>
+        <li><strong>＋ Vue</strong> : crée une vue à partir de l'affichage actuel. Le menu <strong>⋯</strong> de l'onglet actif permet de la renommer ou de la supprimer. Puis cliquez sur <strong>Enregistrer</strong> de Grist pour la garder.</li>
+        <li><strong>👤 Qui suis-je ?</strong> (en haut à droite) : indiquez votre nom, une fois (rien à enregistrer). Le filtre sur la colonne « Assigné à » propose alors <strong>👤 Moi</strong>, qui montre vos propres cartes ; dans une vue partagée, il montre à chacun les siennes.</li>
         <li><strong>＋ Filtre</strong> : ne garde que certaines cartes (« EPIC est … », « Assigné n'est pas … »). Une vue modifiée affiche <strong>•</strong> : cliquez sur <strong>💾 Enregistrer la vue</strong> pour garder les filtres.</li>
         <li><strong>⋯ › Colonnes…</strong> : choisit les statuts affichés et leur ordre. On peut aussi glisser les en-têtes de colonnes.</li>
         <li><strong>Cartes</strong> : glissez une carte dans une autre colonne pour changer son statut ; cliquez dessus pour ouvrir sa fiche.</li>
-        <li><strong>⚠️ Deux « Enregistrer »</strong> : <strong>💾 Enregistrer la vue</strong> garde les filtres dans la vue ; puis le bouton <strong>Enregistrer</strong> de Grist, en haut à droite, inscrit vues et réglages dans le document, pour tous. Sans ce dernier clic, ils sont perdus au rechargement de la page. Les cartes, elles, sont enregistrées aussitôt, et votre navigateur retient l'onglet actif.</li>
+        <li><strong>⚠️ Deux « Enregistrer »</strong> : <strong>💾 Enregistrer la vue</strong> garde les filtres dans la vue ; puis le bouton <strong>Enregistrer</strong> de Grist, en haut à droite, inscrit vues et réglages dans le document, pour tous. Sans ce dernier clic, ils sont perdus au rechargement de la page. Les cartes, elles, sont enregistrées aussitôt, et votre navigateur retient l'onglet actif et votre nom.</li>
       </ol>
       <p class="accueil-plus"><a href="${URL_AIDE}" target="_blank" rel="noopener">📖 En savoir plus (mode d'emploi complet)</a></p>
     </div>`;
@@ -1508,7 +1678,11 @@ function buildModalForm(statut) {
       const values = ['', ...contactOptions.map(c => c.id)];
       // ✅ Correctif : libellé tel que Grist l'affiche (ex. « Prénom Nom »), à défaut Contacts.Nom
       const labels = ['— aucun —', ...contactOptions.map(c => nomAffiche('assigne', c.id) || c.nom)];
-      f.appendChild(makeSelect(values, labels, 'modal-assigne'));
+      const sel = makeSelect(values, labels, 'modal-assigne');
+      // Pré-remplir avec la personne déclarée si un filtre « Assigné à est 👤 Moi » est actif
+      const moi = moiDuFiltre();
+      if (moi && contactOptions.some(c => c.id === moi)) sel.value = moi;
+      f.appendChild(sel);
     } else {
       // Fallback : champ texte
       f.appendChild(makeInput('text', 'modal-assigne', 'Nom…'));
@@ -2383,9 +2557,14 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('colonnes-toutes')?.addEventListener('change', (e) => basculerToutesColonnes(e.target.checked));
 
+  // « Qui suis-je ? » (#202)
+  document.getElementById('btn-moi')     ?.addEventListener('click', (e) => ouvrirMoi(e.currentTarget));
+  document.getElementById('moi-recherche')?.addEventListener('input', remplirMoi);
+  document.getElementById('moi-oublier') ?.addEventListener('click', () => choisirMoi(null));
+
   // Un clic ailleurs ferme les panneaux (sauf sur ce qui en ouvre un)
   document.addEventListener('mousedown', (e) => {
-    if (e.target.closest('.filtre-popover, .filtre-chip, #filtre-ajouter, #vue-ajouter, .vue-menu-btn')) return;
+    if (e.target.closest('.filtre-popover, .filtre-chip, #filtre-ajouter, #vue-ajouter, .vue-menu-btn, #btn-moi')) return;
     fermerPopovers();
   });
 

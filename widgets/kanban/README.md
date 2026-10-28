@@ -102,7 +102,7 @@ apparaissent en tête de liste à l'ouverture de ⚙.
 | Les **réglages** de ⚙ : colonnes associées, projet, équipe | le document (options du widget), pour tous | « Appliquer », puis **Enregistrer** de Grist |
 | Les **vues** : création, nom, colonnes et leur ordre, suppression | le document, pour tous | aussitôt dans le widget, puis **Enregistrer** de Grist |
 | Les **filtres** d'une vue | le document, pour tous | **💾 Enregistrer la vue**, puis **Enregistrer** de Grist |
-| L'**onglet actif** et la disposition de la fiche (côté / centre) | votre navigateur, pour vous seul | automatiquement |
+| L'**onglet actif**, **votre nom** (👤) et la disposition de la fiche (côté / centre) | votre navigateur, pour vous seul | automatiquement |
 
 **Le bouton « Enregistrer » de Grist**, en haut à droite, apparaît dès qu'un
 réglage ou une vue change. Tant qu'on n'a pas cliqué dessus, le changement
@@ -155,6 +155,31 @@ panneau propose une recherche (sans accents ni majuscules) et « Tout cocher » 
 « Aucun ». Une nouvelle carte reprend l'EPIC d'un filtre « EPIC est X » à une
 seule valeur.
 
+## Qui suis-je ? et le filtre « Moi »
+
+Le bouton **👤 Qui suis-je ?**, en haut à droite, permet d'indiquer son nom une
+fois pour toutes. On le choisit dans l'équipe projet (ou dans toute la table
+visée par « Assigné à », si aucune équipe n'est cochée). Ensuite, le bouton
+affiche ce nom : un clic permet d'en changer ou de l'oublier.
+
+Le filtre « Assigné à » propose alors, en tête de liste, la valeur
+**👤 Moi**, remplacée au moment de filtrer par le nom déclaré. Enregistrée dans
+une vue partagée (par exemple « Mes tâches en cours : Assigné à est 👤 Moi »),
+elle montre **à chacun ses propres cartes**. Une carte créée pendant qu'un
+filtre « Assigné à est 👤 Moi » est actif est préremplie à votre nom (elle
+reste ainsi visible dans la vue).
+
+- Le nom est retenu par **votre navigateur** (`localStorage`), pas par le
+  document : rien à enregistrer dans Grist, et chacun a le sien. Il vaut pour
+  tous les Kanban du document qui visent la même table de personnes.
+- Sur un autre poste, un autre navigateur ou en navigation privée, il faut se
+  déclarer à nouveau.
+- Tant que personne n'est déclaré, « est 👤 Moi » ne retient aucune carte (un
+  message l'explique, et le bouton 👤 passe en rouge) ; « n'est pas 👤 Moi »
+  les retient toutes.
+- Le bouton 👤 n'apparaît que si « Assigné à » est associé à une colonne
+  Référence ou Liste de références.
+
 ## Carte
 
 Une carte est un **aperçu** : le titre, l'EPIC dessous (petit, en italique),
@@ -205,9 +230,9 @@ lus dans la table `Contacts` par son nom, remplacés par l'équipe projet (#148)
 Seul reste le préréglage des colonnes, pensé pour la table `Taches` de l'espace
 gestion de projets (ignoré pour les colonnes absentes).
 
-**Vues partagées par tout le document** (amélioration prévue : #202, vues par
-utilisateur ; l'onglet actif est propre à chaque navigateur depuis le
-2026-10-28) :
+**Vues partagées par tout le document** (amélioration en cours : #202, vues
+par utilisateur ; l'onglet actif et le nom déclaré (👤) sont propres à chaque
+navigateur depuis le 2026-10-28) :
 - les vues sont lues à l'ouverture du widget, puis réécrites en bloc à chaque
   modification. Si deux personnes modifient les vues en même temps, la dernière
   enregistrée écrase l'autre.
