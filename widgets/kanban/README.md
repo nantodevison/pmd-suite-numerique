@@ -42,11 +42,9 @@ l'avertissement et le niveau d'accès (**accès complet** requis).
 
 Le bouton ⚙ ouvre un panneau qui associe les colonnes de la table aux champs du
 Kanban : Titre et Statut (obligatoires), Description, Priorité, Assigné à,
-Date / Échéance, EPIC, Projet. Ce réglage, le projet, l'équipe projet, l'ordre
-des colonnes, les vues et l'onglet actif sont mémorisés dans les options du widget
-(`grist.setOption`), donc dans le document. **Ils ne sont écrits dans le
-document qu'après un clic sur « Enregistrer », en haut à droite de Grist** :
-sinon, ils ne restent visibles que pour vous.
+Date / Échéance, EPIC, Projet. Ce réglage, comme le projet et l'équipe projet,
+est gardé dans le document : voir [« Ce qui est enregistré, et
+quand »](#ce-qui-est-enregistré-et-quand).
 
 Par défaut, l'association est préremplie pour la table `Taches` de l'espace
 [gestion de projets](../../espaces/gestion-projets/). Une colonne associée qui
@@ -71,7 +69,8 @@ Tant qu'aucun projet n'est choisi, le Kanban affiche toutes les tâches, signale
 « ⚠️ Choisissez le projet du Kanban dans ⚙ » et **bloque la création de cartes**.
 
 > **À l'installation (ou après la mise à jour du 2026-10-02 pour un Kanban
-> existant) : ouvrir ⚙, choisir le projet, puis « Appliquer ».**
+> existant) : ouvrir ⚙, choisir le projet, « Appliquer », puis « Enregistrer »
+> dans Grist.**
 
 ### Équipe projet
 
@@ -95,12 +94,35 @@ apparaissent en tête de liste à l'ouverture de ⚙.
 > existant) : ouvrir ⚙, cocher l'équipe, « Appliquer », puis « Enregistrer »
 > dans Grist.**
 
+## Ce qui est enregistré, et quand
+
+| Quoi | Où | Comment c'est gardé |
+|---|---|---|
+| Les **cartes** : création, déplacement, champs, suppression | la table Grist | aussitôt, comme toute saisie dans Grist |
+| Les **réglages** de ⚙ : colonnes associées, projet, équipe | le document (options du widget), pour tous | « Appliquer », puis **Enregistrer** de Grist |
+| Les **vues** : création, nom, colonnes et leur ordre, suppression | le document, pour tous | aussitôt dans le widget, puis **Enregistrer** de Grist |
+| Les **filtres** d'une vue | le document, pour tous | **💾 Enregistrer la vue**, puis **Enregistrer** de Grist |
+| L'**onglet actif** et la disposition de la fiche (côté / centre) | votre navigateur, pour vous seul | automatiquement |
+
+**Le bouton « Enregistrer » de Grist**, en haut à droite, apparaît dès qu'un
+réglage ou une vue change. Tant qu'on n'a pas cliqué dessus, le changement
+n'existe que dans votre page : il est **perdu au rechargement** ou à la
+fermeture de l'onglet. Enregistrer demande des droits de modification sur le
+document. Changer d'onglet ne fait plus apparaître ce bouton (#202).
+
+**Onglet actif.** Votre navigateur le retient (`localStorage`), séparément pour
+chaque document, table et projet : chacun retrouve le dernier onglet qu'il a
+regardé. Sur un autre poste, un autre navigateur ou en navigation privée, le
+Kanban s'ouvre sur l'Accueil, ou sur l'onglet enregistré dans le document par
+une version du widget antérieure au 2026-10-28.
+
 ## Accueil
 
 L'onglet **🏠 Accueil**, en haut à côté de « Kanban », est fixe : on ne peut ni
 le supprimer ni le renommer. Il affiche un court mode d'emploi, un bouton pour
 créer une vue et un lien vers cette page. C'est aussi l'onglet de repli : le
-Kanban s'y ouvre au premier lancement, ou quand la vue mémorisée n'existe plus.
+Kanban s'y ouvre au premier lancement, ou quand la vue retenue par votre
+navigateur n'existe plus.
 
 ## Vues
 
@@ -114,12 +136,14 @@ chaque widget Kanban.
   filtres, renommer, choisir les colonnes (**Colonnes…**), supprimer (deux clics
   pour confirmer).
 - **Filtres** : une vue modifiée affiche **•**. **💾 Enregistrer la vue** garde
-  les filtres ; si on change d'onglet sans enregistrer, les modifications sont
-  abandonnées.
+  les filtres dans la vue, puis « Enregistrer » de Grist les garde dans le
+  document ; si on change d'onglet sans enregistrer la vue, les modifications
+  sont abandonnées.
 - **Colonnes** : « Colonnes… » permet d'afficher un statut même sans carte, de
   changer l'ordre (↑ ↓) ou de revenir à « Tous les statuts présents ». Glisser
   un en-tête de colonne change aussi l'ordre de la vue. Ces changements sont
-  enregistrés aussitôt dans la vue.
+  enregistrés aussitôt dans la vue ; reste à cliquer sur « Enregistrer » dans
+  Grist pour les garder dans le document.
 
 ## Filtres
 
@@ -181,10 +205,9 @@ lus dans la table `Contacts` par son nom, remplacés par l'équipe projet (#148)
 Seul reste le préréglage des colonnes, pensé pour la table `Taches` de l'espace
 gestion de projets (ignoré pour les colonnes absentes).
 
-**Vues partagées par tout le document** (amélioration prévue : #202) :
-- l'onglet actif est commun à tous : si quelqu'un change d'onglet puis
-  enregistre, chacun arrivera sur cet onglet au prochain chargement. Chaque
-  changement d'onglet rallume aussi « Enregistrer » dans Grist ;
+**Vues partagées par tout le document** (amélioration prévue : #202, vues par
+utilisateur ; l'onglet actif est propre à chaque navigateur depuis le
+2026-10-28) :
 - les vues sont lues à l'ouverture du widget, puis réécrites en bloc à chaque
   modification. Si deux personnes modifient les vues en même temps, la dernière
   enregistrée écrase l'autre.
