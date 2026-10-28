@@ -598,6 +598,11 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
 }
 .config-field select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(102,126,234,.12); }
 .required { color: var(--danger); }
+/* Équipe projet (#148) : reprend les styles du panneau des filtres */
+.config-equipe { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; }
+.config-equipe .config-field label { margin-bottom: 0; }
+.config-aide { font-size: 12px; color: var(--text-muted); margin: 0; }
+.config-equipe .filtre-valeurs { max-height: 220px; }
 .config-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
 
 /* ── Toast ── */
@@ -631,6 +636,17 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
         <div class="config-field"><label for="col-projet">Champ Projet</label><select id="col-projet"><option value="">— aucune —</option></select></div>
         <!-- ✅ Projet du Kanban : un Kanban = un projet (choisi une fois, mémorisé dans le widget) -->
         <div class="config-field"><label for="col-projet-kanban">Projet du Kanban</label><select id="col-projet-kanban"><option value="">— choisir —</option></select></div>
+      </div>
+      <!-- ✅ Équipe projet (#148) : personnes proposées dans « Assigné à », dessinées par remplirEquipe() -->
+      <div class="config-equipe">
+        <div class="config-field"><label for="equipe-recherche">👥 Équipe projet</label></div>
+        <p class="config-aide">Personnes proposées dans « Assigné à ». Si personne n'est coché, toute la table est proposée.</p>
+        <input id="equipe-recherche" class="filtre-recherche" type="search" placeholder="Rechercher une personne…" autocomplete="off" />
+        <div class="filtre-outils">
+          <button id="equipe-aucun" class="filtre-lien">Tout décocher</button>
+          <span id="equipe-compte" class="filtre-compte"></span>
+        </div>
+        <div id="equipe-liste" class="filtre-valeurs"></div>
       </div>
       <div class="config-actions">
         <button id="btn-save-config" class="btn-primary">✓ Appliquer</button>
