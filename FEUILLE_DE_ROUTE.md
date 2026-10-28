@@ -8,17 +8,14 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-10-27 16:32_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-10-28 01:17_
 
 ### 🖐️ À faire
 - [ ] #183 Ajouter les ref interne (Haute, EPIC « Améliorer la qualité du code »)
-- [ ] #197 Kanban : supprimer VIEWS, les onglets codés en dur et la colonne « Disponible » spéciale (Haute, EPIC « Supprimer les spécifité OTV »)
-- [ ] #198 Migrer l'Observatoire : recréer Tâches, Standardiser et Linéariser en vues (Haute, EPIC « Supprimer les spécifité OTV »)
-- [ ] #199 Kanban : mettre à jour le README et le catalogue des widgets (Haute, EPIC « Supprimer les spécifité OTV »)
 - [ ] #201 Vérifier la sécurité des widgets et du dépôt public (XSS, dépendances CDN, secrets dans l'historique, sync) (Haute, EPIC « Améliorer la qualité du code »)
-- [ ] #147 Chercher les autres spécificités OTV dans le code (Moyenne, EPIC « Supprimer les spécifité OTV »)
-- [ ] #148 Généraliser la liste des contacts assignables du Kanban (Moyenne, EPIC « Supprimer les spécifité OTV »)
+- [ ] #202 Kanban : profils de vue par utilisateur (Haute, EPIC « Améliorer l'interface »)
 - [ ] #185 Rendre les pastilles modifiables dans la fiche de la Galerie (Moyenne, EPIC « Améliorer l'interface »)
+- [ ] #203 Kanban : afficher discrètement le numéro #id sur les cartes (Moyenne, EPIC « Améliorer l'interface »)
 - [ ] #184 Ouvrir un objet lié (tâche, EPIC…) d'un clic depuis la fiche de la Galerie (Basse, EPIC « Améliorer l'interface »)
 - [ ] #186 Préremplir une nouvelle carte de la Galerie avec le filtre de la vue (Sélectionner par) (Basse, EPIC « Améliorer l'interface »)
 - [ ] #188 Extraire le rendu des cartes et des pastilles dans _commun (carte.js, carte.css), utilisé par la Galerie (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
@@ -28,20 +25,20 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [ ] #192 Remplacer le Kanban par le moteur commun : d'abord sur une copie, puis pour l'Observatoire (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
 - [ ] #200 Kanban : filtrer sur n'importe quelle colonne (texte, nombre, date…) (Basse, EPIC « Améliorer l'interface »)
 
-### ♻️ En cours
-- [ ] #146 Supprimer les onglets Standardiser et Linéariser (Haute, EPIC « Supprimer les spécifité OTV »)
-
 <!-- fin kanban -->
 
 ## ⚠️ Prochaine séance
-- [ ] Vérifier dans l'Observatoire (Ctrl + F5) que les vues enregistrées sont en ligne : trois onglets affichés, bouton « ＋ Vue » présent
-- [ ] Puis #198 : recréer Tâches, Standardiser et Linéariser en vues dans l'Observatoire ; ensuite #197 (supprimer les onglets codés en dur)
+- [ ] #202 point 1 : onglet actif mémorisé dans le navigateur (localStorage) ; puis étude du point 2 (vues par utilisateur)
+- [ ] #201 sécurité : relecture ciblée avant de diffuser le Kanban aux collègues
+- [ ] Grist, à la main : passer l'EPIC « Supprimer les spécifité OTV » en Done (toutes ses tâches sont faites)
 
 ## En cours
 - [x] Fiche dense du Kanban fusionnée sur master (PR #15, feat/fiche-centrale), 2026-10-24 = mise en production du Kanban, vérifiée dans le document de l'Observatoire
 - [ ] Refaire le modèle ⚙ de la Galerie dans le document réel
 - [x] Filtres combinables du Kanban (#195), PR #17 fusionnée le 2026-10-26, vérifiée sur les données réelles
 - [x] Vues enregistrées (#196) : 8 tests validés dans le builder, PR #18 fusionnée le 2026-10-27 = mise en production ; #187 (glisser-déposer des colonnes) réglée du même coup
+- [x] Onglets codés en dur remplacés par un onglet Accueil (#197, PR #19), vues recréées dans l'Observatoire (#198), README et catalogue (#199), 2026-10-27
+- [x] Kanban générique : millésime et lecture de EPICs retirés (#147, PR #20), équipe projet dans ⚙ (#148, PR #21), 2026-10-28 ; équipe cochée et Accueil vérifié dans l'Observatoire le même jour
 
 ## Prochaines étapes
 (Les étapes du projet sont désormais suivies dans Grist : voir « Kanban (Grist) » ci-dessus.)
@@ -95,3 +92,9 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - 2026-10-27 — vue active et vues lues dans les options à l'ouverture seulement — Grist rappelle onOptions après chaque setOption, parfois dans le désordre
 - 2026-10-27 — #187 close sans correctif dédié — le glisser-déposer des en-têtes fonctionne avec les vues enregistrées (test 5 de #196)
 - 2026-10-26 — test dans le Custom Widget Builder : Claude assemble un fichier unique (index.html + _commun + JS) dans son scratchpad, à coller dans l'onglet HTML — les chemins relatifs ne fonctionnent pas dans le builder
+- 2026-10-27 — onglet fixe « Accueil » (mode d'emploi) comme repli, à la place d'une vue par défaut — aucun statut codé en dur ; dans la barre du haut, à part des vues du projet
+- 2026-10-27 — les options du widget (vues, onglet actif, colonnes) ne sont écrites dans le document qu'après « Enregistrer » dans Grist — constaté (rubrique « Options personnalisées ») ; rappelé dans l'Accueil et le README
+- 2026-10-28 — millésime retiré du Kanban — l'Observatoire n'a plus à gérer deux millésimes la même année
+- 2026-10-28 — équipe projet cochée dans ⚙ plutôt que Contacts.Projets — Contacts.Projets désigne les contacts CRM liés au projet, pas l'équipe ; repli sur toute la table si aucune équipe
+- 2026-10-28 — Kanban en portée « générique » dans le catalogue — plus aucune valeur propre à un projet codée en dur
+- 2026-10-28 — scan claude-security impossible (outil Workflow indisponible) — plugin retiré ; vérification de sécurité suivie dans #201, à faire en séance
