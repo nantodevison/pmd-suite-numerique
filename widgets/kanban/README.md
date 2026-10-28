@@ -9,10 +9,9 @@ combinables, vues enregistrées (filtres + colonnes), tri par priorité.
 
 > **Version d'origine** reprise depuis le Custom Widget Builder de Grist (commit
 > `4f45af5`), plus un correctif des références (repérable aux commentaires
-> « ✅ Correctif » dans `kanban.js`). Elle reste **spécifique** à l'Observatoire
-> (voir « Limites connues »). Sa généralisation est en cours : les onglets
-> propres à l'Observatoire ont été remplacés par des vues enregistrées le
-> 2026-10-27 ; il reste les points de « Limites connues ».
+> « ✅ Correctif » dans `kanban.js`). Elle était **spécifique** à
+> l'Observatoire ; depuis le 2026-10-28, le widget est **générique** : plus
+> aucune valeur propre à un projet n'est codée en dur (voir « Limites connues »).
 
 ## Fichiers
 
@@ -43,8 +42,8 @@ l'avertissement et le niveau d'accès (**accès complet** requis).
 
 Le bouton ⚙ ouvre un panneau qui associe les colonnes de la table aux champs du
 Kanban : Titre et Statut (obligatoires), Description, Priorité, Assigné à,
-Date / Échéance, EPIC, Projet. Ce réglage, le projet, l'ordre des
-colonnes, les vues et l'onglet actif sont mémorisés dans les options du widget
+Date / Échéance, EPIC, Projet. Ce réglage, le projet, l'équipe projet, l'ordre
+des colonnes, les vues et l'onglet actif sont mémorisés dans les options du widget
 (`grist.setOption`), donc dans le document. **Ils ne sont écrits dans le
 document qu'après un clic sur « Enregistrer », en haut à droite de Grist** :
 sinon, ils ne restent visibles que pour vous.
@@ -73,6 +72,28 @@ Tant qu'aucun projet n'est choisi, le Kanban affiche toutes les tâches, signale
 
 > **À l'installation (ou après la mise à jour du 2026-10-02 pour un Kanban
 > existant) : ouvrir ⚙, choisir le projet, puis « Appliquer ».**
+
+### Équipe projet
+
+La rubrique **« 👥 Équipe projet »** du panneau ⚙ liste les personnes de la
+table visée par « Assigné à » (par exemple `Contacts`), avec une recherche
+(sans accents ni majuscules). Les personnes cochées sont les seules proposées
+dans « Assigné à », dans la fiche comme à la création d'une carte ; elles
+apparaissent en tête de liste à l'ouverture de ⚙.
+
+- Une personne déjà assignée à une carte reste proposée pour cette carte, même
+  si elle ne fait plus partie de l'équipe : un enregistrement ne la retire pas
+  sans prévenir.
+- **Si personne n'est coché, toute la table est proposée** (la liste peut être
+  longue avec une table de CRM).
+- L'équipe est gardée avec le nom de la table visée : si « Assigné à » est
+  associé à une colonne qui vise une autre table, elle est ignorée.
+- La rubrique est grisée si « Assigné à » n'est pas une colonne Référence ou
+  Liste de références.
+
+> **À l'installation (ou après la mise à jour du 2026-10-28 pour un Kanban
+> existant) : ouvrir ⚙, cocher l'équipe, « Appliquer », puis « Enregistrer »
+> dans Grist.**
 
 ## Accueil
 
@@ -150,16 +171,15 @@ est nettoyé par DOMPurify avant affichage.
 Relevées à la lecture du code, puis en partie vérifiées lors du test par URL
 du 2026-09-24 (sur une copie du document de gestion de projets).
 
-**Valeurs propres à l'Observatoire, encore codées en dur** (à généraliser) :
-- les personnes assignables sont limitées aux contacts n° 20, 21, 23 et 360,
-  lus dans la table `Contacts` par son nom (#148).
-
-Le projet OTV codé en dur (6ᵉ ligne de `Projets2`) a été remplacé le
+**Plus aucune valeur propre à l'Observatoire n'est codée en dur.** Le projet OTV codé en dur (6ᵉ ligne de `Projets2`) a été remplacé le
 2026-10-02 par le réglage « Projet du Kanban ». Les onglets Standardiser et
 Linéariser, qui reposaient sur les noms exacts de deux EPICs, ont été remplacés
 le 2026-10-27 par des vues enregistrées dans le document (#196, #197). Le
 millésime et la lecture de la table `EPICs` par son nom ont été retirés le
-2026-10-28 (#147).
+2026-10-28 (#147), de même que les contacts assignables n° 20, 21, 23 et 360,
+lus dans la table `Contacts` par son nom, remplacés par l'équipe projet (#148).
+Seul reste le préréglage des colonnes, pensé pour la table `Taches` de l'espace
+gestion de projets (ignoré pour les colonnes absentes).
 
 **Vues partagées par tout le document** (amélioration prévue : #202) :
 - l'onglet actif est commun à tous : si quelqu'un change d'onglet puis

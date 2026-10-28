@@ -56,10 +56,13 @@ const STATE = {
   // (un Kanban = un projet). null tant qu'aucun projet n'est choisi.
   projetKanban: null,
 
-  // Contacts assignables, lus dans la table Contacts (voir #148)
-  referenceData: {
-    contacts: [],    // Liste des contacts avec id et nom
-    },
+  // Équipe projet (#148) : personnes proposées dans « Assigné à », choisies
+  // dans ⚙. { table: table visée par « Assigné à », ids: [numéros de ligne] },
+  // ou null tant qu'aucune équipe n'est choisie.
+  equipe: null,
+  // Rubrique « Équipe projet » de ⚙ en cours de modification :
+  // référence affichée, numéros cochés, ordre des lignes (figé à l'ouverture)
+  equipePanneau: { ref: null, cochees: new Set(), ordre: [] },
 };
 
 /* ── Constantes ─────────────────────────────────────────────── */
@@ -150,31 +153,6 @@ const _tableNamePret = (async () => {
   }
 })();
 
-// ✨ Récupérer les contacts assignables après l'initialisation. Projets et
-// EPICs, eux, sont lus à partir des colonnes associées (assurerReferences).
-(async () => {
-  try {
-    const CONTACTS_AUTORISES_IDS = [20, 21 ,23 ,360]; //
-
-    //Récupérer la table Contacts
-    const tableContacts = await grist.docApi.fetchTable('Contacts');
-    STATE.referenceData.contacts = tableContacts.id
-    .map((id, idx) => ({
-      id: id,
-      nom: tableContacts.Nom?.[idx] || tableContacts.Name?.[idx] || `Contact ${id}`
-    }))
-    .filter(contact => CONTACTS_AUTORISES_IDS.includes(contact.id));
-
-    console.log('✓ Contacts chargés:', STATE.referenceData.contacts.length);
-    console.log('Tous les contacts:', tableContacts.id.map((id, idx) =>
-    `${id} → ${tableContacts.Nom?.[idx] || tableContacts.Name?.[idx]}`
-    ));
-
-  } catch (err) {
-    console.error('⚠️ Erreur récupération données référence:', err);
-  }
-})();
-
 grist.onRecords((records, _mappings, tableId) => {
   if (tableId) _tableName = tableId;
   STATE.records = records;
@@ -212,6 +190,8 @@ grist.onOptions((options) => {
   if (options && options.columnOrder)  STATE.columnOrder = options.columnOrder;
   // ✅ Projet du Kanban mémorisé dans les options du widget
   STATE.projetKanban = (options && options.projetKanban) ? Number(options.projetKanban) : null;
+  // ✅ Équipe projet (#148), mémorisée elle aussi dans les options du widget
+  STATE.equipe = (options && options.equipe) || null;
   // Vue active et vues enregistrées (#196) : lues à l'ouverture seulement.
   // Grist rappelle onOptions après chaque setOption, parfois dans le désordre :
   // relire ces options ramènerait un état périmé (vue tout juste créée absente,
@@ -274,6 +254,7 @@ function oublierColonnesAbsentes() {
 function openConfig()  {
   populateSelects(); syncSelectsToMapping();
   remplirChoixProjet(REFS.projet); // ✅ liste « Projet du Kanban »
+  preparerEquipe(REFS.assigne);    // ✅ rubrique « Équipe projet »
   document.getElementById('config-panel').classList.remove('hidden');
 }
 function closeConfig() { document.getElementById('config-panel').classList.add('hidden'); }
@@ -307,12 +288,94 @@ async function saveConfig() {
   // ✅ Projet du Kanban : mémorisé dans les options du widget
   const selProjet = document.getElementById('col-projet-kanban');
   STATE.projetKanban = (selProjet && selProjet.value) ? Number(selProjet.value) : null;
+  // ✅ Équipe projet : gardée avec le nom de la table visée. Si « Assigné à »
+  // n'est pas une référence, on ne touche pas à l'équipe déjà enregistrée.
+  const { ref, cochees } = STATE.equipePanneau;
+  if (ref) STATE.equipe = { table: ref.tableVisee, ids: [...cochees] };
   grist.setOption('mapping', STATE.mapping).catch(() => {});
   grist.setOption('projetKanban', STATE.projetKanban).catch(() => {});
+  grist.setOption('equipe', STATE.equipe).catch(() => {});
   closeConfig();
   await assurerReferences(); // l'association des colonnes a pu changer
   renderBoard();
   showToast('✓ Configuration sauvegardée');
+}
+
+/* ── Équipe projet (#148) ───────────────────────────────────────
+   Personnes proposées dans « Assigné à » (fiche et création de carte) :
+   une liste cochée dans ⚙. Des numéros de ligne n'ont de sens que pour une
+   table : la liste est gardée avec le nom de la table visée, et ignorée si
+   « Assigné à » vise une autre table. Sans liste valable, toutes les lignes
+   de la table sont proposées. */
+
+/** Numéros de l'équipe projet, ou null si aucune liste valable. */
+function idsEquipe() {
+  const eq = STATE.equipe, ref = REFS.assigne;
+  if (!eq || !ref || eq.table !== ref.tableVisee || !eq.ids || !eq.ids.length) return null;
+  return eq.ids;
+}
+
+/** Prépare la rubrique « Équipe projet » de ⚙ pour la référence `ref` (ou null). */
+function preparerEquipe(ref) {
+  const eq = STATE.equipe;
+  const ids = (ref && eq && eq.table === ref.tableVisee && eq.ids) ? eq.ids : [];
+  // Ordre figé à l'ouverture (les lignes ne sautent pas quand on coche) :
+  // l'équipe actuelle d'abord, puis les autres, chaque groupe par nom
+  const parNom = (a, b) => (a.nom || '').localeCompare(b.nom || '', 'fr');
+  const options = ref ? [...ref.options] : [];
+  STATE.equipePanneau = {
+    ref,
+    cochees: new Set(ids),
+    ordre: [...options.filter(o => ids.includes(o.id)).sort(parNom),
+            ...options.filter(o => !ids.includes(o.id)).sort(parNom)],
+  };
+  document.getElementById('equipe-recherche').value = '';
+  remplirEquipe();
+}
+
+/** (Re)dessine la liste des personnes, selon le texte de recherche. */
+function remplirEquipe() {
+  const { ref, cochees, ordre } = STATE.equipePanneau;
+  const recherche = document.getElementById('equipe-recherche');
+  const liste = document.getElementById('equipe-liste');
+  recherche.disabled = !ref;
+  document.getElementById('equipe-aucun').disabled = !ref;
+  liste.innerHTML = '';
+  if (!ref) {
+    liste.innerHTML = '<div class="filtre-aucune">Associez « Assigné à » à une colonne Référence ou Liste de références pour choisir l\'équipe.</div>';
+    document.getElementById('equipe-compte').textContent = '';
+    return;
+  }
+  const texte = pourRecherche(recherche.value.trim());
+  const visibles = texte ? ordre.filter(o => pourRecherche(o.nom || '').includes(texte)) : ordre;
+  visibles.forEach(o => {
+    const ligne = document.createElement('label');
+    ligne.className = 'filtre-valeur';
+    const caseACocher = document.createElement('input');
+    caseACocher.type = 'checkbox';
+    caseACocher.checked = cochees.has(o.id);
+    caseACocher.addEventListener('change', () => {
+      if (caseACocher.checked) cochees.add(o.id); else cochees.delete(o.id);
+      majCompteEquipe();
+    });
+    const nom = document.createElement('span');
+    nom.className = 'filtre-valeur-nom';
+    nom.textContent = o.nom || `(ligne ${o.id})`;
+    ligne.append(caseACocher, nom);
+    liste.appendChild(ligne);
+  });
+  if (visibles.length === 0) {
+    liste.innerHTML = '<div class="filtre-aucune">Aucune personne ne correspond.</div>';
+  }
+  majCompteEquipe();
+}
+
+/** Compteur de la rubrique « Équipe projet ». */
+function majCompteEquipe() {
+  const n = STATE.equipePanneau.cochees.size;
+  document.getElementById('equipe-compte').textContent = n
+    ? `${n} sélectionnée${n > 1 ? 's' : ''}`
+    : 'aucune : toute la table est proposée';
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1111,7 +1174,7 @@ function renderAccueil(board) {
           : 'Cliquez sur un onglet pour retrouver les cartes.'}</p>
       <button id="accueil-creer" class="btn-primary">＋ ${premiere ? 'Créer ma première vue' : 'Créer une vue'}</button>
       <ol class="accueil-etapes">
-        <li><strong>⚙ Configurer</strong> : choisissez le projet du Kanban et associez les colonnes de la table.</li>
+        <li><strong>⚙ Configurer</strong> : choisissez le projet du Kanban, associez les colonnes de la table et cochez l'équipe projet (personnes proposées dans « Assigné à »).</li>
         <li><strong>＋ Vue</strong> : crée une vue à partir de l'affichage actuel. Le menu <strong>⋯</strong> de l'onglet actif permet de la renommer ou de la supprimer.</li>
         <li><strong>＋ Filtre</strong> : ne garde que certaines cartes (« EPIC est … », « Assigné n'est pas … »). Une vue modifiée affiche <strong>•</strong> : cliquez sur <strong>💾 Enregistrer la vue</strong> pour garder les filtres.</li>
         <li><strong>⋯ › Colonnes…</strong> : choisit les statuts affichés et leur ordre. On peut aussi glisser les en-têtes de colonnes.</li>
@@ -1254,7 +1317,7 @@ function buildCard(record, palette) {
   // Assigné : afficher le nom si c'est une référence
   const assigne = getField(record, 'assigne');
   if (assigne) {
-    const assigneDisplay = typeof assigne === 'number' ? getReferenceName('assigne', assigne) : assigne;
+    const assigneDisplay = typeof assigne === 'number' ? (nomAffiche('assigne', assigne) || String(assigne)) : assigne;
     footer.appendChild(buildBadge('👤 ' + assigneDisplay, 'badge-assigne'));
   }
 
@@ -2085,16 +2148,15 @@ function nomsVersIds(key, valeur) {
 
 /**
  * Lignes proposées dans la liste de choix d'un champ de référence.
- * Pour « Assigné à », on respecte la liste restreinte de contacts de la
- * version d'origine (STATE.referenceData.contacts) quand elle existe, en
- * gardant toujours les personnes déjà assignées : sinon, un simple
+ * Pour « Assigné à », on se limite à l'équipe projet choisie dans ⚙ (#148),
+ * en gardant toujours les personnes déjà assignées : sinon, un simple
  * enregistrement les retirerait sans prévenir.
  */
 function optionsProposees(key, idsActuels) {
   const ref = REFS[key];
-  if (key === 'assigne' && STATE.referenceData.contacts.length > 0) {
-    const autorises = STATE.referenceData.contacts.map(c => c.id);
-    return ref.options.filter(o => autorises.includes(o.id) || idsActuels.includes(o.id));
+  const equipe = key === 'assigne' ? idsEquipe() : null;
+  if (equipe) {
+    return ref.options.filter(o => equipe.includes(o.id) || idsActuels.includes(o.id));
   }
   // ✅ Projet du Kanban : seuls les EPICs du projet choisi (#144), en gardant
   // l'EPIC actuel de la carte même s'il appartient à un autre projet.
@@ -2116,7 +2178,8 @@ function optionsProposees(key, idsActuels) {
 function getReferenceOptions(fieldKey) {
   switch (fieldKey) {
     case 'assigne':
-      return STATE.referenceData.contacts || [];
+      // Équipe projet, ou toute la table visée ; [] si ce n'est pas une référence
+      return REFS.assigne ? optionsProposees('assigne', []) : [];
     case 'epic':
       // ✅ Projet du Kanban : si la référence est connue, seuls les EPICs du projet (#144)
       if (REFS.epic) return optionsProposees('epic', []);
@@ -2199,6 +2262,22 @@ document.addEventListener('DOMContentLoaded', () => {
       catch (err) { console.error('Kanban – lecture des projets impossible:', err); }
     }
     remplirChoixProjet(ref);
+  });
+  // ✅ Équipe projet : recherche, « Tout décocher », et nouvelle liste de
+  // personnes si l'on change la colonne « Assigné à »
+  document.getElementById('equipe-recherche')?.addEventListener('input', remplirEquipe);
+  document.getElementById('equipe-aucun')?.addEventListener('click', () => {
+    STATE.equipePanneau.cochees.clear();
+    remplirEquipe();
+  });
+  document.getElementById('col-assigne')?.addEventListener('change', async (e) => {
+    const col = e.target.value;
+    let ref = null;
+    if (col) {
+      try { ref = await chargerReference(getTableName(), col); }
+      catch (err) { console.error('Kanban – lecture des personnes impossible:', err); }
+    }
+    preparerEquipe(ref);
   });
   document.getElementById('config-panel')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeConfig(); });
 
