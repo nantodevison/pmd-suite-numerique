@@ -223,6 +223,8 @@ grist.onOptions(async (options) => {
     // est ignorée. La clé de mémoire dépend du document et de la table : on
     // attend de les connaître.
     await Promise.all([_docNamePret, _tableNamePret]);
+    // Vues personnelles (#202), retenues par ce navigateur : après les vues partagées
+    STATE.vues.push(...lireVuesPerso());
     const candidats = [lireVueMemorisee(), options && options.activeView];
     STATE.activeView = candidats.find(id => vueEnregistree(id)) || ACCUEIL;
     chargerFiltresDeLaVue();
@@ -320,6 +322,12 @@ async function saveConfig() {
   closeConfig();
   await assurerReferences(); // l'association des colonnes a pu changer
   await chargerMoi();        // … et avec elle la table des personnes
+  // Les vues personnelles sont propres au projet : on relit celles du projet choisi
+  STATE.vues = STATE.vues.filter(v => !v.perso).concat(lireVuesPerso());
+  if (!vueEnregistree(STATE.activeView)) {
+    STATE.activeView = ACCUEIL;
+    chargerFiltresDeLaVue();
+  }
   renderBoard();
   showToast('✓ Configuration sauvegardée');
 }
@@ -415,7 +423,11 @@ function majCompteEquipe() {
    - changer de vue recharge ses filtres (aucun pour l'accueil) :
      des filtres modifiés et non enregistrés sont abandonnés ;
    - les colonnes et leur ordre sont enregistrés immédiatement ;
-   - les filtres, eux, passent par « Enregistrer » (l'onglet affiche • sinon). */
+   - les filtres, eux, passent par « Enregistrer » (l'onglet affiche • sinon).
+   Vues personnelles (#202) : même format, plus `perso: true`. Elles sont
+   gardées dans le navigateur (voir lireVuesPerso), pas dans le document :
+   chacun a les siennes, enregistrées aussitôt. Toutes les vues sont dans
+   STATE.vues ; enregistrerVues(vue) range chaque genre à sa place. */
 
 /** La vue enregistrée d'identifiant `id`, ou undefined. */
 function vueEnregistree(id) {
@@ -459,9 +471,15 @@ function vueModifiee() {
   return !!vue && signatureFiltres(STATE.filters) !== signatureFiltres(vue.filtres);
 }
 
-/** Mémorise toutes les vues dans les options du widget. */
-function enregistrerVues() {
-  grist.setOption('vues', STATE.vues).catch(() =>
+/**
+ * Mémorise les vues du même genre que `vue`, qui vient d'être créée, modifiée
+ * ou supprimée : les vues personnelles dans le navigateur, les vues
+ * partagées dans les options du widget. Ainsi, toucher à une vue perso
+ * n'allume pas le bouton « Enregistrer » de Grist.
+ */
+function enregistrerVues(vue) {
+  if (vue.perso) { memoriserVuesPerso(); return; }
+  grist.setOption('vues', STATE.vues.filter(v => !v.perso)).catch(() =>
     showToast('⚠️ Vue non enregistrée : droits de modification du document nécessaires ?', 3500));
 }
 
@@ -483,11 +501,16 @@ function switchView(viewId) {
    localStorage peut être refusé (navigation privée, Custom Widget Builder…) :
    chaque accès est protégé, et le widget retombe alors sur l'accueil. */
 
-/** Clé de mémoire de ce Kanban, ou null si le document est inconnu. */
-function memoireVueActive() {
+/**
+ * Clé de mémoire de ce Kanban pour la donnée `nom` (ex. 'vueActive'), ou
+ * null si le document est inconnu.
+ */
+function cleMemoire(nom) {
   if (!_docName) return null;
-  return `kanban.vueActive.${_docName}.${getTableName()}.${STATE.projetKanban || 'sans-projet'}`;
+  return `kanban.${nom}.${_docName}.${getTableName()}.${STATE.projetKanban || 'sans-projet'}`;
 }
+
+function memoireVueActive() { return cleMemoire('vueActive'); }
 
 /** Identifiant de l'onglet mémorisé par ce navigateur, ou null. */
 function lireVueMemorisee() {
@@ -503,6 +526,33 @@ function memoriserVueActive(viewId) {
   if (!cle) return;
   try { localStorage.setItem(cle, viewId); }
   catch (err) { /* mémoire indisponible : l'onglet ne sera pas retenu */ }
+}
+
+/* ── Vues personnelles retenues par le navigateur (#202, étape 2) ──
+   Même clé que l'onglet actif (document, table, projet) : un Kanban d'un
+   autre projet a ses propres vues perso. */
+
+/** Vues personnelles de ce Kanban retenues par ce navigateur ([] si aucune ou mémoire indisponible). */
+function lireVuesPerso() {
+  const cle = cleMemoire('vuesPerso');
+  if (!cle) return [];
+  try {
+    const vues = JSON.parse(localStorage.getItem(cle) || '[]');
+    return Array.isArray(vues) ? vues.map(v => ({ ...v, perso: true })) : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+/** Mémorise toutes les vues personnelles dans ce navigateur. */
+function memoriserVuesPerso() {
+  const cle = cleMemoire('vuesPerso');
+  try {
+    if (!cle) throw new Error('document inconnu');
+    localStorage.setItem(cle, JSON.stringify(STATE.vues.filter(v => v.perso)));
+  } catch (err) {
+    showToast('⚠️ Ce navigateur ne peut pas retenir vos vues personnelles : elles seront perdues au rechargement.', 3500);
+  }
 }
 
 /* ── « Qui suis-je ? » (#202, étape 1) ──────────────────────────
@@ -613,20 +663,27 @@ function remplirMoi() {
   document.getElementById('moi-oublier').disabled = !STATE.moi;
 }
 
-/** Onglets : état de l'onglet Accueil, puis un onglet par vue enregistrée. */
+/**
+ * Onglets : état de l'onglet Accueil, puis un onglet par vue enregistrée,
+ * les vues partagées d'abord, puis les vues personnelles (🔒).
+ */
 function renderVueTabs() {
   document.querySelectorAll('.view-tab[data-view]').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.view === STATE.activeView);
   });
 
-  const zone = document.getElementById('vues-perso');
+  const zone = document.getElementById('vues-enregistrees');
   if (!zone) return;
   zone.innerHTML = '';
-  STATE.vues.forEach(vue => {
+  const ordre = [...STATE.vues.filter(v => !v.perso), ...STATE.vues.filter(v => v.perso)];
+  ordre.forEach(vue => {
     const active = vue.id === STATE.activeView;
     const onglet = document.createElement('button');
-    onglet.className = 'view-tab vue-perso' + (active ? ' active' : '');
-    onglet.textContent = vue.nom;
+    onglet.className = 'view-tab vue-enregistree' + (vue.perso ? ' perso' : '') + (active ? ' active' : '');
+    onglet.textContent = (vue.perso ? '🔒 ' : '') + vue.nom;
+    onglet.title = vue.perso
+      ? 'Vue personnelle : visible dans ce navigateur seulement'
+      : 'Vue partagée : la même pour tous';
     onglet.addEventListener('click', () => { if (!active) switchView(vue.id); });
     if (active) {
       if (vueModifiee()) {
@@ -653,27 +710,69 @@ function renderVueTabs() {
 
 /* ── Création, renommage, suppression ── */
 
+/** Ajoute une vue, la mémorise à sa place (navigateur ou document) et l'affiche. */
+function ajouterVue(vue) {
+  STATE.vues.push(vue);
+  enregistrerVues(vue);
+  switchView(vue.id);
+}
+
 /**
  * Nouvelle vue à partir de ce qui est affiché : filtres de l'utilisateur et
  * colonnes de la vue active. Depuis l'accueil : aucun filtre, et tous les
- * statuts présents (colonnes null).
+ * statuts présents (colonnes null). Sert aussi à « Copier en vue perso » :
+ * la copie reprend ce qui est affiché, modifications non enregistrées comprises.
+ * @param {string}  nom
+ * @param {boolean} perso - vue personnelle (navigateur) ou partagée (document)
  */
-function creerVue(nom) {
+function creerVue(nom, perso) {
   const source = vueCourante();
   const filtres = copieFiltres(STATE.filters.filter(f => f.valeurs.length > 0));
   const colonnes = source.preferredOrder.length ? [...source.preferredOrder] : null;
   const vue = { id: 'vue-' + Date.now().toString(36), nom, filtres, colonnes };
-  STATE.vues.push(vue);
-  enregistrerVues();
-  switchView(vue.id);
-  showToast(`✓ Vue « ${nom} » créée`);
+  if (perso) vue.perso = true;
+  ajouterVue(vue);
+  if (perso) showToast(`✓ Vue personnelle « ${nom} » créée`);
+  else       showToast(`✓ Vue « ${nom} » créée : cliquez sur « Enregistrer » dans Grist pour la garder`, 4000);
+}
+
+/**
+ * Vue personnelle « Mes tâches » déjà créée : une vue perso dont un filtre
+ * dit « Assigné à est … 👤 Moi ». undefined s'il n'y en a pas.
+ */
+function vueMesTaches() {
+  return STATE.vues.find(v => v.perso && (v.filtres || []).some(f =>
+    f.col === STATE.mapping.assigne && f.op === 'est' && f.valeurs.includes(MOI)));
+}
+
+/**
+ * Bouton de l'Accueil : ouvre la vue « Mes tâches », ou la crée (vue perso,
+ * « Assigné à est 👤 Moi », tous les statuts présents). Si personne n'est
+ * déclaré, le panneau « Qui suis-je ? » s'ouvre ensuite.
+ */
+function ouvrirMesTaches() {
+  const existante = vueMesTaches();
+  if (existante) { switchView(existante.id); return; }
+  ajouterVue({
+    id: 'vue-' + Date.now().toString(36),
+    nom: 'Mes tâches',
+    filtres: [{ col: STATE.mapping.assigne, op: 'est', valeurs: [MOI] }],
+    colonnes: null,
+    perso: true,
+  });
+  if (STATE.moi) {
+    showToast('✓ Vue « Mes tâches » créée. Masquez les statuts inutiles avec ⋯ › Colonnes…', 4500);
+  } else {
+    ouvrirMoi(document.getElementById('btn-moi'));
+    showToast('✓ Vue « Mes tâches » créée : indiquez qui vous êtes pour y voir vos cartes', 4500);
+  }
 }
 
 function renommerVue(nom) {
   const vue = vueEnregistree(STATE.activeView);
   if (!vue) return;
   vue.nom = nom;
-  enregistrerVues();
+  enregistrerVues(vue);
   renderVueTabs();
 }
 
@@ -681,7 +780,7 @@ function supprimerVue() {
   const vue = vueEnregistree(STATE.activeView);
   if (!vue) return;
   STATE.vues = STATE.vues.filter(v => v !== vue);
-  enregistrerVues();
+  enregistrerVues(vue);
   switchView(ACCUEIL);
   showToast(`✓ Vue « ${vue.nom} » supprimée`);
 }
@@ -691,7 +790,7 @@ function enregistrerFiltresVue() {
   const vue = vueEnregistree(STATE.activeView);
   if (!vue) return;
   vue.filtres = copieFiltres(STATE.filters.filter(f => f.valeurs.length > 0));
-  enregistrerVues();
+  enregistrerVues(vue);
   fermerPopovers();
   renderBoard();
   showToast('✓ Filtres enregistrés dans la vue');
@@ -721,15 +820,28 @@ function fermerPopovers() {
     document.getElementById(id)?.classList.add('hidden'));
 }
 
-/** Panneau de saisie du nom : mode 'creer' ou 'renommer'. */
+/**
+ * Panneau de saisie du nom, selon le mode :
+ *   'creer'    : nouvelle vue, personnelle (par défaut) ou partagée ;
+ *   'renommer' : vue active ;
+ *   'copier'   : copie personnelle de la vue partagée active (#202).
+ */
 function ouvrirNomVue(mode, ancre) {
   fermerPopovers();
   const pop = document.getElementById('vue-nom-popover');
   const champ = document.getElementById('vue-nom');
+  const aide = document.getElementById('vue-nom-aide');
   pop.dataset.mode = mode;
-  champ.value = mode === 'renommer' ? (vueEnregistree(STATE.activeView)?.nom || '') : '';
-  document.getElementById('vue-nom-valider').textContent = mode === 'renommer' ? 'Renommer' : 'Créer la vue';
-  document.getElementById('vue-nom-aide').classList.toggle('hidden', mode === 'renommer');
+  champ.value = mode === 'creer' ? '' : (vueEnregistree(STATE.activeView)?.nom || '');
+  document.getElementById('vue-nom-valider').textContent =
+    { creer: 'Créer la vue', renommer: 'Renommer', copier: 'Copier' }[mode];
+  aide.textContent = mode === 'copier'
+    ? 'Copie, rien que pour vous, les filtres et les colonnes affichés.'
+    : 'Reprend les filtres et les colonnes affichés.';
+  aide.classList.toggle('hidden', mode === 'renommer');
+  // Choix 🔒 Pour moi / 👥 Pour tous : à la création seulement, « Pour moi » par défaut
+  document.getElementById('vue-portee').classList.toggle('hidden', mode !== 'creer');
+  document.querySelector('input[name="vue-portee"][value="perso"]').checked = true;
   placerSous(pop, ancre);
   champ.focus();
   champ.select();
@@ -740,11 +852,16 @@ function validerNomVue() {
   const nom = document.getElementById('vue-nom').value.trim();
   if (!nom) return;
   pop.classList.add('hidden');
-  if (pop.dataset.mode === 'renommer') renommerVue(nom); else creerVue(nom);
+  const mode = pop.dataset.mode;
+  if (mode === 'renommer')    renommerVue(nom);
+  else if (mode === 'copier') creerVue(nom, true);
+  else creerVue(nom, document.querySelector('input[name="vue-portee"]:checked')?.value !== 'partagee');
 }
 
 function ouvrirMenuVue(ancre) {
   fermerPopovers();
+  // « Copier en vue perso » : seulement depuis une vue partagée
+  document.getElementById('vue-menu-copier').hidden = !!vueEnregistree(STATE.activeView)?.perso;
   const modifiee = vueModifiee();
   document.getElementById('vue-menu-enregistrer').disabled = !modifiee;
   document.getElementById('vue-menu-annuler').disabled = !modifiee;
@@ -821,7 +938,7 @@ function remplirColonnesVue() {
 function majColonnesVue(colonnes) {
   const vue = vueEnregistree(STATE.activeView);
   vue.colonnes = colonnes;
-  enregistrerVues();
+  enregistrerVues(vue);
   remplirColonnesVue();
   renderBoard();
 }
@@ -1383,6 +1500,10 @@ function majBarreProjet() {
  */
 function renderAccueil(board) {
   const premiere = STATE.vues.length === 0;
+  // Bouton « Mes tâches » (#202) : seulement si « Assigné à » est une référence
+  const mesTaches = (STATE.mapping.assigne && REFS.assigne)
+    ? `<button id="accueil-mes-taches" class="btn-primary">👤 ${vueMesTaches() ? 'Ouvrir' : 'Créer'} ma vue Mes tâches</button>`
+    : '';
   board.innerHTML = `
     <div class="accueil">
       <h2>Bienvenue dans le Kanban</h2>
@@ -1390,20 +1511,24 @@ function renderAccueil(board) {
         avec ses filtres et ses colonnes. ${premiere
           ? 'Ce Kanban n\'a pas encore de vue : créez-en une pour voir les cartes.'
           : 'Cliquez sur un onglet pour retrouver les cartes.'}</p>
-      <button id="accueil-creer" class="btn-primary">＋ ${premiere ? 'Créer ma première vue' : 'Créer une vue'}</button>
+      <div class="accueil-boutons">
+        ${mesTaches}
+        <button id="accueil-creer" class="${mesTaches ? 'btn-ghost' : 'btn-primary'}">＋ ${premiere ? 'Créer ma première vue' : 'Créer une vue'}</button>
+      </div>
       <ol class="accueil-etapes">
         <li><strong>⚙ Configurer</strong> : choisissez le projet du Kanban, associez les colonnes de la table et cochez l'équipe projet (personnes proposées dans « Assigné à »). Puis cliquez sur <strong>Enregistrer</strong>, en haut à droite de Grist.</li>
-        <li><strong>＋ Vue</strong> : crée une vue à partir de l'affichage actuel. Le menu <strong>⋯</strong> de l'onglet actif permet de la renommer ou de la supprimer. Puis cliquez sur <strong>Enregistrer</strong> de Grist pour la garder.</li>
+        <li><strong>＋ Vue</strong> : crée une vue à partir de l'affichage actuel, <strong>🔒 pour vous</strong> (par défaut : gardée aussitôt dans votre navigateur) ou <strong>👥 pour tous</strong> (puis cliquez sur <strong>Enregistrer</strong> de Grist pour la garder). Le menu <strong>⋯</strong> de l'onglet actif permet de la renommer, de la supprimer, ou de copier une vue partagée en vue perso pour l'adapter sans gêner les autres.</li>
         <li><strong>👤 Qui suis-je ?</strong> (en haut à droite) : indiquez votre nom, une fois (rien à enregistrer). Le filtre sur la colonne « Assigné à » propose alors <strong>👤 Moi</strong>, qui montre vos propres cartes ; dans une vue partagée, il montre à chacun les siennes.</li>
         <li><strong>＋ Filtre</strong> : ne garde que certaines cartes (« EPIC est … », « Assigné n'est pas … »). Une vue modifiée affiche <strong>•</strong> : cliquez sur <strong>💾 Enregistrer la vue</strong> pour garder les filtres.</li>
         <li><strong>⋯ › Colonnes…</strong> : choisit les statuts affichés et leur ordre. On peut aussi glisser les en-têtes de colonnes.</li>
         <li><strong>Cartes</strong> : glissez une carte dans une autre colonne pour changer son statut ; cliquez dessus pour ouvrir sa fiche.</li>
-        <li><strong>⚠️ Deux « Enregistrer »</strong> : <strong>💾 Enregistrer la vue</strong> garde les filtres dans la vue ; puis le bouton <strong>Enregistrer</strong> de Grist, en haut à droite, inscrit vues et réglages dans le document, pour tous. Sans ce dernier clic, ils sont perdus au rechargement de la page. Les cartes, elles, sont enregistrées aussitôt, et votre navigateur retient l'onglet actif et votre nom.</li>
+        <li><strong>⚠️ Deux « Enregistrer »</strong> : <strong>💾 Enregistrer la vue</strong> garde les filtres dans la vue ; pour une vue 👥 partagée, le bouton <strong>Enregistrer</strong> de Grist, en haut à droite, l'inscrit ensuite dans le document, pour tous. Sans ce dernier clic, elle est perdue au rechargement de la page, comme les réglages de ⚙. Les vues 🔒 personnelles, les cartes, l'onglet actif et votre nom sont gardés aussitôt.</li>
       </ol>
       <p class="accueil-plus"><a href="${URL_AIDE}" target="_blank" rel="noopener">📖 En savoir plus (mode d'emploi complet)</a></p>
     </div>`;
   document.getElementById('accueil-creer')
     ?.addEventListener('click', (e) => ouvrirNomVue('creer', e.currentTarget));
+  document.getElementById('accueil-mes-taches')?.addEventListener('click', ouvrirMesTaches);
 }
 
 function getOrderedStatuts(statutList, view) {
@@ -2237,7 +2362,7 @@ function onColumnDrop(e) {
   if (vue && vue.colonnes) {
     vue.colonnes = [...order.filter(s => vue.colonnes.includes(s)),
                     ...vue.colonnes.filter(s => !order.includes(s))];
-    enregistrerVues();
+    enregistrerVues(vue);
   } else {
     STATE.columnOrder = order;
     grist.setOption('columnOrder', STATE.columnOrder).catch(() => {});
@@ -2545,9 +2670,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('vue-menu-enregistrer')?.addEventListener('click', enregistrerFiltresVue);
   document.getElementById('vue-menu-annuler')    ?.addEventListener('click', annulerModificationsVue);
   document.getElementById('vue-menu-renommer')   ?.addEventListener('click', () =>
-    ouvrirNomVue('renommer', document.querySelector('.vue-perso.active')));
+    ouvrirNomVue('renommer', document.querySelector('.vue-enregistree.active')));
   document.getElementById('vue-menu-colonnes')   ?.addEventListener('click', () =>
-    ouvrirColonnesVue(document.querySelector('.vue-perso.active')));
+    ouvrirColonnesVue(document.querySelector('.vue-enregistree.active')));
+  document.getElementById('vue-menu-copier')     ?.addEventListener('click', () =>
+    ouvrirNomVue('copier', document.querySelector('.vue-enregistree.active')));
   // Suppression en deux clics : le premier demande confirmation
   document.getElementById('vue-menu-supprimer')  ?.addEventListener('click', (e) => {
     const b = e.currentTarget;

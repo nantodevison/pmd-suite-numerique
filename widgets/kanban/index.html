@@ -203,8 +203,13 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 .filtre-pied { border-top: 1px solid var(--border); padding-top: 6px; }
 
 /* ── Vues enregistrées (#196) ── */
-.vues-perso { display: flex; align-items: center; gap: 2px; }
-.view-tab.vue-perso { display: inline-flex; align-items: center; gap: 4px; }
+.vues-enregistrees { display: flex; align-items: center; gap: 2px; }
+.view-tab.vue-enregistree { display: inline-flex; align-items: center; gap: 4px; }
+/* Vue personnelle (#202) : bordure en pointillés pour la distinguer des vues partagées */
+.view-tab.vue-enregistree.perso:not(.active) { border: 1.5px dashed var(--border); }
+.vue-portee { display: flex; flex-direction: column; gap: 2px; }
+.vue-portee.hidden, .vue-aide.hidden { display: none; }
+.vue-menu-item[hidden] { display: none; }
 .vue-modifiee { font-size: 16px; line-height: 1; color: var(--warning); }
 .view-tab.active .vue-modifiee { color: #fde68a; }
 .vue-menu-btn { padding: 0 4px; border-radius: 4px; font-weight: 700; }
@@ -469,6 +474,7 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 .accueil-intro { color: var(--text-muted); margin: 0 0 16px; }
 .accueil-etapes { margin: 20px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; }
 .accueil-plus { margin-top: 20px; }
+.accueil-boutons { display: flex; flex-wrap: wrap; gap: 8px; }
 .accueil-plus a { color: var(--accent); }
 /* Sur l'accueil, pas de cartes : les commandes de filtre sont masquées */
 .filterbar.sur-accueil .filter-sep,
@@ -720,7 +726,7 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
   <div class="filterbar" id="filterbar">
     <div class="view-tabs" id="view-tabs">
       <!-- Vues enregistrées (#196) : un onglet par vue, dessiné par renderVueTabs() -->
-      <div id="vues-perso" class="vues-perso"></div>
+      <div id="vues-enregistrees" class="vues-enregistrees"></div>
       <button id="vue-ajouter" class="filtre-ajouter" title="Créer une vue à partir de l'affichage actuel">＋ Vue</button>
     </div>
 
@@ -755,10 +761,21 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
     </div>
   </div>
 
-  <!-- Vues enregistrées (#196) : saisie du nom (création ou renommage) -->
+  <!-- Vues enregistrées (#196) : saisie du nom (création, renommage ou copie) -->
   <div id="vue-nom-popover" class="filtre-popover hidden">
     <input id="vue-nom" class="filtre-recherche" type="text" placeholder="Nom de la vue" autocomplete="off" />
     <p id="vue-nom-aide" class="vue-aide">Reprend les filtres et les colonnes affichés.</p>
+    <!-- À la création seulement : vue personnelle (par défaut) ou partagée (#202) -->
+    <div id="vue-portee" class="vue-portee">
+      <label class="filtre-valeur">
+        <input type="radio" name="vue-portee" value="perso" checked />
+        <span>🔒 <strong>Pour moi</strong> <span class="vue-aide">— ce navigateur, gardée aussitôt</span></span>
+      </label>
+      <label class="filtre-valeur">
+        <input type="radio" name="vue-portee" value="partagee" />
+        <span>👥 <strong>Pour tous</strong> <span class="vue-aide">— le document, puis « Enregistrer » de Grist</span></span>
+      </label>
+    </div>
     <button id="vue-nom-valider" class="btn-primary vue-valider">Créer la vue</button>
   </div>
 
@@ -768,6 +785,7 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
     <button id="vue-menu-annuler" class="vue-menu-item">↩ Annuler les modifications</button>
     <button id="vue-menu-renommer" class="vue-menu-item">✏️ Renommer</button>
     <button id="vue-menu-colonnes" class="vue-menu-item">▦ Colonnes…</button>
+    <button id="vue-menu-copier" class="vue-menu-item">🔒 Copier en vue perso</button>
     <button id="vue-menu-supprimer" class="vue-menu-item danger">🗑 Supprimer la vue</button>
   </div>
 
