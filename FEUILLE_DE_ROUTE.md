@@ -8,28 +8,42 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-10-28 01:17_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-10-29 02:26_
 
 ### 🖐️ À faire
-- [ ] #183 Ajouter les ref interne (Haute, EPIC « Améliorer la qualité du code »)
-- [ ] #201 Vérifier la sécurité des widgets et du dépôt public (XSS, dépendances CDN, secrets dans l'historique, sync) (Haute, EPIC « Améliorer la qualité du code »)
-- [ ] #202 Kanban : profils de vue par utilisateur (Haute, EPIC « Améliorer l'interface »)
-- [ ] #185 Rendre les pastilles modifiables dans la fiche de la Galerie (Moyenne, EPIC « Améliorer l'interface »)
-- [ ] #203 Kanban : afficher discrètement le numéro #id sur les cartes (Moyenne, EPIC « Améliorer l'interface »)
-- [ ] #184 Ouvrir un objet lié (tâche, EPIC…) d'un clic depuis la fiche de la Galerie (Basse, EPIC « Améliorer l'interface »)
-- [ ] #186 Préremplir une nouvelle carte de la Galerie avec le filtre de la vue (Sélectionner par) (Basse, EPIC « Améliorer l'interface »)
+- [ ] #183 Ajouter les ref interne (Haute, EPIC « Améliorer la qualité du code du kanban »)
+- [ ] #185 Rendre les pastilles modifiables dans la fiche de la Galerie (Moyenne, EPIC « Améliorer l'interface du kanban »)
+- [ ] #203 Kanban : afficher discrètement le numéro #id sur les cartes (Moyenne, EPIC « Améliorer l'interface du kanban »)
+- [ ] #204 Réutiliser les filtres kanban (Moyenne, EPIC « Filtrer la galerie »)
+- [ ] #205 Modifier des pastilles sans ouvrir la carte (Moyenne, EPIC « Rendre les cartes de galerie modifiable »)
+- [ ] #206 Modifier des pastilles dans la carte (Moyenne, EPIC « Rendre les cartes de galerie modifiable »)
+- [ ] #184 Ouvrir un objet lié (tâche, EPIC…) d'un clic depuis la fiche de la Galerie (Basse, EPIC « Améliorer l'interface du kanban »)
+- [ ] #186 Préremplir une nouvelle carte de la Galerie avec le filtre de la vue (Sélectionner par) (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #188 Extraire le rendu des cartes et des pastilles dans _commun (carte.js, carte.css), utilisé par la Galerie (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
 - [ ] #189 Ajouter à la Galerie un mode tableau : cartes groupées en colonnes selon une colonne Choix associée (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
 - [ ] #190 Permettre le glisser-déposer des cartes entre colonnes dans le mode tableau (change la valeur de la colonne de regroupement) (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
 - [ ] #191 Reprendre dans le moteur commun les réglages du Kanban : ordre des colonnes, filtres EPIC et personne, projet du widget (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
 - [ ] #192 Remplacer le Kanban par le moteur commun : d'abord sur une copie, puis pour l'Observatoire (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
-- [ ] #200 Kanban : filtrer sur n'importe quelle colonne (texte, nombre, date…) (Basse, EPIC « Améliorer l'interface »)
+- [ ] #200 Kanban : filtrer sur n'importe quelle colonne (texte, nombre, date…) (Basse, EPIC « Améliorer l'interface du kanban »)
+- [ ] #207 Afficher les relations de "bloque" et "bloqué par" entre les taches (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
+
+### ♻️ En cours
+- [ ] #201 Vérifier la sécurité des widgets et du dépôt public (XSS, dépendances CDN, secrets dans l'historique, sync) (Haute, EPIC « Améliorer la qualité du code du kanban »)
+- [ ] #202 Kanban : profils de vue par utilisateur (Haute, EPIC « Améliorer l'interface du kanban »)
 
 <!-- fin kanban -->
 
 ## ⚠️ Prochaine séance
-- [ ] #202 point 1 : onglet actif mémorisé dans le navigateur (localStorage) ; puis étude du point 2 (vues par utilisateur)
-- [ ] #201 sécurité : relecture ciblée avant de diffuser le Kanban aux collègues
+- [ ] #201 étape 2 : test XSS sur une COPIE du document (le pare-feu de Grist bloquera peut-être la saisie : le noter).
+  Fenêtre « 1 » = faille ; attendu = texte affiché tel quel. Textes à saisir :
+  - titre d'une tâche : `<img src=x onerror=alert(1)>Test titre`
+  - nom d'un EPIC : `<script>alert(1)</script>EPIC test`
+  - choix de Statut : `<b onmouseover=alert(1)>Statut piégé</b>` (survoler l'en-tête)
+  - nom d'une personne de l'équipe : `<img src=x onerror=alert(1)>Contact` (carte, fiche, filtre, panneau 👤)
+  - description : `[clique ici](javascript:alert(1))` puis, à la ligne, `<img src=x onerror=alert(1)>`
+  - nom d'une vue : `<img src=x onerror=alert(1)>` ; Galerie : titre, pastille, texte principal
+  Puis décider : A. DOMPurify restreint au Markdown (recommandé) ; B. CSP (report proposé)
+- [ ] #202 : test avec Vincent et Elisa (👤 Qui suis-je ?, « Créer ma vue Mes tâches », ⋯ › Colonnes…) avant l'étape 3 (Mes onglets)
 - [ ] Grist, à la main : passer l'EPIC « Supprimer les spécifité OTV » en Done (toutes ses tâches sont faites)
 
 ## En cours
@@ -39,6 +53,8 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [x] Vues enregistrées (#196) : 8 tests validés dans le builder, PR #18 fusionnée le 2026-10-27 = mise en production ; #187 (glisser-déposer des colonnes) réglée du même coup
 - [x] Onglets codés en dur remplacés par un onglet Accueil (#197, PR #19), vues recréées dans l'Observatoire (#198), README et catalogue (#199), 2026-10-27
 - [x] Kanban générique : millésime et lecture de EPICs retirés (#147, PR #20), équipe projet dans ⚙ (#148, PR #21), 2026-10-28 ; équipe cochée et Accueil vérifié dans l'Observatoire le même jour
+- [x] #202 : onglet actif dans le navigateur (PR #22, 2026-10-28), « Qui suis-je ? » + filtre 👤 Moi (PR #23), vues personnelles 🔒 + « Mes tâches » (PR #24), 2026-10-29 ; reste l'étape 3 après test
+- [x] #201 étape 1 : clé API Grist trouvée dans une sortie de notebook (commit 3cae070) → régénérée ; clé Brevo supprimée ; historique et 32 images sains ; étape 2 : revue de code sans faille
 
 ## Prochaines étapes
 (Les étapes du projet sont désormais suivies dans Grist : voir « Kanban (Grist) » ci-dessus.)
@@ -55,6 +71,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - Vérifier que la sync fonctionne encore (cookies Docs probablement expirés depuis avril)
 - Éviter les doublons dans Chapitres quand on relance la sync
 - Dépôt .claude : ajouter à taches.py des options --bloque / --bloquee-par (colonnes Bloque / Bloquee_par de Grist), pour lier les tâches sans passer par Grist à la main — demandé le 2026-10-26
+- Sécurité : vider les sorties des notebooks avant chaque commit (contrôle automatique type nbstripout ?) — à formaliser à l'étape 6 de #201
 
 ## Décisions récentes
 <!-- Une ligne par décision : date — décision — raison en quelques mots -->
@@ -98,3 +115,9 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - 2026-10-28 — équipe projet cochée dans ⚙ plutôt que Contacts.Projets — Contacts.Projets désigne les contacts CRM liés au projet, pas l'équipe ; repli sur toute la table si aucune équipe
 - 2026-10-28 — Kanban en portée « générique » dans le catalogue — plus aucune valeur propre à un projet codée en dur
 - 2026-10-28 — scan claude-security impossible (outil Workflow indisponible) — plugin retiré ; vérification de sécurité suivie dans #201, à faire en séance
+- 2026-10-28 — onglet actif retenu par le navigateur (localStorage), activeView n'est plus écrit dans le document — « Enregistrer » ne s'allume plus à chaque changement d'onglet, chacun retrouve le sien
+- 2026-10-29 — couche perso dans le navigateur (nom, vues perso), plutôt que dans les options du document ou une table dédiée — ni « Enregistrer » ni écrasement entre utilisateurs ; perte sur un autre poste acceptée (export/import en option)
+- 2026-10-29 — « 👤 Moi » stocké sous un code dans la vue et remplacé au filtrage par le nom déclaré — une vue partagée montre à chacun ses cartes
+- 2026-10-29 — vue personnelle par défaut à la création ; « Mes tâches » affiche tous les statuts, à masquer avec ⋯ › Colonnes… — amener les collègues à utiliser l'éditeur de colonnes
+- 2026-10-29 — après accord sur le commit, Claude enchaîne push, PR, fusion, retour sur master et suppression des branches — étapes mécaniques
+- 2026-10-29 — gitleaks 8.30.1 installé en portable (%LOCALAPPDATA%\Programs\gitleaks, empreinte vérifiée) ; les textes de test XSS restent hors de Grist, dont le pare-feu les refuse (403) — outil d'analyse des secrets du dépôt public
