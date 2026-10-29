@@ -100,8 +100,9 @@ apparaissent en tête de liste à l'ouverture de ⚙.
 |---|---|---|
 | Les **cartes** : création, déplacement, champs, suppression | la table Grist | aussitôt, comme toute saisie dans Grist |
 | Les **réglages** de ⚙ : colonnes associées, projet, équipe | le document (options du widget), pour tous | « Appliquer », puis **Enregistrer** de Grist |
-| Les **vues** : création, nom, colonnes et leur ordre, suppression | le document, pour tous | aussitôt dans le widget, puis **Enregistrer** de Grist |
-| Les **filtres** d'une vue | le document, pour tous | **💾 Enregistrer la vue**, puis **Enregistrer** de Grist |
+| Les **vues 👥 partagées** : création, nom, colonnes et leur ordre, suppression | le document, pour tous | aussitôt dans le widget, puis **Enregistrer** de Grist |
+| Les **filtres** d'une vue partagée | le document, pour tous | **💾 Enregistrer la vue**, puis **Enregistrer** de Grist |
+| Les **vues 🔒 personnelles** (et leurs filtres) | votre navigateur, pour vous seul | aussitôt (filtres : **💾 Enregistrer la vue**) |
 | L'**onglet actif**, **votre nom** (👤) et la disposition de la fiche (côté / centre) | votre navigateur, pour vous seul | automatiquement |
 
 **Le bouton « Enregistrer » de Grist**, en haut à droite, apparaît dès qu'un
@@ -119,7 +120,8 @@ une version du widget antérieure au 2026-10-28.
 ## Accueil
 
 L'onglet **🏠 Accueil**, en haut à côté de « Kanban », est fixe : on ne peut ni
-le supprimer ni le renommer. Il affiche un court mode d'emploi, un bouton pour
+le supprimer ni le renommer. Il affiche un court mode d'emploi, un bouton
+**👤 Créer ma vue Mes tâches** (voir « Vues personnelles »), un bouton pour
 créer une vue et un lien vers cette page. C'est aussi l'onglet de repli : le
 Kanban s'y ouvre au premier lancement, ou quand la vue retenue par votre
 navigateur n'existe plus.
@@ -128,22 +130,45 @@ navigateur n'existe plus.
 
 Une vue est un onglet de la deuxième ligne. Elle a un nom, des filtres et une
 liste de colonnes (statuts affichés et leur ordre). Les vues sont propres à
-chaque widget Kanban.
+chaque widget Kanban. Il en existe deux sortes : les vues **👥 partagées**,
+gardées dans le document et les mêmes pour tous, puis, après elles, les vues
+**🔒 personnelles** (bordure en pointillés), voir plus bas.
 
-- **＋ Vue** crée une vue à partir de l'affichage actuel (filtres et colonnes).
-  Depuis l'Accueil, la vue n'a aucun filtre et affiche tous les statuts présents.
+- **＋ Vue** crée une vue à partir de l'affichage actuel (filtres et colonnes),
+  **🔒 pour moi** (choix par défaut) ou **👥 pour tous**. Depuis l'Accueil, la
+  vue n'a aucun filtre et affiche tous les statuts présents.
 - **Menu ⋯** de l'onglet actif : enregistrer ou annuler les modifications des
-  filtres, renommer, choisir les colonnes (**Colonnes…**), supprimer (deux clics
-  pour confirmer).
+  filtres, renommer, choisir les colonnes (**Colonnes…**), copier en vue perso
+  (vues partagées seulement), supprimer (deux clics pour confirmer).
 - **Filtres** : une vue modifiée affiche **•**. **💾 Enregistrer la vue** garde
-  les filtres dans la vue, puis « Enregistrer » de Grist les garde dans le
-  document ; si on change d'onglet sans enregistrer la vue, les modifications
-  sont abandonnées.
+  les filtres dans la vue (pour une vue partagée, cliquer ensuite sur
+  « Enregistrer » de Grist pour les garder dans le document) ; si on change
+  d'onglet sans enregistrer la vue, les modifications sont abandonnées.
 - **Colonnes** : « Colonnes… » permet d'afficher un statut même sans carte, de
   changer l'ordre (↑ ↓) ou de revenir à « Tous les statuts présents ». Glisser
   un en-tête de colonne change aussi l'ordre de la vue. Ces changements sont
-  enregistrés aussitôt dans la vue ; reste à cliquer sur « Enregistrer » dans
-  Grist pour les garder dans le document.
+  enregistrés aussitôt dans la vue ; pour une vue partagée, reste à cliquer sur
+  « Enregistrer » dans Grist pour les garder dans le document.
+
+### Vues personnelles
+
+Une vue **🔒 personnelle** n'est visible que par vous : elle est gardée par
+votre navigateur (`localStorage`), aussitôt, sans « Enregistrer » de Grist, et
+sans effet sur les vues des autres. Elle se manipule comme une vue partagée
+(menu ⋯, filtres, colonnes).
+
+- **Copier en vue perso** (menu ⋯ d'une vue partagée) : crée une vue
+  personnelle avec les filtres et les colonnes **affichés**, modifications non
+  enregistrées comprises. On part d'une vue commune, on l'adapte, on la garde
+  pour soi.
+- **👤 Créer ma vue Mes tâches** (Accueil) : crée en un clic une vue
+  personnelle « Mes tâches », filtrée sur « Assigné à est 👤 Moi » (voir
+  « Qui suis-je ? »), avec tous les statuts présents : masquez ceux qui ne vous
+  servent pas avec ⋯ › Colonnes…. Si elle existe déjà, le bouton l'ouvre.
+- Les vues personnelles sont propres au document, à la table et au projet du
+  Kanban. Sur un autre poste, un autre navigateur ou en navigation privée, on
+  ne les retrouve pas ; elles sont perdues si l'on efface les données du site
+  dans le navigateur.
 
 ## Filtres
 
