@@ -11,9 +11,7 @@ Docs, était synchronisé dans Grist pour y être parcouru, commenté et questio
 | Élément | Où |
 |---|---|
 | Synchronisation du guide Docs → table `Chapitres` | [`../../python/`](../../python/) |
-| Widget de parcours des chapitres | [`../../widgets/parcours-doc/`](../../widgets/parcours-doc/) |
-| Widget pour poser des questions | [`../../widgets/questions/`](../../widgets/questions/) |
-| Widget d'échanges et de réponses | [`../../widgets/echanges/`](../../widgets/echanges/) |
+| Widgets `parcours-doc` (parcours des chapitres), `questions` et `echanges` (questions et réponses) | retirés le 2026-10-30 (#201) ; code dans l'historique Git, au tag `archive-widgets-gt-cbs` (commit `83a05a4`) (voir [`../../widgets/README.md`](../../widgets/README.md)) |
 | Schéma du document Grist | [`../../espaces/gt-cbs-bruit/grist_schema.py`](../../espaces/gt-cbs-bruit/grist_schema.py) |
 | Images du guide publiées par la sync | [`../../images/`](../../images/) |
 | Exemple d'arborescence Docs récupérée | [`tree_example.txt`](tree_example.txt) |
@@ -24,4 +22,5 @@ Docs, était synchronisé dans Grist pour y être parcouru, commenté et questio
   des images), pour tout projet qui rédige dans Docs et exploite dans Grist
   (par exemple, les écoutes client).
 - Le **parcours de chapitres** (`parcours-doc`), pour consulter un document Docs
-  structuré depuis Grist.
+  structuré depuis Grist : à reprendre depuis l'historique Git, en ajoutant
+  DOMPurify et des dépendances à version figée (comme le Kanban).

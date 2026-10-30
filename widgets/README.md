@@ -34,9 +34,22 @@ https://nantodevison.github.io/pmd-suite-numerique/widgets/<nom-du-dossier>/
 |---|---|---|---|---|---|---|
 | [kanban](kanban/) | Suivre des tâches en colonnes par statut : glisser-déposer, création, fiche (côté ou centre) avec pastilles modifiables et description en Markdown, filtres combinables, vues enregistrées, onglet Accueil (mode d'emploi), équipe projet choisie dans ⚙ | générique | observatoire-trafics | lit et écrit la table de la vue (colonnes associées via ⚙) ; lit les tables visées par les colonnes Projet, EPIC et Assigné à | `full` | en service |
 | [galerie](galerie/) | Afficher une table en cartes avec pastilles colorées ; fiche (côté ou centre) pour lire et modifier le titre et le texte principal en Markdown ; création de carte avec modèle de texte | générique | gestion-de-projet | colonnes à associer : Titre, Texte principal (Markdown), Pastilles (plusieurs), Objets liés (plusieurs), Contexte (plusieurs) ; lit la structure du document | `full` | en test |
-| [parcours-doc](parcours-doc/) | Parcourir les chapitres d'un document Docs synchronisé | spécifique | gt-cbs-bruit | lit `Chapitres` | `full` | archivé |
-| [questions](questions/) | Poser des questions sur le document et les classer par thème | spécifique | gt-cbs-bruit | lit et écrit `Questions`, `Question_Theme_Link`, `Enum_Themes`, `Widget_Session` ; lit `Users` | `full` | archivé |
-| [echanges](echanges/) | Répondre aux questions, voter, lier les réponses aux chapitres ; notifications email (désactivées) | spécifique | gt-cbs-bruit | lit et écrit `Questions`, `Reponses`, `Votes`, `Reponse_Chapitre_Link`, `Conversations`… ; lit `Chapitres`, `Users` | `full` | archivé |
+
+**Widgets retirés.** GitHub Pages publie tout le dépôt : un widget qui n'est plus
+utilisé est supprimé, et non simplement marqué « archivé », pour ne pas laisser
+en ligne du code que plus personne ne surveille. Son code reste dans
+l'historique Git.
+
+| Widget | Rôle | Projet | Retiré le | Code récupérable au tag |
+|---|---|---|---|---|
+| parcours-doc | Parcourir les chapitres d'un document Docs synchronisé | gt-cbs-bruit | 2026-10-30 (#201) | `archive-widgets-gt-cbs` |
+| questions | Poser des questions sur le document et les classer par thème | gt-cbs-bruit | 2026-10-30 (#201) | `archive-widgets-gt-cbs` |
+| echanges | Répondre aux questions, voter, lier les réponses aux chapitres | gt-cbs-bruit | 2026-10-30 (#201) | `archive-widgets-gt-cbs` |
+
+Le tag `archive-widgets-gt-cbs` marque le commit `83a05a4`. Pour consulter
+l'un de ces widgets : `git show archive-widgets-gt-cbs:widgets/<widget>/widget.js`,
+ou en ligne : <https://github.com/nantodevison/pmd-suite-numerique/tree/archive-widgets-gt-cbs/widgets>.
+Un tag n'est pas publié par GitHub Pages (seule la branche `master` l'est).
 
 ## Conventions
 
@@ -49,7 +62,7 @@ https://nantodevison.github.io/pmd-suite-numerique/widgets/<nom-du-dossier>/
 
 ## Workflow : modifier un widget
 
-1. **Modifier** le fichier dans ce dépôt (ex. `widgets/echanges/widget.js`).
+1. **Modifier** le fichier dans ce dépôt (ex. `widgets/kanban/kanban.js`).
 2. **Committer** et **pousser**, puis fusionner sur `master` (la branche publiée par GitHub Pages).
 3. Mettre à jour Grist, selon le mode de déploiement du widget :
    - **par URL (GitHub Pages)** : rien à faire, la nouvelle version est publiée automatiquement 1 à 2 minutes après la fusion sur `master` ; il suffit de recharger la page Grist ;
@@ -65,12 +78,12 @@ https://nantodevison.github.io/pmd-suite-numerique/widgets/<nom-du-dossier>/
 3. Dans le panneau de droite, **Niveau d'accès** → **Accès complet au document**. Sinon, le widget affiche « Access not granted ».
 
 Le code servi est public (dépôt GitHub public). Chaque widget charge aussi
-`grist-plugin-api.js` (getgrist.com) ; `parcours-doc` charge `marked` (jsDelivr),
-`kanban` et `galerie` chargent `marked` et `DOMPurify` (cdnjs, avec contrôle
+`grist-plugin-api.js` (getgrist.com) ; `kanban` et `galerie` chargent `marked` et `DOMPurify` (cdnjs, avec contrôle
 d'intégrité `integrity`).
 
 ## Notes de sécurité
 
 - **Pas de secrets dans le JS** : ne jamais inclure de clé API ou de token dans les widgets frontend.
 - **Niveau d'accès** : demander le niveau minimal ; `full` seulement si le widget écrit dans le document ou lit d'autres tables que celle de la vue.
+- **Widgets inutilisés** : les supprimer du dépôt (voir « Widgets retirés »), puisque tout ce qui est dans le dépôt est publié.
 - **Images** : voir [`../python/README.md`](../python/README.md#gestion-des-images-internes).

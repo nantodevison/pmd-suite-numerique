@@ -60,7 +60,7 @@ Configuration dans `.env` à la racine (voir `python/README.md` pour la liste). 
 
 ## GT CBS (projet terminé)
 
-Les widgets `parcours-doc`, `questions` et `echanges` (statut « archivé ») servaient la plateforme de questions/réponses du GT « Harmonisation CBS » (DGPR). Le widget `echanges` envoie des emails via l'API Brevo ; c'est désactivé par `var NOTIFICATIONS_ENABLED = false;` en tête de `widgets/echanges/widget.js` (fonctions `notifyOnNewResponse`, `sendSollicitation`, `notifyAuthor`).
+Les widgets `parcours-doc`, `questions` et `echanges` servaient la plateforme de questions/réponses du GT « Harmonisation CBS » (DGPR). Ils ont été retirés le 2026-10-30 (#201) : tout le dépôt étant publié par GitHub Pages, un widget inutilisé est supprimé plutôt qu'archivé. Leur code reste consultable au tag `archive-widgets-gt-cbs` (commit `83a05a4`).
 
 ## Feuille de route
 <!-- Lu par les compétences etat-des-lieux et cloture-session -->
