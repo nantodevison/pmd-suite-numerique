@@ -32,7 +32,8 @@
      - marked     : transforme le Markdown en HTML ;
      - DOMPurify  : nettoie ce HTML. Indispensable : le widget a l'accès
                     complet au document, et une description contenant du
-                    HTML malveillant pourrait sinon exécuter du code.
+                    HTML malveillant pourrait sinon exécuter du code. Seules
+                    les balises du Markdown sont gardées (voir section 2).
    Et la feuille de style ../_commun/fiche.css.
 
    UTILISATION (exemple)
@@ -159,6 +160,46 @@
 
   /* ── 2. Markdown ───────────────────────────────────────────── */
 
+  /*
+   * Nettoyage du HTML par liste blanche : on ne garde que ce que le Markdown
+   * produit. DOMPurify retire déjà tout code (<script>, onerror=…), mais
+   * laisserait passer des formulaires, des boutons ou des styles : de quoi
+   * dessiner, dans une description, une fausse page de connexion. Le texte
+   * des balises retirées est conservé.
+   */
+  const BALISES_MARKDOWN = ['p', 'br', 'hr', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'strong', 'em', 'del', 'code', 'pre', 'blockquote', 'ul', 'ol', 'li', 'a', 'img',
+    'table', 'thead', 'tbody', 'tr', 'th', 'td',
+    'input'];   // uniquement les cases à cocher des listes « - [ ] » (voir plus bas)
+  const ATTRIBUTS_MARKDOWN = ['href', 'title', 'src', 'alt', 'align', 'start',
+    'type', 'checked', 'disabled'];
+
+  // Images acceptées : celles que publie la synchronisation Docs → Grist (dépôt
+  // du projet) et celles embarquées dans le texte. Une image venue d'ailleurs
+  // permettrait à son site de savoir qui ouvre la fiche, et quand.
+  const IMAGES_AUTORISEES = [
+    'https://raw.githubusercontent.com/nantodevison/pmd-suite-numerique/',
+    'data:image/',
+  ];
+
+  // Appelé par DOMPurify sur chaque élément, une fois ses attributs nettoyés.
+  // Le nettoyage a lieu dans un document « inerte » : l'image refusée n'est
+  // jamais téléchargée.
+  DOMPurify.addHook('afterSanitizeAttributes', function (noeud) {
+    if (noeud.nodeName === 'IMG') {
+      const src = noeud.getAttribute('src') || '';
+      if (!IMAGES_AUTORISEES.some(debut => src.startsWith(debut))) {
+        const alt = noeud.getAttribute('alt');
+        noeud.replaceWith(noeud.ownerDocument.createTextNode(
+          '🖼 [image externe masquée' + (alt ? ' : ' + alt : '') + ']'));
+      }
+    } else if (noeud.nodeName === 'INPUT') {
+      // Une case à cocher reste un simple affichage ; tout autre champ est retiré.
+      if (noeud.getAttribute('type') === 'checkbox') noeud.setAttribute('disabled', '');
+      else noeud.remove();
+    }
+  });
+
   /** Markdown → HTML nettoyé, prêt à être inséré avec innerHTML. */
   function markdownVersHtml(texte) {
     if (!texte) return '';
@@ -166,7 +207,10 @@
     texte = notepadVersMarkdown(String(texte));
     // breaks : un simple retour à la ligne est conservé, comme dans Grist.
     const html = marked.parse(texte, { breaks: true, gfm: true });
-    return DOMPurify.sanitize(html);
+    return DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: BALISES_MARKDOWN,
+      ALLOWED_ATTR: ATTRIBUTS_MARKDOWN,
+    });
   }
 
   /** Markdown → texte brut sur une ligne (pour les aperçus sur les cartes). */
