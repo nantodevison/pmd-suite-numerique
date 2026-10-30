@@ -55,7 +55,7 @@ Un tag n'est pas publié par GitHub Pages (seule la branche `master` l'est).
 
 - Chaque widget est composé d'un `index.html` et d'un fichier JavaScript ; `index.html` charge ce dernier par `<script src="…">` (indispensable en mode URL).
 - Pas de dépendances npm : seules des CDN publics sont utilisés (chargés via `<script src="...">`).
-- La bibliothèque `grist-plugin-api.js` est toujours chargée depuis `https://docs.getgrist.com/grist-plugin-api.js`.
+- La bibliothèque `grist-plugin-api.js` est toujours chargée depuis l'instance de la DINUM : `https://grist.numerique.gouv.fr/grist-plugin-api.js`.
 - Toujours appeler `grist.ready()` **avant** tout appel à l'API Grist (évite l'erreur `RPC_UNKNOWN_FORWARD_DEST`).
 - Les dossiers dont le nom commence par `_` ne sont pas des widgets : ce sont des ressources partagées. Ils sont publiés grâce au fichier `.nojekyll` à la racine du dépôt.
   - [`_commun/`](_commun/) : la **fiche** partagée par `kanban` et `galerie` (`fiche.js`, `fiche.css`) : disposition côté / centre, Markdown. Un widget qui l'utilise ne fonctionne qu'en mode URL. Modifier ces fichiers touche **tous** ces widgets, y compris ceux en service : tester chacun avant de fusionner.
@@ -78,12 +78,13 @@ Un tag n'est pas publié par GitHub Pages (seule la branche `master` l'est).
 3. Dans le panneau de droite, **Niveau d'accès** → **Accès complet au document**. Sinon, le widget affiche « Access not granted ».
 
 Le code servi est public (dépôt GitHub public). Chaque widget charge aussi
-`grist-plugin-api.js` (getgrist.com) ; `kanban` et `galerie` chargent `marked` et `DOMPurify` (cdnjs, avec contrôle
+`grist-plugin-api.js` (instance Grist de la DINUM) ; `kanban` et `galerie` chargent `marked` et `DOMPurify` (cdnjs, avec contrôle
 d'intégrité `integrity`).
 
 ## Notes de sécurité
 
 - **Pas de secrets dans le JS** : ne jamais inclure de clé API ou de token dans les widgets frontend.
 - **Niveau d'accès** : demander le niveau minimal ; `full` seulement si le widget écrit dans le document ou lit d'autres tables que celle de la vue.
+- **Markdown** : nettoyé par DOMPurify en liste blanche (`_commun/fiche.js`) : ni formulaire, ni bouton, ni style ; une image qui ne vient pas du dépôt du projet est remplacée par « 🖼 [image externe masquée] ».
 - **Widgets inutilisés** : les supprimer du dépôt (voir « Widgets retirés »), puisque tout ce qui est dans le dépôt est publié.
 - **Images** : voir [`../python/README.md`](../python/README.md#gestion-des-images-internes).

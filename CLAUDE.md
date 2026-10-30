@@ -22,7 +22,8 @@ Le document Grist principal est `espaces/gestion-projets/` : un espace unique (g
 
 ## Widgets Grist
 
-- Pas de npm ni de bundler : chaque widget est un `index.html` + un fichier JS autonomes, dépendances uniquement via CDN ; `grist-plugin-api.js` est chargé depuis `https://docs.getgrist.com/grist-plugin-api.js`.
+- Pas de npm ni de bundler : chaque widget est un `index.html` + un fichier JS autonomes, dépendances uniquement via CDN ; `grist-plugin-api.js` est chargé depuis l'instance de la DINUM, `https://grist.numerique.gouv.fr/grist-plugin-api.js` (même version que notre Grist ; celle de `docs.getgrist.com` est une version de développement).
+- Le Markdown affiché passe par `Fiche.markdownVersHtml()` (`widgets/_commun/fiche.js`) : DOMPurify en liste blanche (balises du Markdown seulement), images limitées au dépôt du projet et aux `data:image/`. Ne jamais insérer de texte venu de Grist par `innerHTML` sans cette fonction ou `escHtml()`.
 - Toujours appeler `grist.ready()` avant tout appel à l'API Grist (sinon `RPC_UNKNOWN_FORWARD_DEST`).
 - Déploiement, deux modes (par URL testé avec succès le 2026-09-23 sur l'instance Grist de la DINUM) :
   - **par URL (GitHub Pages, branche `master`)** : `https://nantodevison.github.io/pmd-suite-numerique/widgets/<widget>/`. Grist affiche un avertissement « source inconnue » à confirmer, puis il faut régler le niveau d'accès du widget sur « Accès complet » ;
