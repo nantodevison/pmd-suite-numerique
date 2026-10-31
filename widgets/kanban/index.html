@@ -17,6 +17,7 @@
           crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <!-- Fiche partagée avec les autres widgets (mode URL uniquement) -->
   <link rel="stylesheet" href="../_commun/fiche.css" />
+  <link rel="stylesheet" href="../_commun/liens.css" />
   <style>
 /* ══════════════════════════════════════════════════════════════
    KANBAN GRIST — styles v3
@@ -655,6 +656,8 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
         <div class="config-field"><label for="col-date">Date / Échéance</label><select id="col-date"><option value="">— aucune —</option></select></div>
         <div class="config-field"><label for="col-epic">EPIC</label><select id="col-epic"><option value="">— aucune —</option></select></div>
         <div class="config-field"><label for="col-projet">Champ Projet</label><select id="col-projet"><option value="">— aucune —</option></select></div>
+        <div class="config-field"><label for="col-bloquee-par">⛔ Bloquée par</label><select id="col-bloquee-par"><option value="">— aucune —</option></select></div>
+        <div class="config-field"><label for="col-bloque">➡️ Bloque</label><select id="col-bloque"><option value="">— aucune —</option></select></div>
         <!-- ✅ Projet du Kanban : un Kanban = un projet (choisi une fois, mémorisé dans le widget) -->
         <div class="config-field"><label for="col-projet-kanban">Projet du Kanban</label><select id="col-projet-kanban"><option value="">— choisir —</option></select></div>
       </div>
@@ -822,6 +825,8 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
 
   <div id="toast" class="toast hidden"></div>
   <script src="../_commun/fiche.js"></script>
+  <!-- Liens « Bloque / Bloquée par » entre cartes (après fiche.js, dont il dépend) -->
+  <script src="../_commun/liens.js"></script>
   <script src="kanban.js"></script>
 </body>
 </html>

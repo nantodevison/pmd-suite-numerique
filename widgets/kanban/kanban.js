@@ -25,6 +25,8 @@ const STATE = {
     date:        '',
     epic:        '',
     projet:      '',
+    bloqueePar:  '',   // liens entre cartes (#183), voir la section 8 bis
+    bloque:      '',
   },
 
   columnOrder: [],
@@ -79,6 +81,8 @@ const SELECT_IDS = {
   date:        'col-date',
   epic:        'col-epic',
   projet:      'col-projet',
+  bloqueePar:  'col-bloquee-par',
+  bloque:      'col-bloque',
 };
 
 /* Association proposée par défaut : colonnes de la table Taches de l'espace
@@ -88,6 +92,7 @@ const PREREGLAGE_MAPPING = {
   titre:'Nom', statut:'statut', description:'Description',
   priorite:'Priorite', assigne:'qui_', date:'date_cible',
   epic:'EPIC', projet:'Projet',
+  bloqueePar:'Bloquee_par', bloque:'Bloque',
 };
 
 const PROP_ICONS  = { statut:'📋', description:'📝', priorite:'🚦', assigne:'👤', date:'📅', epic:'🏷️' };
@@ -182,8 +187,11 @@ grist.onRecords((records, _mappings, tableId) => {
   renderBoard();
 
   if (STATE.editPanel.recordId !== null && !STATE.editPanel.dirty) {
-    const rec = STATE.records.find(r => r.id === STATE.editPanel.recordId);
-    if (rec) populateEditPanel(rec);
+    // Les liens (#183) sont relus d'abord : ceux des cartes liées ont pu changer.
+    chargerLiens().then(() => {
+      const rec = STATE.records.find(r => r.id === STATE.editPanel.recordId);
+      if (rec && !STATE.editPanel.dirty) populateEditPanel(rec);
+    });
   }
 });
 
@@ -1521,7 +1529,7 @@ function renderAccueil(board) {
         <li><strong>👤 Qui suis-je ?</strong> (en haut à droite) : indiquez votre nom, une fois (rien à enregistrer). Le filtre sur la colonne « Assigné à » propose alors <strong>👤 Moi</strong>, qui montre vos propres cartes ; dans une vue partagée, il montre à chacun les siennes.</li>
         <li><strong>＋ Filtre</strong> : ne garde que certaines cartes (« EPIC est … », « Assigné n'est pas … »). Une vue modifiée affiche <strong>•</strong> : cliquez sur <strong>💾 Enregistrer la vue</strong> pour garder les filtres.</li>
         <li><strong>⋯ › Colonnes…</strong> : choisit les statuts affichés et leur ordre. On peut aussi glisser les en-têtes de colonnes.</li>
-        <li><strong>Cartes</strong> : glissez une carte dans une autre colonne pour changer son statut ; cliquez dessus pour ouvrir sa fiche.</li>
+        <li><strong>Cartes</strong> : glissez une carte dans une autre colonne pour changer son statut ; cliquez dessus pour ouvrir sa fiche. Dans la fiche, la bande <strong>⛔ Bloquée par / ➡️ Bloque</strong> relie la carte à celles qu'elle attend ou qu'elle retient.</li>
         <li><strong>⚠️ Deux « Enregistrer »</strong> : <strong>💾 Enregistrer la vue</strong> garde les filtres dans la vue ; pour une vue 👥 partagée, le bouton <strong>Enregistrer</strong> de Grist, en haut à droite, l'inscrit ensuite dans le document, pour tous. Sans ce dernier clic, elle est perdue au rechargement de la page, comme les réglages de ⚙. Les vues 🔒 personnelles, les cartes, l'onglet actif et votre nom sont gardés aussitôt.</li>
       </ol>
       <p class="accueil-plus"><a href="${URL_AIDE}" target="_blank" rel="noopener">📖 En savoir plus (mode d'emploi complet)</a></p>
@@ -1719,6 +1727,7 @@ async function openAddCardModal(statut) {
   const confirmBtn = document.getElementById('modal-confirm');
   if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Créer la carte'; }
   await assurerReferences(); // ✅ Correctif : correspondances numéro ↔ nom à jour
+  await chargerLiens();      // cartes proposées dans l'enchaînement (#183)
   buildModalForm(statut);
   document.getElementById('add-card-modal').classList.remove('hidden');
 }
@@ -1817,6 +1826,14 @@ function buildModalForm(statut) {
 
   if (row2.children.length) body.appendChild(row2);
 
+  // Enchaînement (#183) : liens choisis ici, écrits avec la carte
+  STATE.addModal.liens = { bloqueePar: [], bloque: [] };
+  if (liensAssocies()) {
+    const f = makeModalField('liens', 'Enchaînement', '🔗', false);
+    f.appendChild(bandeLiens(0, '', (liens) => { STATE.addModal.liens = liens; }));
+    body.appendChild(f);
+  }
+
   // Ligne 3 : Date
   const row3 = document.createElement('div'); row3.className = 'modal-row';
   if (STATE.mapping.date) {
@@ -1902,6 +1919,13 @@ async function submitAddCardModal() {
     }
   });
 
+  // Liens (#183) : Grist complète de lui-même les cartes liées
+  const liens = STATE.addModal.liens || {};
+  ['bloqueePar', 'bloque'].forEach(key => {
+    const ids = liens[key];
+    if (STATE.mapping[key] && ids && ids.length) newRecord[STATE.mapping[key]] = ['L', ...ids];
+  });
+
   // Date
   if (STATE.mapping.date) {
     const el = document.getElementById('modal-date');
@@ -1958,6 +1982,7 @@ async function openEditPanel(recordId) {
   STATE.editPanel.dirty    = false;
   STATE.editPanel.fields   = {};
   await assurerReferences(); // ✅ Correctif : correspondances numéro ↔ nom à jour
+  await chargerLiens();      // liens « Bloque / Bloquée par » à jour (#183)
   populateEditPanel(record);
   // Fiche « côté » ou « centre » selon le dernier choix (voir _commun/fiche.js).
   // Sur le côté, on réserve sa place au tableau ; au centre, elle le recouvre.
@@ -2002,6 +2027,18 @@ function populateEditPanel(record) {
   const ligneEpic = document.createElement('div');
   principal.append(titleInput, ligneEpic);
   STATE.editPanel.zones = { encart, ligneEpic };
+
+  // Enchaînement (#183) : cartes qui bloquent celle-ci, et cartes qu'elle
+  // bloque. Écrit à « Sauvegarder », comme le reste ; Grist met alors à jour
+  // les cartes liées.
+  if (liensAssocies()) {
+    body.appendChild(bandeLiens(record.id, getField(record, 'titre') || '',
+      (liens) => {
+        if (STATE.mapping.bloqueePar) markDirty('bloqueePar', liens.bloqueePar);
+        if (STATE.mapping.bloque)     markDirty('bloque', liens.bloque);
+      },
+      (id) => openEditPanel(id)));
+  }
 
   if (STATE.mapping.description) {
     // Description en Markdown : affichée mise en forme, modifiable en brut.
@@ -2207,6 +2244,9 @@ async function saveEditPanel() {
       // Date effacée (menu « Effacer la date ») : cellule vidée
       const d = new Date(value);
       updates[col] = !value ? null : (isNaN(d) ? value : Math.floor(d.getTime() / 1000));
+    } else if (key === 'bloqueePar' || key === 'bloque') {
+      // Liens (#183) : liste de références, ['L', n1, n2, …] (null si vide)
+      updates[col] = value.length ? ['L', ...value] : null;
     } else if (REFS[key] && REFS[key].estListe) {
       // ✅ Correctif : une liste de références s'écrit ['L', n1, n2, …] (null si vide)
       updates[col] = value.length ? ['L', ...value] : null;
@@ -2512,6 +2552,64 @@ function optionsProposees(key, idsActuels) {
     return ref.options.filter(o => o.projetId === STATE.projetKanban || idsActuels.includes(o.id));
   }
   return ref.options;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   8 bis. LIENS « BLOQUE / BLOQUÉE PAR » (#183)
+   ══════════════════════════════════════════════════════════════
+   Le dessin et la recherche sont dans ../_commun/liens.js (commun avec la
+   Galerie). Ici : la lecture des cartes et de leurs liens. La table est
+   relue avec fetchTable, qui donne les numéros des cartes liées ; onRecords
+   ne donne que leurs titres, ambigus si deux cartes portent le même. */
+
+/** Cartes du document et leurs liens (voir Liens.indexer), relues à chaque ouverture de fiche. */
+let INDEX_LIENS = new Map();
+
+/** Vrai si au moins une des deux colonnes de liens est associée dans ⚙. */
+function liensAssocies() {
+  return Boolean(STATE.mapping.bloque || STATE.mapping.bloqueePar);
+}
+
+async function chargerLiens() {
+  if (!liensAssocies()) { INDEX_LIENS = new Map(); return; }
+  await _tableNamePret;
+  try {
+    const table = await grist.docApi.fetchTable(getTableName());
+    INDEX_LIENS = Liens.indexer(table, {
+      titre:      STATE.mapping.titre,
+      statut:     STATE.mapping.statut,
+      projet:     STATE.mapping.projet,
+      bloque:     STATE.mapping.bloque,
+      bloqueePar: STATE.mapping.bloqueePar,
+    });
+  } catch (err) {
+    console.error('Kanban – lecture des liens impossible:', err);
+  }
+}
+
+/** Cartes que l'on peut lier : celles du projet du Kanban (toutes, si aucun projet n'est choisi). */
+function candidatsLiens() {
+  const memeProjet = STATE.projetKanban && STATE.mapping.projet;
+  return [...INDEX_LIENS.values()]
+    .filter(c => !memeProjet || c.projet === STATE.projetKanban)
+    .map(c => c.id);
+}
+
+/**
+ * Bande « enchaînement » d'une carte (id 0 : carte en cours de création).
+ * Un côté dont la colonne n'est pas associée est masqué (valeur null).
+ */
+function bandeLiens(id, titre, surChangement, surOuvrir) {
+  const enregistree = INDEX_LIENS.get(id) || { bloqueePar: [], bloque: [] };
+  return Liens.bande({
+    index:      INDEX_LIENS,
+    carte:      { id, titre },
+    bloqueePar: STATE.mapping.bloqueePar ? enregistree.bloqueePar : null,
+    bloque:     STATE.mapping.bloque     ? enregistree.bloque     : null,
+    candidats:  candidatsLiens(),
+    surChangement,
+    surOuvrir,
+  });
 }
 
 /* ══════════════════════════════════════════════════════════════

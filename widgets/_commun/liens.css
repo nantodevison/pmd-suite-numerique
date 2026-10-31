@@ -1,0 +1,75 @@
+/* ══════════════════════════════════════════════════════════════
+   LIENS — styles de la bande « enchaînement » (voir liens.js)
+     [cartes qui la bloquent] ▶ [cette carte] ▶ [cartes qu'elle bloque]
+   Petite taille de texte : la bande ne doit pas repousser la description.
+   ══════════════════════════════════════════════════════════════ */
+
+/* La bande mesure sa propre largeur : voir le réglage « étroit » en bas. */
+.liens-bande { container-type: inline-size; }
+
+.liens-grille {
+  display: grid; align-items: center; gap: 4px 8px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 12rem) auto minmax(0, 1fr);
+  padding: 6px 8px; font-size: 11px;
+  background: var(--col-bg, #f5f7fa); border: 1px solid var(--border, #e2e8f0); border-radius: 8px;
+}
+
+.liens-colonne { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+/* Les cartes se rapprochent de la carte du centre, comme des flèches qui y mènent */
+.liens-colonne-bloqueePar { align-items: flex-end; }
+.liens-colonne-bloque     { align-items: flex-start; }
+
+.liens-titre {
+  font-size: 10px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase;
+  color: var(--text-muted, #718096);
+}
+.liens-fleche { color: var(--text-muted, #718096); font-size: 11px; }
+.liens-centre {
+  min-width: 0; padding: 4px 8px; text-align: center; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: var(--surface, #fff); border: 1.5px solid #a0aec0; border-radius: 6px;
+}
+
+/* Carte liée : rouge à gauche (elle bloque), bleue à droite (elle attend) */
+.liens-pastille {
+  display: inline-flex; align-items: center; max-width: 100%;
+  border: 1px solid; border-radius: 6px; line-height: 1.35;
+}
+.liens-bloqueur { color: #b91c1c; background: #fef2f2; border-color: #fca5a5; }
+.liens-bloquee  { color: #1d4ed8; background: #eff6ff; border-color: #93c5fd; }
+/* Autre projet, ou carte introuvable : grisée, en pointillés */
+.liens-autre { color: var(--text-muted, #718096); background: transparent; border-style: dashed; border-color: #cbd5e0; }
+
+.liens-pastille-texte {
+  min-width: 0; padding: 1px 2px 1px 7px; border: none; background: none;
+  font: inherit; color: inherit; text-align: left;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+button.liens-pastille-texte { cursor: pointer; }
+button.liens-pastille-texte:hover { text-decoration: underline; }
+.liens-statut { opacity: .7; }
+.liens-retirer {
+  flex-shrink: 0; padding: 0 6px 0 3px; border: none; background: none;
+  font-size: 13px; line-height: 1; color: inherit; opacity: .55; cursor: pointer;
+}
+.liens-retirer:hover { opacity: 1; }
+
+.liens-ajouter {
+  padding: 1px 7px; border: 1px dashed #cbd5e0; border-radius: 6px; background: transparent;
+  font: inherit; color: var(--text-muted, #718096); cursor: pointer;
+}
+.liens-ajouter:hover { border-color: var(--accent, #667eea); color: var(--accent, #667eea); }
+
+/* Aucun lien : seulement les deux boutons « ＋ », sur une ligne */
+.liens-grille.liens-vide { grid-template-columns: auto auto; justify-content: start; padding: 4px 8px; }
+.liens-vide .liens-titre, .liens-vide .liens-fleche, .liens-vide .liens-centre { display: none; }
+.liens-vide .liens-colonne { align-items: flex-start; }
+
+/* Bande étroite (fiche sur le côté) : les deux côtés l'un sous l'autre ; la
+   carte du centre, déjà en titre de la fiche, n'est pas répétée. */
+@container (max-width: 460px) {
+  .liens-grille:not(.liens-vide) { grid-template-columns: minmax(0, 1fr); }
+  .liens-grille .liens-fleche, .liens-grille .liens-centre { display: none; }
+  .liens-grille .liens-colonne { align-items: flex-start; }
+  .liens-grille .liens-colonne:empty { display: none; }
+}
