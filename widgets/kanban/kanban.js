@@ -1997,12 +1997,17 @@ async function submitAddCardModal() {
     }
   }
 
+  // Enchaînement (#183) : sur « Annuler », la fenêtre de création reste ouverte
+  const info = avertirEnchainement(0, { titre, statut, bloqueePar: liens.bloqueePar, bloque: liens.bloque });
+  if (info === null) return;
+
   const confirmBtn = document.getElementById('modal-confirm');
   if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = '…'; }
 
   try {
     await grist.docApi.applyUserActions([['AddRecord', getTableName(), null, newRecord]]);
-    showToast(`✓ Carte « ${titre} » créée dans « ${statut} »`);
+    if (info) showToast(info, 6000);
+    else showToast(`✓ Carte « ${titre} » créée dans « ${statut} »`);
     closeAddCardModal();
   } catch (err) {
     showToast(`⚠️ Erreur : ${err.message || err}`, 4000);
@@ -2012,7 +2017,10 @@ async function submitAddCardModal() {
 }
 
 async function deleteCard(recordId, titre) {
-  const confirmed = window.confirm(`Supprimer définitivement la carte « ${titre} » ?`);
+  // Enchaînement (#183) : les liens de la carte disparaissent avec elle
+  if (liensAssocies()) await chargerLiens();
+  const liens = Liens.messageSuppression(INDEX_LIENS, recordId);
+  const confirmed = window.confirm(`Supprimer définitivement la carte « ${titre} » ?${liens}`);
   if (!confirmed) return;
 
   try {
@@ -2319,6 +2327,17 @@ async function saveEditPanel() {
   });
   if (!Object.keys(updates).length) return;
 
+  // Enchaînement (#183) : nouveau statut et nouveaux liens, pris ensemble.
+  // Sur « Annuler », la fiche reste ouverte avec ses modifications.
+  const champs = STATE.editPanel.fields;
+  const info = avertirEnchainement(STATE.editPanel.recordId, {
+    titre:      champs.titre,
+    statut:     champs.statut,
+    bloqueePar: champs.bloqueePar,
+    bloque:     champs.bloque,
+  });
+  if (info === null) return;
+
   const saveBtn = document.getElementById('edit-save-btn');
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '…'; }
 
@@ -2327,7 +2346,8 @@ async function saveEditPanel() {
     STATE.editPanel.dirty = false; STATE.editPanel.fields = {};
     updateDirtyIndicator();
     if (saveBtn) saveBtn.textContent = '✓ Sauvegarder';
-    showToast('✓ Modifications sauvegardées');
+    if (info) showToast(info, 6000);
+    else showToast('✓ Modifications sauvegardées');
   } catch (err) {
     showToast(`⚠️ Erreur : ${err.message || err}`, 4000);
     if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✓ Sauvegarder'; }
@@ -2382,9 +2402,15 @@ async function onDrop(e) {
   removePlaceholder();
   if (toStatut === STATE.drag.fromStatut) return;
 
+  // Enchaînement (#183) : sur « Annuler », la carte reste dans sa colonne
+  const cardId = STATE.drag.cardId;
+  const info = avertirEnchainement(cardId, { statut: toStatut });
+  if (info === null) return;
+
   try {
-    await grist.docApi.applyUserActions([['UpdateRecord', getTableName(), STATE.drag.cardId, { [STATE.mapping.statut]: toStatut }]]);
-    showToast(`✓ Déplacé vers « ${toStatut} »`);
+    await grist.docApi.applyUserActions([['UpdateRecord', getTableName(), cardId, { [STATE.mapping.statut]: toStatut }]]);
+    if (info) showToast(info, 6000);
+    else showToast(`✓ Déplacé vers « ${toStatut} »`);
   } catch (err) {
     showToast(`⚠️ Erreur : ${err.message || err}`, 4000);
   }
@@ -2672,6 +2698,30 @@ function bandeLiens(id, titre, surChangement, surOuvrir) {
     surChangement,
     surOuvrir,
   });
+}
+
+/**
+ * Avant d'enregistrer un changement de carte (statut, liens) : avertit s'il
+ * contredit l'enchaînement (voir Liens.avertissements). Le widget prévient,
+ * l'utilisateur décide.
+ *   id    : carte modifiée (0 : carte en cours de création)
+ *   apres : { titre, statut, bloqueePar, bloque } : la carte après le
+ *           changement ; une valeur absente reprend l'état enregistré
+ * Renvoie null si l'utilisateur annule, sinon le texte à afficher une fois
+ * le changement enregistré (vide s'il n'y a rien à signaler).
+ */
+function avertirEnchainement(id, apres) {
+  if (!liensAssocies()) return '';
+  const enregistree = INDEX_LIENS.get(id) || { titre: '', statut: '' };
+  const { aConfirmer, aSignaler } = Liens.avertissements(INDEX_LIENS, STATE.classesStatut, {
+    id,
+    titre:      apres.titre  ?? enregistree.titre,
+    statut:     apres.statut ?? enregistree.statut,
+    bloqueePar: apres.bloqueePar || null,
+    bloque:     apres.bloque     || null,
+  });
+  if (aConfirmer && !confirm(aConfirmer)) return null;
+  return aSignaler;
 }
 
 /* ══════════════════════════════════════════════════════════════
