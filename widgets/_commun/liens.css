@@ -65,6 +65,14 @@ button.liens-pastille-texte:hover { text-decoration: underline; }
 .liens-vide .liens-titre, .liens-vide .liens-fleche, .liens-vide .liens-centre { display: none; }
 .liens-vide .liens-colonne { align-items: flex-start; }
 
+/* Badges d'une carte du tableau (« ⛔ 2 », « ➡️ 1 ») : mêmes couleurs que les
+   pastilles de la bande ; la liste des cartes s'affiche au survol. */
+.liens-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 1px 7px; border: 1px solid; border-radius: 999px;
+  font-size: 11px; font-weight: 600; white-space: nowrap; cursor: help;
+}
+
 /* Bande étroite (fiche sur le côté) : les deux côtés l'un sous l'autre ; la
    carte du centre, déjà en titre de la fiche, n'est pas répétée. */
 @container (max-width: 460px) {

@@ -22,6 +22,10 @@
       avec ＋ (chercher une carte à lier), × (retirer un lien) et un clic
       sur une carte liée pour l'ouvrir.
 
+   4. badges() : « ⛔ 2 » / « ➡️ 1 » sur une carte du tableau, d'après les
+      classes de statut (À faire, En cours, Terminé, Autre) réglées par
+      l'utilisateur : seules les cartes à faire ou en cours comptent.
+
    DÉPENDANCES : ../_commun/fiche.js (menu de recherche), à charger AVANT
    ce fichier, et la feuille de style ../_commun/liens.css.
 
@@ -272,6 +276,84 @@
     return racine;
   }
 
+  /* ── 4. Classes de statut et badges des cartes ─────────────── */
+
+  /*
+   * Chaque statut est rangé dans une des quatre classes ci-dessous, réglées
+   * par l'utilisateur (le widget n'écrit aucun statut en dur). Seules les
+   * cartes « actives » (À faire, En cours) comptent dans l'enchaînement :
+   *   - une carte Terminée ne bloque plus personne ;
+   *   - une carte Autre (idée, piste…) n'est pas en production : elle ne
+   *     bloque pas, et n'est pas signalée comme bloquée.
+   */
+  const CLASSES = {
+    afaire:  'À faire',
+    encours: 'En cours',
+    termine: 'Terminé',
+    autre:   'Autre',
+  };
+
+  /**
+   * Classe proposée par défaut pour un statut, d'après son texte. Un statut
+   * inconnu est rangé en « À faire » : par prudence, il bloque ; l'utilisateur
+   * le range ailleurs s'il le faut.
+   */
+  function devinerClasse(statut) {
+    const s = String(statut || '').toLowerCase();
+    if (/fait|termin|done|clos|validé|annul|archiv|abandon/.test(s)) return 'termine';
+    if (/cours|progress|doing/.test(s))                             return 'encours';
+    if (/id[ée]e|piste|brouillon/.test(s))                          return 'autre';
+    return 'afaire';
+  }
+
+  /** Classe d'un statut : celle réglée par l'utilisateur, sinon celle devinée. */
+  function classeDe(statut, classes) {
+    return (classes && CLASSES[classes[statut]]) ? classes[statut] : devinerClasse(statut);
+  }
+
+  /** Vrai si la carte compte dans l'enchaînement (À faire ou En cours). */
+  function estActive(carte, classes) {
+    const c = classeDe(carte.statut, classes);
+    return c === 'afaire' || c === 'encours';
+  }
+
+  /**
+   * Liens encore « vivants » d'une carte :
+   *   bloqueurs : cartes actives qui la bloquent ;
+   *   attentes  : cartes actives qui l'attendent.
+   * Deux listes vides si la carte elle-même n'est pas active (terminée ou
+   * autre) : il n'y a rien à signaler sur le tableau.
+   */
+  function blocages(index, id, classes) {
+    const carte = index.get(id);
+    if (!carte || !estActive(carte, classes)) return { bloqueurs: [], attentes: [] };
+    const actives = (ids) => ids.map(x => index.get(x)).filter(c => c && estActive(c, classes));
+    return { bloqueurs: actives(carte.bloqueePar), attentes: actives(carte.bloque) };
+  }
+
+  /**
+   * Badges d'une carte du tableau : « ⛔ n » (n cartes à terminer avant
+   * elle) et « ➡️ n » (n cartes qui l'attendent). Le survol affiche la liste
+   * des cartes concernées (bulle du navigateur). Renvoie une liste d'éléments,
+   * vide s'il n'y a rien à signaler.
+   */
+  function badges(index, id, classes) {
+    const { bloqueurs, attentes } = blocages(index, id, classes);
+    const liste = (cartes) => cartes.map(c => `#${c.id} ${c.titre}` + (c.statut ? ` · ${c.statut}` : '')).join('\n');
+    const resultat = [];
+    const ajouter = (cartes, texte, classe, entete) => {
+      if (!cartes.length) return;
+      const b = document.createElement('span');
+      b.className = 'liens-badge ' + classe;
+      b.textContent = `${texte} ${cartes.length}`;
+      b.title = entete + '\n' + liste(cartes);
+      resultat.push(b);
+    };
+    ajouter(bloqueurs, '⛔', 'liens-bloqueur', 'Bloquée par (à terminer avant) :');
+    ajouter(attentes,  '➡️', 'liens-bloquee',  'Bloque (cartes qui attendent) :');
+    return resultat;
+  }
+
   // Seul objet rendu visible au reste de la page.
-  window.Liens = { indexer, chercherBoucle, bande };
+  window.Liens = { indexer, chercherBoucle, bande, CLASSES, devinerClasse, classeDe, blocages, badges };
 })();
