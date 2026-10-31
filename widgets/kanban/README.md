@@ -274,9 +274,32 @@ Dans une fiche étroite (sur le côté), les deux listes passent l'une sous
 l'autre. La fenêtre de création propose la même bande : les liens sont écrits
 avec la carte.
 
-À venir (#183) : classes de statut dans ⚙, badges sur les cartes, et
-avertissements quand un changement de statut ou une suppression contredit
-l'enchaînement.
+### Badges sur les cartes et classes de statut
+
+Sur le tableau, une carte affiche dans son pied :
+
+- **⛔ 2** (rouge) : 2 cartes sont à terminer avant elle ;
+- **➡️ 1** (bleu) : 1 carte l'attend.
+
+Le survol d'un badge liste les cartes concernées (`#188 Titre · statut`).
+
+Pour savoir qu'une carte est « finie », le widget s'appuie sur les **classes
+de statut**, réglées dans ⚙ (rubrique 🚦) : chaque statut est rangé en
+**À faire**, **En cours**, **Terminé** ou **Autre**.
+
+- seules les cartes À faire ou En cours comptent : une carte Terminée ne
+  bloque plus ; une carte **Autre** (idée, piste : pas en production) ne
+  bloque pas et n'affiche pas de badge ;
+- un statut d'attente (« En attente d'un retour ») doit être rangé en
+  **En cours**, pas en Autre : il bloque bien ;
+- tant qu'un statut n'est pas réglé, sa classe est devinée d'après le libellé
+  (« fait », « annulé », « archivé » → Terminé ; « cours » → En cours ;
+  « idée », « piste » → Autre ; sinon À faire, par prudence) et affichée en
+  italique. « Appliquer » retient les classes affichées ; comme le reste de ⚙,
+  elles ne sont gardées qu'après **Enregistrer** dans Grist.
+
+À venir (#183) : avertissements quand un changement de statut ou une
+suppression contredit l'enchaînement.
 
 ## Limites connues
 

@@ -69,6 +69,11 @@ const STATE = {
   // « Qui suis-je ? » (#202) : numéro de la ligne de la personne déclarée dans
   // la table visée par « Assigné à », retenu par le navigateur ; null sinon.
   moi: null,
+
+  // Classes de statut (#183), réglées dans ⚙ : { statut: 'afaire' | 'encours'
+  // | 'termine' | 'autre' }. Un statut absent reçoit la classe devinée par
+  // Liens.devinerClasse. Servent aux badges ⛔ / ➡️ des cartes.
+  classesStatut: {},
 };
 
 /* ── Constantes ─────────────────────────────────────────────── */
@@ -186,13 +191,16 @@ grist.onRecords((records, _mappings, tableId) => {
 
   renderBoard();
 
-  if (STATE.editPanel.recordId !== null && !STATE.editPanel.dirty) {
-    // Les liens (#183) sont relus d'abord : ceux des cartes liées ont pu changer.
-    chargerLiens().then(() => {
-      const rec = STATE.records.find(r => r.id === STATE.editPanel.recordId);
-      if (rec && !STATE.editPanel.dirty) populateEditPanel(rec);
-    });
-  }
+  // Les liens (#183) sont relus à chaque changement : ceux des cartes liées,
+  // et leurs statuts, ont pu changer. Puis on redessine les badges ⛔ / ➡️ du
+  // tableau et, si elle est ouverte et non modifiée, la fiche.
+  // (Sans colonnes de liens, chargerLiens ne fait rien et le tableau est déjà à jour.)
+  chargerLiens().then(() => {
+    if (liensAssocies()) renderBoard();
+    if (STATE.editPanel.recordId === null || STATE.editPanel.dirty) return;
+    const rec = STATE.records.find(r => r.id === STATE.editPanel.recordId);
+    if (rec) populateEditPanel(rec);
+  });
 });
 
 grist.onRecord((record) => {
@@ -215,6 +223,8 @@ grist.onOptions(async (options) => {
   STATE.projetKanban = (options && options.projetKanban) ? Number(options.projetKanban) : null;
   // ✅ Équipe projet (#148), mémorisée elle aussi dans les options du widget
   STATE.equipe = (options && options.equipe) || null;
+  // Classes de statut (#183), elles aussi dans les options du widget
+  STATE.classesStatut = (options && options.classesStatut) || {};
   // Vue active et vues enregistrées (#196) : lues à l'ouverture seulement.
   // Grist rappelle onOptions après chaque setOption, parfois dans le désordre :
   // relire ces options ramènerait un état périmé (vue tout juste créée absente,
@@ -286,6 +296,7 @@ function oublierColonnesAbsentes() {
 function openConfig()  {
   populateSelects(); syncSelectsToMapping();
   remplirChoixProjet(REFS.projet); // ✅ liste « Projet du Kanban »
+  remplirClasses();                // rubrique « Classes de statut » (#183)
   preparerEquipe(REFS.assigne);    // ✅ rubrique « Équipe projet »
   document.getElementById('config-panel').classList.remove('hidden');
 }
@@ -324,12 +335,19 @@ async function saveConfig() {
   // n'est pas une référence, on ne touche pas à l'équipe déjà enregistrée.
   const { ref, cochees } = STATE.equipePanneau;
   if (ref) STATE.equipe = { table: ref.tableVisee, ids: [...cochees] };
+  // Classes de statut (#183) : toutes celles affichées, devinées comprises,
+  // pour qu'un réglage vu dans ⚙ ne change plus ensuite
+  document.querySelectorAll('#classes-liste select').forEach(sel => {
+    STATE.classesStatut[sel.dataset.statut] = sel.value;
+  });
   grist.setOption('mapping', STATE.mapping).catch(() => {});
   grist.setOption('projetKanban', STATE.projetKanban).catch(() => {});
   grist.setOption('equipe', STATE.equipe).catch(() => {});
+  grist.setOption('classesStatut', STATE.classesStatut).catch(() => {});
   closeConfig();
   await assurerReferences(); // l'association des colonnes a pu changer
   await chargerMoi();        // … et avec elle la table des personnes
+  await chargerLiens();      // … et les colonnes de liens (badges ⛔ / ➡️)
   // Les vues personnelles sont propres au projet : on relit celles du projet choisi
   STATE.vues = STATE.vues.filter(v => !v.perso).concat(lireVuesPerso());
   if (!vueEnregistree(STATE.activeView)) {
@@ -338,6 +356,46 @@ async function saveConfig() {
   }
   renderBoard();
   showToast('✓ Configuration sauvegardée');
+}
+
+/* ── Classes de statut (#183) ───────────────────────────────────
+   Chaque statut est rangé dans une classe (À faire, En cours, Terminé,
+   Autre) : c'est ce qui dit au widget qu'une carte bloquante est finie, sans
+   écrire aucun statut en dur. La classe proposée par défaut est devinée
+   d'après le libellé (voir Liens.devinerClasse). */
+
+/** (Re)dessine la rubrique : une ligne par statut connu, avec sa classe. */
+function remplirClasses() {
+  const liste = document.getElementById('classes-liste');
+  if (!liste) return;
+  liste.innerHTML = '';
+  const statuts = statutsConnus({});
+  if (statuts.length === 0) {
+    liste.innerHTML = '<div class="filtre-aucune">Aucun statut connu : associez la colonne Statut.</div>';
+    return;
+  }
+  statuts.forEach(statut => {
+    const ligne = document.createElement('label');
+    ligne.className = 'classe-ligne';
+    const nom = document.createElement('span');
+    nom.className = 'classe-nom';
+    nom.textContent = statut;
+    const sel = document.createElement('select');
+    sel.dataset.statut = statut;
+    Object.entries(Liens.CLASSES).forEach(([valeur, libelle]) => {
+      const opt = document.createElement('option');
+      opt.value = valeur; opt.textContent = libelle;
+      sel.appendChild(opt);
+    });
+    sel.value = Liens.classeDe(statut, STATE.classesStatut);
+    // Classe pas encore enregistrée : on le signale, elle sera retenue à « Appliquer »
+    if (!(statut in STATE.classesStatut)) {
+      ligne.classList.add('classe-devinee');
+      ligne.title = 'Classe proposée d\'après le libellé : vérifiez-la';
+    }
+    ligne.append(nom, sel);
+    liste.appendChild(ligne);
+  });
 }
 
 /* ── Équipe projet (#148) ───────────────────────────────────────
@@ -1675,6 +1733,10 @@ function buildCard(record, palette) {
 
   const date = getField(record, 'date');
   if (date) footer.appendChild(buildBadge('📅 ' + formatDate(date), 'badge-date'));
+
+  // Enchaînement (#183) : « ⛔ n » cartes à terminer avant, « ➡️ n » cartes
+  // qui attendent ; liste au survol. Rien si la carte est terminée ou « autre ».
+  Liens.badges(INDEX_LIENS, record.id, STATE.classesStatut).forEach(b => footer.appendChild(b));
 
   if (footer.children.length > 0) card.appendChild(footer);
 
