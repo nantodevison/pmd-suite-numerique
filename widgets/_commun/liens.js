@@ -26,6 +26,10 @@
       classes de statut (À faire, En cours, Terminé, Autre) réglées par
       l'utilisateur : seules les cartes à faire ou en cours comptent.
 
+   5. avertissements() / messageSuppression() : textes à montrer quand un
+      changement de statut, de liens, ou une suppression contredit
+      l'enchaînement (le widget prévient, il ne refuse jamais).
+
    DÉPENDANCES : ../_commun/fiche.js (menu de recherche), à charger AVANT
    ce fichier, et la feuille de style ../_commun/liens.css.
 
@@ -354,6 +358,90 @@
     return resultat;
   }
 
+  /* ── 5. Avertissements ─────────────────────────────────────── */
+
+  /*
+   * Quand un changement (statut, liens) contredit l'enchaînement, le widget
+   * prévient sans jamais refuser :
+   *   - à confirmer : la carte passe En cours ou Terminé alors qu'une carte
+   *     qui la bloque n'est pas finie ;
+   *   - à signaler : la carte (re)devient active et bloque une carte déjà
+   *     En cours ou Terminée (réouverture, ou nouveau lien).
+   * Seul ce qui est NOUVEAU par rapport à l'état enregistré est signalé :
+   * une carte déjà En cours et déjà bloquée ne redéclenche pas l'alerte.
+   */
+
+  /** « #188 Titre (🖐️ À faire) », titre raccourci pour tenir dans un message. */
+  function decrire(c) {
+    const titre = c.titre.length > 50 ? c.titre.slice(0, 49) + '…' : c.titre;
+    return `#${c.id} ${titre}` + (c.statut ? ` (${c.statut})` : '');
+  }
+
+  /**
+   * Avertissements d'un changement de carte.
+   *   index   : cartes (voir indexer), dans leur état enregistré
+   *   classes : classes de statut
+   *   carte   : { id, titre, statut, bloqueePar, bloque } : la carte APRÈS le
+   *             changement (id 0 : carte en cours de création) ; un côté
+   *             null (colonne non associée) reprend l'état enregistré
+   * Renvoie { aConfirmer, aSignaler } : deux textes, vides s'il n'y a rien.
+   */
+  function avertissements(index, classes, carte) {
+    const avant = index.get(carte.id) || { statut: '', bloqueePar: [], bloque: [] };
+    const bloqueePar = carte.bloqueePar || avant.bloqueePar;
+    const bloque     = carte.bloque     || avant.bloque;
+    const classeAvant = carte.id ? classeDe(avant.statut, classes) : null;
+    const classeApres = classeDe(carte.statut, classes);
+    const memeClasse  = classeAvant === classeApres;
+    const nom = carte.id ? `#${carte.id} « ${carte.titre} »` : `« ${carte.titre} »`;
+    const cartes = (ids) => ids.map(x => index.get(x)).filter(Boolean);
+
+    // 1. Avancer (En cours, Terminé) une carte encore bloquée
+    let aConfirmer = '';
+    if (classeApres === 'encours' || classeApres === 'termine') {
+      const dejaVus = memeClasse ? avant.bloqueePar : [];
+      const bloqueurs = cartes(bloqueePar.filter(x => !dejaVus.includes(x)))
+        .filter(c => estActive(c, classes));
+      if (bloqueurs.length) {
+        aConfirmer = `⚠️ ${nom} est encore bloquée par :\n`
+          + bloqueurs.map(c => '  • ' + decrire(c)).join('\n')
+          + `\n\nLa passer quand même en « ${carte.statut} » ?`;
+      }
+    }
+
+    // 2. Une carte active qui retient des cartes déjà avancées
+    let aSignaler = '';
+    if (classeApres === 'afaire' || classeApres === 'encours') {
+      const etaitActive = classeAvant === 'afaire' || classeAvant === 'encours';
+      const dejaVues = etaitActive ? avant.bloque : [];
+      const retenues = cartes(bloque.filter(x => !dejaVues.includes(x)))
+        .filter(c => ['encours', 'termine'].includes(classeDe(c.statut, classes)));
+      if (retenues.length) {
+        // « de nouveau » : carte rouverte ; « désormais » : nouveau lien, ou nouvelle carte
+        const quand = (etaitActive || !carte.id) ? 'désormais' : 'de nouveau';
+        aSignaler = `ℹ️ ${nom} bloque ${quand} : `
+          + retenues.map(decrire).join(', ');
+      }
+    }
+    return { aConfirmer, aSignaler };
+  }
+
+  /**
+   * Phrase à ajouter à la confirmation de suppression d'une carte liée :
+   * ses liens disparaîtront avec elle. Texte vide si elle n'a aucun lien.
+   */
+  function messageSuppression(index, id) {
+    const c = index.get(id);
+    if (!c) return '';
+    const parties = [];
+    if (c.bloque.length)     parties.push('elle bloque ' + c.bloque.map(x => '#' + x).join(', '));
+    if (c.bloqueePar.length) parties.push('elle attend ' + c.bloqueePar.map(x => '#' + x).join(', '));
+    if (!parties.length) return '';
+    const texte = parties.join(' et ');
+    return `\n\n🔗 ${texte.charAt(0).toUpperCase() + texte.slice(1)} : ces liens seront retirés.`;
+  }
+
   // Seul objet rendu visible au reste de la page.
-  window.Liens = { indexer, chercherBoucle, bande, CLASSES, devinerClasse, classeDe, blocages, badges };
+  window.Liens = { indexer, chercherBoucle, bande, CLASSES, devinerClasse, classeDe, blocages, badges,
+                   avertissements, messageSuppression };
 })();

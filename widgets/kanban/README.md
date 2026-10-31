@@ -298,8 +298,26 @@ de statut**, réglées dans ⚙ (rubrique 🚦) : chaque statut est rangé en
   italique. « Appliquer » retient les classes affichées ; comme le reste de ⚙,
   elles ne sont gardées qu'après **Enregistrer** dans Grist.
 
-À venir (#183) : avertissements quand un changement de statut ou une
-suppression contredit l'enchaînement.
+### Avertissements
+
+Le widget **prévient sans jamais refuser** quand un changement contredit
+l'enchaînement, que ce soit par glisser-déposer, dans la fiche (à
+« Sauvegarder ») ou à la création d'une carte :
+
+- **⚠️ à confirmer** : passer une carte **En cours** ou **Terminé** alors
+  qu'une carte qui la bloque est encore à faire ou en cours. « Annuler »
+  laisse la carte dans sa colonne (ou la fiche ouverte, avec ses
+  modifications) ;
+- **ℹ️ signalé après coup** : une carte rouverte (Terminé ou Autre → À faire
+  ou En cours), ou un nouveau lien, qui bloque une carte déjà En cours ou
+  Terminée ;
+- **🔗 à la suppression** : la confirmation rappelle les liens de la carte,
+  qui disparaissent avec elle.
+
+Seul ce qui est nouveau est signalé : sauvegarder la description d'une carte
+déjà En cours et déjà bloquée ne redéclenche pas l'alerte. Un changement fait
+directement dans Grist échappe au widget ; les badges restent alors le seul
+signal.
 
 ## Limites connues
 
