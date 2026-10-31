@@ -8,10 +8,9 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-10-29 02:26_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-10-31 01:46_
 
 ### 🖐️ À faire
-- [ ] #183 Ajouter les ref interne (Haute, EPIC « Améliorer la qualité du code du kanban »)
 - [ ] #185 Rendre les pastilles modifiables dans la fiche de la Galerie (Moyenne, EPIC « Améliorer l'interface du kanban »)
 - [ ] #203 Kanban : afficher discrètement le numéro #id sur les cartes (Moyenne, EPIC « Améliorer l'interface du kanban »)
 - [ ] #204 Réutiliser les filtres kanban (Moyenne, EPIC « Filtrer la galerie »)
@@ -26,23 +25,20 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [ ] #192 Remplacer le Kanban par le moteur commun : d'abord sur une copie, puis pour l'Observatoire (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
 - [ ] #200 Kanban : filtrer sur n'importe quelle colonne (texte, nombre, date…) (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #207 Afficher les relations de "bloque" et "bloqué par" entre les taches (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
+- [ ] #208 Rendre cliquables les cases à cocher des descriptions Markdown (Kanban et Galerie) (Basse, EPIC « Améliorer l'interface du kanban »)
 
 ### ♻️ En cours
+- [ ] #183 Liens Bloque / Bloquée par : saisie, visualisation, avertissements (Kanban) (Haute, EPIC « Améliorer la qualité du code du kanban »)
 - [ ] #201 Vérifier la sécurité des widgets et du dépôt public (XSS, dépendances CDN, secrets dans l'historique, sync) (Haute, EPIC « Améliorer la qualité du code du kanban »)
 - [ ] #202 Kanban : profils de vue par utilisateur (Haute, EPIC « Améliorer l'interface du kanban »)
 
 <!-- fin kanban -->
 
 ## ⚠️ Prochaine séance
-- [ ] #201 étape 2 : test XSS sur une COPIE du document (le pare-feu de Grist bloquera peut-être la saisie : le noter).
-  Fenêtre « 1 » = faille ; attendu = texte affiché tel quel. Textes à saisir :
-  - titre d'une tâche : `<img src=x onerror=alert(1)>Test titre`
-  - nom d'un EPIC : `<script>alert(1)</script>EPIC test`
-  - choix de Statut : `<b onmouseover=alert(1)>Statut piégé</b>` (survoler l'en-tête)
-  - nom d'une personne de l'équipe : `<img src=x onerror=alert(1)>Contact` (carte, fiche, filtre, panneau 👤)
-  - description : `[clique ici](javascript:alert(1))` puis, à la ligne, `<img src=x onerror=alert(1)>`
-  - nom d'une vue : `<img src=x onerror=alert(1)>` ; Galerie : titre, pastille, texte principal
-  Puis décider : A. DOMPurify restreint au Markdown (recommandé) ; B. CSP (report proposé)
+- [ ] #201 : sur l'autre poste, supprimer la ligne GITHUB_TOKEN= du .env, puis passer #201 en ✅ Fait
+- [ ] Observatoire (Ctrl + F5) : vérifier que la bande ⛔ Bloquée par / ➡️ Bloque s'affiche dans une fiche (PR #27)
+- [ ] #183 étape 2 : classes de statut dans ⚙ (À faire, En cours, Terminé, Autre), badges sur les cartes, survol
+- [ ] #183 : trancher le « parents / fille » de la description d'origine (sous-tâches ?), non couvert par les 4 étapes
 - [ ] #202 : test avec Vincent et Elisa (👤 Qui suis-je ?, « Créer ma vue Mes tâches », ⋯ › Colonnes…) avant l'étape 3 (Mes onglets)
 - [ ] Grist, à la main : passer l'EPIC « Supprimer les spécifité OTV » en Done (toutes ses tâches sont faites)
 
@@ -55,6 +51,8 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [x] Kanban générique : millésime et lecture de EPICs retirés (#147, PR #20), équipe projet dans ⚙ (#148, PR #21), 2026-10-28 ; équipe cochée et Accueil vérifié dans l'Observatoire le même jour
 - [x] #202 : onglet actif dans le navigateur (PR #22, 2026-10-28), « Qui suis-je ? » + filtre 👤 Moi (PR #23), vues personnelles 🔒 + « Mes tâches » (PR #24), 2026-10-29 ; reste l'étape 3 après test
 - [x] #201 étape 1 : clé API Grist trouvée dans une sortie de notebook (commit 3cae070) → régénérée ; clé Brevo supprimée ; historique et 32 images sains ; étape 2 : revue de code sans faille
+- [x] #201 : double authentification GitHub, jeton de la sync révoqué (ce poste), widgets archivés retirés (PR #25, tag archive-widgets-gt-cbs), API Grist servie par la DINUM et Markdown en liste blanche (PR #26), 2026-10-30 ; reste l'autre poste
+- [x] #183 étape 1 : liens Bloque / Bloquée par dans la fiche et à la création, module _commun/liens.js (PR #27), 2026-10-31
 
 ## Prochaines étapes
 (Les étapes du projet sont désormais suivies dans Grist : voir « Kanban (Grist) » ci-dessus.)
@@ -72,6 +70,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - Éviter les doublons dans Chapitres quand on relance la sync
 - Dépôt .claude : ajouter à taches.py des options --bloque / --bloquee-par (colonnes Bloque / Bloquee_par de Grist), pour lier les tâches sans passer par Grist à la main — demandé le 2026-10-26
 - Sécurité : vider les sorties des notebooks avant chaque commit (contrôle automatique type nbstripout ?) — à formaliser à l'étape 6 de #201
+- Sécurité : CSP dans index.html, reportée (#201) — protège contre un texte piégé, pas contre un code modifié sur GitHub
 
 ## Décisions récentes
 <!-- Une ligne par décision : date — décision — raison en quelques mots -->
@@ -121,3 +120,11 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - 2026-10-29 — vue personnelle par défaut à la création ; « Mes tâches » affiche tous les statuts, à masquer avec ⋯ › Colonnes… — amener les collègues à utiliser l'éditeur de colonnes
 - 2026-10-29 — après accord sur le commit, Claude enchaîne push, PR, fusion, retour sur master et suppression des branches — étapes mécaniques
 - 2026-10-29 — gitleaks 8.30.1 installé en portable (%LOCALAPPDATA%\Programs\gitleaks, empreinte vérifiée) ; les textes de test XSS restent hors de Grist, dont le pare-feu les refuse (403) — outil d'analyse des secrets du dépôt public
+- 2026-10-30 — #201 recentré sur le risque principal : un code de widget modifié sur GitHub, exécuté avec l'accès complet (copie des données, fausse page ProConnect) — la faille XSS était déjà traitée par le code
+- 2026-10-30 — un widget inutilisé est supprimé du dépôt, pas seulement archivé ; code gardé au tag archive-widgets-gt-cbs — GitHub Pages publie tout le dépôt
+- 2026-10-30 — pas de règle « PR obligatoire » sur master — un compte volé est administrateur et peut la retirer ; elle bloquerait les commits de fin de séance
+- 2026-10-30 — grist-plugin-api.js chargé depuis grist.numerique.gouv.fr — même version que notre instance ; celle de getgrist.com est une version de développement (eval)
+- 2026-10-30 — Markdown en liste blanche (DOMPurify) ; images limitées au dépôt et aux data:image/ — ni faux formulaire, ni pistage par image
+- 2026-10-30 — test XSS pratique abandonné (pare-feu de Grist), remplacé par la revue de code et la liste blanche ; CSP reportée
+- 2026-10-31 — liens entre cartes : module commun _commun/liens.js ; 4 classes de statut dans ⚙ ; avertir sans jamais refuser ; liens limités au projet ; carte elle-même et cartes déjà liées non proposées (boucle directe impossible), boucle indirecte → confirmation — réutilisable par la Galerie (#207)
+- 2026-10-31 — liens lus avec fetchTable (numéros de ligne) — onRecords ne donne que les titres, ambigus si deux cartes portent le même
