@@ -19,10 +19,11 @@ combinables, vues enregistrées (filtres + colonnes), tri par priorité.
 |---|---|
 | `index.html` | Structure HTML et styles ; charge `kanban.js` |
 | `kanban.js` | Logique Grist : réception des données, rendu, glisser-déposer, écriture |
-| [`../_commun/fiche.js`](../_commun/fiche.js), [`fiche.css`](../_commun/fiche.css) | Fiche partagée avec la Galerie : disposition côté / centre, Markdown |
+| [`../_commun/fiche.js`](../_commun/fiche.js), [`fiche.css`](../_commun/fiche.css) | Fiche partagée avec la Galerie : disposition côté / centre, Markdown, menus |
+| [`../_commun/liens.js`](../_commun/liens.js), [`liens.css`](../_commun/liens.css) | Liens « Bloque / Bloquée par » entre cartes (bande « enchaînement », recherche, boucles) |
 
 Le Kanban dépend du dossier `_commun/` : il ne fonctionne donc qu'**en mode
-URL** (en copier-coller, il faudrait aussi coller `fiche.js` et `fiche.css`).
+URL** (en copier-coller, il faudrait aussi coller les fichiers de `_commun/`).
 
 ## Déploiement
 
@@ -42,7 +43,8 @@ l'avertissement et le niveau d'accès (**accès complet** requis).
 
 Le bouton ⚙ ouvre un panneau qui associe les colonnes de la table aux champs du
 Kanban : Titre et Statut (obligatoires), Description, Priorité, Assigné à,
-Date / Échéance, EPIC, Projet. Ce réglage, comme le projet et l'équipe projet,
+Date / Échéance, EPIC, Projet, ⛔ Bloquée par et ➡️ Bloque (voir
+[« Enchaînement »](#enchaînement-bloque--bloquée-par)). Ce réglage, comme le projet et l'équipe projet,
 est gardé dans le document : voir [« Ce qui est enregistré, et
 quand »](#ce-qui-est-enregistré-et-quand).
 
@@ -222,6 +224,8 @@ glissement, lui, déplace la carte sans ouvrir la fiche. Son contenu est dense :
   ouvre un petit menu pour changer la valeur (cases à cocher pour plusieurs
   personnes, calendrier et « Effacer » pour la date) ; une valeur absente
   apparaît en pointillés (« + Priorité »…) ;
+- la bande **enchaînement** (voir ci-dessous), si les colonnes de liens sont
+  associées ;
 - la **description**, en grand.
 
 La fiche s'affiche, avec le même contenu :
@@ -239,6 +243,40 @@ La **description est en Markdown** (`**gras**`, `*italique*`, `# titre`,
 `- liste`, `[lien](url)`…) : affichée mise en forme, modifiable en brut avec
 « ✏️ Modifier ». Le HTML produit
 est nettoyé par DOMPurify avant affichage.
+
+## Enchaînement (Bloque / Bloquée par)
+
+Une carte peut en attendre d'autres (**⛔ Bloquée par**) et en retenir
+d'autres (**➡️ Bloque**). Il faut, dans ⚙, associer deux colonnes « Liste de
+références » vers la table des cartes elle-même, déclarées dans Grist comme
+**référence à double sens** (l'une inverse de l'autre) : le widget écrit un
+côté, Grist met à jour la carte liée. Une seule colonne associée suffit (seul
+ce côté s'affiche alors).
+
+Dans la fiche, sous le titre, la bande reprend l'enchaînement :
+
+```
+⛔ BLOQUÉE PAR                                 ➡️ BLOQUE
+[#188 Extraire le rendu… ×] ▶ [#205 Cette carte] ▶ [#190 Glisser-déposer… ×]
+[＋ Bloquée par…]                                [＋ Bloque…]
+```
+
+- **＋** cherche une carte par son titre ou son `#numéro`, parmi celles du
+  projet du Kanban, sans la carte elle-même ni celles déjà liées ;
+- **×** retire le lien ; un **clic sur une carte liée** ouvre sa fiche ;
+- un lien vers une carte d'un **autre projet** (saisi dans Grist) reste
+  affiché, grisé et en pointillés, et peut être retiré ;
+- un lien qui crée une **boucle** (A bloque B, qui bloque A, même par un
+  intermédiaire) demande une confirmation ;
+- comme le reste de la fiche, les liens ne sont écrits qu'à **Sauvegarder**.
+
+Dans une fiche étroite (sur le côté), les deux listes passent l'une sous
+l'autre. La fenêtre de création propose la même bande : les liens sont écrits
+avec la carte.
+
+À venir (#183) : classes de statut dans ⚙, badges sur les cartes, et
+avertissements quand un changement de statut ou une suppression contredit
+l'enchaînement.
 
 ## Limites connues
 

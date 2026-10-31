@@ -23,8 +23,9 @@
       à l'affichage ; un widget peut aussi s'en servir pour réécrire les
       cellules une fois pour toutes (voir la Galerie).
 
-   5. Un petit menu (choix simple ou multiple, ou date) qui s'ouvre au clic
-      sur une pastille de la fiche, pour en changer la valeur.
+   5. Un petit menu (choix simple ou multiple, date, ou recherche dans une
+      liste) qui s'ouvre au clic sur une pastille de la fiche, pour en
+      changer la valeur.
 
    6. Un champ de titre qui passe à la ligne au lieu de couper le texte.
 
@@ -446,6 +447,66 @@
     return menu;
   }
 
+  /**
+   * Menu de recherche : un champ de saisie filtre une liste d'options.
+   *   options     : [{ valeur, libelle, detail }] (detail : texte gris, facultatif)
+   *   placeholder : texte affiché dans le champ vide
+   *   surChoix    : appelée avec la valeur choisie (le menu se ferme)
+   * La recherche ignore majuscules et accents, et chaque mot saisi doit
+   * figurer dans le libellé. Entrée choisit le premier résultat.
+   */
+  function menuRecherche(ancre, { options, placeholder = 'Rechercher…', surChoix }) {
+    const menu = ouvrirMenu(ancre);
+    menu.classList.add('fiche-menu-recherche');
+    const saisie = document.createElement('input');
+    saisie.type = 'search';
+    saisie.className = 'fiche-menu-saisie';
+    saisie.placeholder = placeholder;
+    const liste = document.createElement('div');
+    const simplifier = t => String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+    function afficher() {
+      const mots = simplifier(saisie.value).split(/\s+/).filter(Boolean);
+      const trouvees = options.filter(o => {
+        const texte = simplifier(o.libelle);
+        return mots.every(m => texte.includes(m));
+      });
+      liste.replaceChildren();
+      if (!trouvees.length) {
+        liste.appendChild(Object.assign(document.createElement('div'), { className: 'fiche-menu-vide', textContent: 'Aucun résultat' }));
+        return;
+      }
+      trouvees.slice(0, 50).forEach(o => {   // au-delà, mieux vaut préciser la recherche
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'fiche-menu-item';
+        const libelle = document.createElement('span');
+        libelle.className = 'fiche-menu-libelle';
+        libelle.textContent = o.libelle;
+        item.appendChild(libelle);
+        if (o.detail) {
+          const detail = document.createElement('span');
+          detail.className = 'fiche-menu-detail';
+          detail.textContent = o.detail;
+          item.appendChild(detail);
+        }
+        item.addEventListener('click', () => { fermerMenu(); surChoix(o.valeur); });
+        liste.appendChild(item);
+      });
+    }
+
+    saisie.addEventListener('input', afficher);
+    saisie.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      const premier = liste.querySelector('button');
+      if (premier) { e.preventDefault(); premier.click(); }
+    });
+    menu.append(saisie, liste);
+    afficher();
+    setTimeout(() => saisie.focus(), 0);
+    return menu;
+  }
+
   /* ── 5. Dispositions « côté » / « centre » ─────────────────── */
 
   function dispositionMemorisee() {
@@ -529,7 +590,7 @@
   window.Fiche = {
     markdownVersHtml, markdownVersTexte, champMarkdown,
     estNotepad, notepadVersMarkdown,
-    menuChoix, menuDate, fermerMenu, champTitre,
+    menuChoix, menuDate, menuRecherche, fermerMenu, champTitre,
     installer, ouvrir, fermer, disposition,
   };
 })();
