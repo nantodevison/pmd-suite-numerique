@@ -8,14 +8,16 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-10-31 01:46_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-01 01:29_
 
 ### 🖐️ À faire
+- [ ] #209 AJouter une fonctionalité "Rechercher" dans le Kaban (Haute, EPIC « Améliorer l'interface du kanban »)
+- [ ] #211 Proposer un tri configurable des cartes, sur n'importe quelle colonne (comme les filtres) (Haute, EPIC « Améliorer l'interface du kanban »)
 - [ ] #185 Rendre les pastilles modifiables dans la fiche de la Galerie (Moyenne, EPIC « Améliorer l'interface du kanban »)
-- [ ] #203 Kanban : afficher discrètement le numéro #id sur les cartes (Moyenne, EPIC « Améliorer l'interface du kanban »)
 - [ ] #204 Réutiliser les filtres kanban (Moyenne, EPIC « Filtrer la galerie »)
 - [ ] #205 Modifier des pastilles sans ouvrir la carte (Moyenne, EPIC « Rendre les cartes de galerie modifiable »)
 - [ ] #206 Modifier des pastilles dans la carte (Moyenne, EPIC « Rendre les cartes de galerie modifiable »)
+- [ ] #210 Configuration ⚙ en 4 étapes visibles : projet, colonnes, classes de statut, membres du projet (Moyenne, EPIC « Améliorer l'interface du kanban »)
 - [ ] #184 Ouvrir un objet lié (tâche, EPIC…) d'un clic depuis la fiche de la Galerie (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #186 Préremplir une nouvelle carte de la Galerie avec le filtre de la vue (Sélectionner par) (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #188 Extraire le rendu des cartes et des pastilles dans _commun (carte.js, carte.css), utilisé par la Galerie (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
@@ -24,11 +26,11 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [ ] #191 Reprendre dans le moteur commun les réglages du Kanban : ordre des colonnes, filtres EPIC et personne, projet du widget (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
 - [ ] #192 Remplacer le Kanban par le moteur commun : d'abord sur une copie, puis pour l'Observatoire (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
 - [ ] #200 Kanban : filtrer sur n'importe quelle colonne (texte, nombre, date…) (Basse, EPIC « Améliorer l'interface du kanban »)
-- [ ] #207 Afficher les relations de "bloque" et "bloqué par" entre les taches (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
+- [ ] #207 Galerie : relations « Bloque » / « Bloquée par » entre les cartes, à reprendre après le moteur de cartes commun (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
 - [ ] #208 Rendre cliquables les cases à cocher des descriptions Markdown (Kanban et Galerie) (Basse, EPIC « Améliorer l'interface du kanban »)
+- [ ] #212 Choisir les couleurs des colonnes de statut (Basse, EPIC « Améliorer l'interface du kanban »)
 
 ### ♻️ En cours
-- [ ] #183 Liens Bloque / Bloquée par : saisie, visualisation, avertissements (Kanban) (Haute, EPIC « Améliorer la qualité du code du kanban »)
 - [ ] #201 Vérifier la sécurité des widgets et du dépôt public (XSS, dépendances CDN, secrets dans l'historique, sync) (Haute, EPIC « Améliorer la qualité du code du kanban »)
 - [ ] #202 Kanban : profils de vue par utilisateur (Haute, EPIC « Améliorer l'interface du kanban »)
 
@@ -36,9 +38,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 
 ## ⚠️ Prochaine séance
 - [ ] #201 : sur l'autre poste, supprimer la ligne GITHUB_TOKEN= du .env, puis passer #201 en ✅ Fait
-- [ ] Observatoire (Ctrl + F5) : vérifier que la bande ⛔ Bloquée par / ➡️ Bloque s'affiche dans une fiche (PR #27)
-- [ ] #183 étape 2 : classes de statut dans ⚙ (À faire, En cours, Terminé, Autre), badges sur les cartes, survol
-- [ ] #183 : trancher le « parents / fille » de la description d'origine (sous-tâches ?), non couvert par les 4 étapes
+- [ ] Observatoire (Ctrl + F5) : ⚙ › 🚦 Classes de statut, vérifier, « Appliquer » puis « Enregistrer » de Grist (PR #28)
 - [ ] #202 : test avec Vincent et Elisa (👤 Qui suis-je ?, « Créer ma vue Mes tâches », ⋯ › Colonnes…) avant l'étape 3 (Mes onglets)
 - [ ] Grist, à la main : passer l'EPIC « Supprimer les spécifité OTV » en Done (toutes ses tâches sont faites)
 
@@ -53,6 +53,8 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [x] #201 étape 1 : clé API Grist trouvée dans une sortie de notebook (commit 3cae070) → régénérée ; clé Brevo supprimée ; historique et 32 images sains ; étape 2 : revue de code sans faille
 - [x] #201 : double authentification GitHub, jeton de la sync révoqué (ce poste), widgets archivés retirés (PR #25, tag archive-widgets-gt-cbs), API Grist servie par la DINUM et Markdown en liste blanche (PR #26), 2026-10-30 ; reste l'autre poste
 - [x] #183 étape 1 : liens Bloque / Bloquée par dans la fiche et à la création, module _commun/liens.js (PR #27), 2026-10-31
+- [x] #183 étape 2 : classes de statut dans ⚙ et badges ⛔ / ➡️ (PR #28), 2026-10-31 ; étape 3 : avertissements (PR #29), 2026-11-01 ; #183 close, étape 4 (Galerie) reportée dans #207, bloquée par #188
+- [x] #203 : numéro #id sur les cartes et dans la barre de la fiche (PR #30), 2026-11-01
 
 ## Prochaines étapes
 (Les étapes du projet sont désormais suivies dans Grist : voir « Kanban (Grist) » ci-dessus.)
@@ -128,3 +130,10 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - 2026-10-30 — test XSS pratique abandonné (pare-feu de Grist), remplacé par la revue de code et la liste blanche ; CSP reportée
 - 2026-10-31 — liens entre cartes : module commun _commun/liens.js ; 4 classes de statut dans ⚙ ; avertir sans jamais refuser ; liens limités au projet ; carte elle-même et cartes déjà liées non proposées (boucle directe impossible), boucle indirecte → confirmation — réutilisable par la Galerie (#207)
 - 2026-10-31 — liens lus avec fetchTable (numéros de ligne) — onRecords ne donne que les titres, ambigus si deux cartes portent le même
+- 2026-10-31 — classe Autre ni bloquante, ni signalée bloquée ; statut inconnu deviné en À faire ; un statut d'attente se range en En cours — Autre = idéation, pas production ; prudence pour les statuts nouveaux
+- 2026-10-31 — badges ⛔ / ➡️ avec la bulle du navigateur seulement, sans surlignage des cartes liées — UX constante, rien d'autre n'est surligné
+- 2026-10-31 — liens relus (fetchTable) à chaque changement de données — badges à jour ; coût négligeable pour quelques centaines de tâches
+- 2026-11-01 — avertissements : confirmation si une carte bloquée passe En cours ou Terminé, message si un bloqueur est rouvert, liens rappelés à la suppression ; seul le nouveau est signalé — prévenir sans refuser, sans alertes répétées
+- 2026-11-01 — « parents / fille » écarté de #183, sans carte — pas à l'ordre du jour
+- 2026-11-01 — #207 (liens dans la Galerie) en attente, bloquée par #188 — la Galerie sert aux EPICs, besoin non prouvé ; le moteur commun évitera un double câblage
+- 2026-11-01 — numéro #id en bas à droite des cartes et dans la barre de la fiche, simple texte — le titre reste lu en premier, et le titre de la fiche reste un champ libre
