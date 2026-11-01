@@ -58,7 +58,7 @@ Un tag n'est pas publié par GitHub Pages (seule la branche `master` l'est).
 - La bibliothèque `grist-plugin-api.js` est toujours chargée depuis l'instance de la DINUM : `https://grist.numerique.gouv.fr/grist-plugin-api.js`.
 - Toujours appeler `grist.ready()` **avant** tout appel à l'API Grist (évite l'erreur `RPC_UNKNOWN_FORWARD_DEST`).
 - Les dossiers dont le nom commence par `_` ne sont pas des widgets : ce sont des ressources partagées. Ils sont publiés grâce au fichier `.nojekyll` à la racine du dépôt.
-  - [`_commun/`](_commun/) : la **fiche** partagée par `kanban` et `galerie` (`fiche.js`, `fiche.css`) : disposition côté / centre, Markdown ; les **liens** entre cartes (`liens.js`, `liens.css`), utilisés par `kanban` (et plus tard `galerie`, après le moteur de cartes commun : #207, bloquée par #188). Un widget qui l'utilise ne fonctionne qu'en mode URL. Modifier ces fichiers touche **tous** ces widgets, y compris ceux en service : tester chacun avant de fusionner.
+  - [`_commun/`](_commun/) : la **fiche** partagée par `kanban` et `galerie` (`fiche.js`, `fiche.css`) : disposition côté / centre, Markdown ; les **liens** entre cartes (`liens.js`, `liens.css`), utilisés par `kanban` (et plus tard `galerie`, après le moteur de cartes commun : #207, bloquée par #188) ; la **recherche** (`recherche.js`), règle commune à `kanban` et `galerie` (#209). Un widget qui l'utilise ne fonctionne qu'en mode URL. Modifier ces fichiers touche **tous** ces widgets, y compris ceux en service : tester chacun avant de fusionner.
 
 ## Workflow : modifier un widget
 

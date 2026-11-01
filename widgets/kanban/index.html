@@ -59,6 +59,13 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 /* Droite : nom du projet, puis ⚙ */
 .toolbar-right { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .toolbar-title { font-weight: 700; font-size: 15px; letter-spacing: -.3px; }
+/* 🔍 Recherche (#209), masquée sur l'Accueil */
+.recherche {
+  width: min(240px, 30vw); padding: 5px 10px; font-size: 13px; font-family: var(--font);
+  border: 1.5px solid var(--border); border-radius: 8px; color: var(--text);
+}
+.recherche:focus { outline: none; border-color: var(--accent); }
+.recherche.hidden { display: none; }
 .toolbar-table-name {
   font-size: 11px; color: var(--text-muted); background: var(--col-bg);
   border-radius: 5px; padding: 3px 10px; max-width: 420px;
@@ -738,6 +745,9 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
       <button class="view-tab active" data-view="accueil">🏠 Accueil</button>
     </div>
     <div class="toolbar-right">
+      <!-- Recherche passagère (#209) : s'ajoute aux filtres, jamais enregistrée -->
+      <input type="search" id="recherche" class="recherche hidden" placeholder="🔍 Rechercher… ou #numéro"
+             title="Tous les mots, dans n'importe quelle colonne (accents ignorés) ; #203 : carte n° 203" autocomplete="off" />
       <!-- « Qui suis-je ? » (#202) : nom de la personne, retenu par le navigateur -->
       <button id="btn-moi" class="btn-moi hidden">👤 Qui suis-je ?</button>
       <span id="toolbar-table-name" class="toolbar-table-name"></span>
@@ -843,6 +853,8 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
   </div>
 
   <div id="toast" class="toast hidden"></div>
+  <!-- Règle de recherche commune (#209), avant fiche.js qui s'en sert -->
+  <script src="../_commun/recherche.js"></script>
   <script src="../_commun/fiche.js"></script>
   <!-- Liens « Bloque / Bloquée par » entre cartes (après fiche.js, dont il dépend) -->
   <script src="../_commun/liens.js"></script>

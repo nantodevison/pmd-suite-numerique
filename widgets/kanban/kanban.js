@@ -2,6 +2,7 @@
    KANBAN GRIST — kanban.js v4
    • Onglet « Accueil » (mode d'emploi), puis les vues enregistrées (#196, #197)
    • Filtres combinables sur les colonnes Choix et Référence (#195)
+   • Recherche passagère dans toutes les colonnes, et par #numéro (#209)
    • Tri des cartes par priorité : haute → moyenne → basse
    • Hauteur cartes fixe (flex-shrink:0)
    • Curseur horizontal natif
@@ -42,6 +43,11 @@ const STATE = {
   ordreValeurs: [],
   // Choix déclarés des colonnes Choix / Choix multiple : { colId: [choix…] }
   choix: {},
+
+  // Recherche (#209) : texte saisi dans 🔍. Passagère : elle s'ajoute aux
+  // filtres mais n'est enregistrée nulle part (ni vue, ni document, ni
+  // navigateur). Règle commune dans ../_commun/recherche.js.
+  recherche: '',
 
   // Vues enregistrées (#196), mémorisées dans les options du widget :
   // [{ id, nom, filtres: [{col, op, valeurs}], colonnes: [statuts…] | null }]
@@ -190,6 +196,9 @@ grist.onRecords((records, _mappings, tableId) => {
   }
 
   renderBoard();
+
+  // Recherche (#209) : un nom de référence (EPIC, personne…) a pu changer
+  marquerStructureRecherchePerimee();
 
   // Les liens (#183) sont relus à chaque changement : ceux des cartes liées,
   // et leurs statuts, ont pu changer. Puis on redessine les badges ⛔ / ➡️ du
@@ -443,8 +452,7 @@ function remplirEquipe() {
     document.getElementById('equipe-compte').textContent = '';
     return;
   }
-  const texte = pourRecherche(recherche.value.trim());
-  const visibles = texte ? ordre.filter(o => pourRecherche(o.nom || '').includes(texte)) : ordre;
+  const visibles = ordre.filter(o => Recherche.correspond(recherche.value, pourRecherche(o.nom || '')));
   visibles.forEach(o => {
     const ligne = document.createElement('label');
     ligne.className = 'filtre-valeur';
@@ -704,9 +712,9 @@ function ouvrirMoi(ancre) {
 /** Liste des personnes (équipe projet, ou toute la table), par nom, selon la recherche. */
 function remplirMoi() {
   const liste = document.getElementById('moi-liste');
-  const texte = pourRecherche(document.getElementById('moi-recherche').value.trim());
+  const saisie = document.getElementById('moi-recherche').value;
   const personnes = optionsProposees('assigne', STATE.moi ? [STATE.moi] : [])
-    .filter(o => !texte || pourRecherche(o.nom || '').includes(texte))
+    .filter(o => Recherche.correspond(saisie, pourRecherche(o.nom || '')))
     .sort((a, b) => (a.nom || '').localeCompare(b.nom || '', 'fr'));
   liste.innerHTML = '';
   personnes.forEach(o => {
@@ -1222,13 +1230,14 @@ function valeursProposees(colId, dejaCochees) {
 
 /** Texte comparable pour la recherche : sans accents ni majuscules. */
 function pourRecherche(texte) {
-  return texte.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  return Recherche.simplifier(texte);
 }
 
+/** « ✕ Réinitialiser » : retire les filtres ET la recherche (#209). */
 function resetFilters() {
   fermerFiltre();
   STATE.filters = [];
-  renderBoard();
+  changerRecherche('');
 }
 
 function isAnyUserFilterActive() {
@@ -1283,7 +1292,8 @@ function renderFilterChips() {
 
   // Nombre de filtres actifs sur le bouton : on sait qu'ils existent même
   // quand des étiquettes sont hors de vue (zone qui défile)
-  const nbActifs = STATE.filters.filter(f => f.valeurs.length > 0).length;
+  // (la recherche en cours compte pour un)
+  const nbActifs = STATE.filters.filter(f => f.valeurs.length > 0).length + (rechercheActive() ? 1 : 0);
   const reset = document.getElementById('filter-reset');
   if (reset) reset.textContent = nbActifs ? `✕ Réinitialiser (${nbActifs})` : '✕ Réinitialiser';
 
@@ -1367,9 +1377,8 @@ function calculerOrdreValeurs() {
 
 /** Valeurs affichées compte tenu du texte de recherche. */
 function valeursVisibles() {
-  const texte = pourRecherche(document.getElementById('filtre-recherche').value.trim());
-  if (!texte) return STATE.ordreValeurs;
-  return STATE.ordreValeurs.filter(p => pourRecherche(libelleValeur(p.valeur, true)).includes(texte));
+  const saisie = document.getElementById('filtre-recherche').value;
+  return STATE.ordreValeurs.filter(p => Recherche.correspond(saisie, pourRecherche(libelleValeur(p.valeur, true))));
 }
 
 /** (Re)dessine opérateur, cases à cocher et compteur du panneau. */
@@ -1427,15 +1436,65 @@ function cocherVisibles(cochee) {
   renderBoard();
 }
 
-/* Cartes affichées : celles du projet qui respectent les filtres */
+/* Cartes affichées : celles du projet qui respectent les filtres et la recherche */
 function getFilteredRecords() {
   return STATE.records.filter(r => {
     // ✅ Projet du Kanban : on ne garde que les cartes du projet choisi
     if (!estDuProjet(r)) return false;
 
     // Filtres de la vue (ou ajoutés par l'utilisateur) : tous doivent être respectés
-    return STATE.filters.every(f => carteRespecte(r, f));
+    if (!STATE.filters.every(f => carteRespecte(r, f))) return false;
+
+    // Recherche (#209) : dans toutes les colonnes de la carte, et #numéro
+    return Recherche.ligneCorrespond(r, STATE.recherche, STRUCTURE_RECHERCHE);
   });
+}
+
+/* ── Recherche (#209) ──
+   La règle (accents ignorés, chaque mot, #numéro) et la lecture des
+   colonnes sont dans ../_commun/recherche.js, communes avec la Galerie.
+   Ici : le champ 🔍 et la « structure » de la table (types des colonnes,
+   noms affichés des références), lue à la première recherche puis relue
+   quand les données changent pendant une recherche. */
+
+let STRUCTURE_RECHERCHE = null;    // dernière structure lue (null : pas encore)
+let _structureAJour = false;       // false : à relire avant la prochaine recherche
+let _structureEnCours = null;      // lecture en cours (une seule à la fois)
+
+function rechercheActive() {
+  return STATE.recherche.trim() !== '';
+}
+
+/** Lit la structure si elle manque ou a vieilli, puis redessine le tableau. */
+function assurerStructureRecherche() {
+  if (_structureAJour || _structureEnCours) return;
+  _structureEnCours = (async () => {
+    try {
+      await _tableNamePret;
+      STRUCTURE_RECHERCHE = await Recherche.lireStructure(getTableName());
+    } catch (err) {
+      // Sans structure, la recherche parcourt quand même les textes
+      console.error('Kanban – structure de la table illisible pour la recherche :', err);
+    }
+    _structureAJour = true;   // même en cas d'échec : pas de nouvel essai à chaque touche
+    _structureEnCours = null;
+    if (rechercheActive()) renderBoard();
+  })();
+}
+
+/** Les données ont changé : la structure sera relue (tout de suite si une recherche est en cours). */
+function marquerStructureRecherchePerimee() {
+  _structureAJour = false;
+  if (rechercheActive()) assurerStructureRecherche();
+}
+
+/** Change le texte recherché (champ 🔍, Échap, « Réinitialiser »), puis redessine. */
+function changerRecherche(texte) {
+  STATE.recherche = texte;
+  const champ = document.getElementById('recherche');
+  if (champ && champ.value !== texte) champ.value = texte;
+  if (rechercheActive()) assurerStructureRecherche();
+  renderBoard();
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1452,6 +1511,7 @@ function renderBoard() {
   // Accueil : mode d'emploi à la place des cartes, et pas de filtres
   const accueil = STATE.activeView === ACCUEIL;
   document.getElementById('filterbar')?.classList.toggle('sur-accueil', accueil);
+  document.getElementById('recherche')?.classList.toggle('hidden', accueil);
   if (accueil) {
     renderAccueil(board);
     return;
@@ -1468,7 +1528,7 @@ function renderBoard() {
 
   const view = vueCourante();
   const filteredRecords = getFilteredRecords();
-  const filterActive = isAnyUserFilterActive();
+  const filterActive = isAnyUserFilterActive() || rechercheActive();
 
   // ✨ Une vue "restreinte" est une vue dont preferredOrder n'est pas vide
   const hasPreferredOrder = view.preferredOrder && view.preferredOrder.length > 0;
@@ -1586,6 +1646,7 @@ function renderAccueil(board) {
         <li><strong>＋ Vue</strong> : crée une vue à partir de l'affichage actuel, <strong>🔒 pour vous</strong> (par défaut : gardée aussitôt dans votre navigateur) ou <strong>👥 pour tous</strong> (puis cliquez sur <strong>Enregistrer</strong> de Grist pour la garder). Le menu <strong>⋯</strong> de l'onglet actif permet de la renommer, de la supprimer, ou de copier une vue partagée en vue perso pour l'adapter sans gêner les autres.</li>
         <li><strong>👤 Qui suis-je ?</strong> (en haut à droite) : indiquez votre nom, une fois (rien à enregistrer). Le filtre sur la colonne « Assigné à » propose alors <strong>👤 Moi</strong>, qui montre vos propres cartes ; dans une vue partagée, il montre à chacun les siennes.</li>
         <li><strong>＋ Filtre</strong> : ne garde que certaines cartes (« EPIC est … », « Assigné n'est pas … »). Une vue modifiée affiche <strong>•</strong> : cliquez sur <strong>💾 Enregistrer la vue</strong> pour garder les filtres.</li>
+        <li><strong>🔍 Rechercher</strong> (en haut) : garde les cartes qui contiennent tous les mots tapés, dans n'importe quelle colonne, sans tenir compte des accents ni des majuscules ; <strong>#203</strong> retrouve une carte par son numéro. La recherche s'ajoute aux filtres et ne s'enregistre nulle part : Échap ou <strong>✕ Réinitialiser</strong> l'efface.</li>
         <li><strong>⋯ › Colonnes…</strong> : choisit les statuts affichés et leur ordre. On peut aussi glisser les en-têtes de colonnes.</li>
         <li><strong>Cartes</strong> : glissez une carte dans une autre colonne pour changer son statut ; cliquez dessus pour ouvrir sa fiche. Dans la fiche, la bande <strong>⛔ Bloquée par / ➡️ Bloque</strong> relie la carte à celles qu'elle attend ou qu'elle retient.</li>
         <li><strong>⚠️ Deux « Enregistrer »</strong> : <strong>💾 Enregistrer la vue</strong> garde les filtres dans la vue ; pour une vue 👥 partagée, le bouton <strong>Enregistrer</strong> de Grist, en haut à droite, l'inscrit ensuite dans le document, pour tous. Sans ce dernier clic, elle est perdue au rechargement de la page, comme les réglages de ⚙. Les vues 🔒 personnelles, les cartes, l'onglet actif et votre nom sont gardés aussitôt.</li>
@@ -2856,6 +2917,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // Filtres combinables (#195)
   document.getElementById('filtre-ajouter')  ?.addEventListener('click', (e) => ajouterFiltre(e.currentTarget));
   document.getElementById('filter-reset')    ?.addEventListener('click', resetFilters);
+  // 🔍 Recherche (#209). Échap vide le champ, sans fermer la fiche ouverte.
+  const champRecherche = document.getElementById('recherche');
+  champRecherche?.addEventListener('input', (e) => changerRecherche(e.target.value));
+  champRecherche?.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    e.preventDefault();
+    e.stopPropagation();
+    changerRecherche('');
+  });
   document.getElementById('filtre-colonne')  ?.addEventListener('change', (e) => {
     // Nouvelle colonne : les valeurs cochées n'ont plus de sens, on repart de zéro
     STATE.filtreEdite.col = e.target.value;
