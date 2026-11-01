@@ -8,11 +8,9 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-01 01:29_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-01 21:19_
 
 ### 🖐️ À faire
-- [ ] #209 AJouter une fonctionalité "Rechercher" dans le Kaban (Haute, EPIC « Améliorer l'interface du kanban »)
-- [ ] #211 Proposer un tri configurable des cartes, sur n'importe quelle colonne (comme les filtres) (Haute, EPIC « Améliorer l'interface du kanban »)
 - [ ] #185 Rendre les pastilles modifiables dans la fiche de la Galerie (Moyenne, EPIC « Améliorer l'interface du kanban »)
 - [ ] #204 Réutiliser les filtres kanban (Moyenne, EPIC « Filtrer la galerie »)
 - [ ] #205 Modifier des pastilles sans ouvrir la carte (Moyenne, EPIC « Rendre les cartes de galerie modifiable »)
@@ -38,9 +36,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 
 ## ⚠️ Prochaine séance
 - [ ] #201 : sur l'autre poste, supprimer la ligne GITHUB_TOKEN= du .env, puis passer #201 en ✅ Fait
-- [ ] Observatoire (Ctrl + F5) : ⚙ › 🚦 Classes de statut, vérifier, « Appliquer » puis « Enregistrer » de Grist (PR #28)
 - [ ] #202 : test avec Vincent et Elisa (👤 Qui suis-je ?, « Créer ma vue Mes tâches », ⋯ › Colonnes…) avant l'étape 3 (Mes onglets)
-- [ ] Grist, à la main : passer l'EPIC « Supprimer les spécifité OTV » en Done (toutes ses tâches sont faites)
 
 ## En cours
 - [x] Fiche dense du Kanban fusionnée sur master (PR #15, feat/fiche-centrale), 2026-10-24 = mise en production du Kanban, vérifiée dans le document de l'Observatoire
@@ -55,6 +51,8 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [x] #183 étape 1 : liens Bloque / Bloquée par dans la fiche et à la création, module _commun/liens.js (PR #27), 2026-10-31
 - [x] #183 étape 2 : classes de statut dans ⚙ et badges ⛔ / ➡️ (PR #28), 2026-10-31 ; étape 3 : avertissements (PR #29), 2026-11-01 ; #183 close, étape 4 (Galerie) reportée dans #207, bloquée par #188
 - [x] #203 : numéro #id sur les cartes et dans la barre de la fiche (PR #30), 2026-11-01
+- [x] #209 : recherche dans le Kanban et la Galerie, règle commune _commun/recherche.js (PR #31), 2026-11-01
+- [x] #211 : tri des cartes du Kanban sur n'importe quelle colonne, module _commun/tri.js (PR #32), 2026-11-01
 
 ## Prochaines étapes
 (Les étapes du projet sont désormais suivies dans Grist : voir « Kanban (Grist) » ci-dessus.)
@@ -137,3 +135,5 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - 2026-11-01 — « parents / fille » écarté de #183, sans carte — pas à l'ordre du jour
 - 2026-11-01 — #207 (liens dans la Galerie) en attente, bloquée par #188 — la Galerie sert aux EPICs, besoin non prouvé ; le moteur commun évitera un double câblage
 - 2026-11-01 — numéro #id en bas à droite des cartes et dans la barre de la fiche, simple texte — le titre reste lu en premier, et le titre de la fiche reste un champ libre
+- 2026-11-01 — recherche : parcourt tous les champs texte et les noms des références, quelle que soit la table ; « #N » cherche dans les numéros (début du numéro) ; passagère (jamais enregistrée), vidée par Réinitialiser ; règle commune Kanban, Galerie et menu des liens — robuste quelle que soit la table interrogée
+- 2026-11-01 — tri : rangé selon le type Grist (ordre des choix, nombres, dates, textes à la française), vides toujours en bas, enregistré dans la vue comme les filtres, retiré par Réinitialiser, au plus 10 critères ; sans tri, rangement par priorité inchangé — générique, et rien ne change pour les vues existantes
