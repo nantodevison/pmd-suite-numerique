@@ -170,6 +170,23 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 .filtre-ajouter:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 .filtre-ajouter:disabled { opacity: .5; cursor: not-allowed; }
 
+/* ── Tri des cartes (#211) ── */
+/* Bouton : pointillés comme « ＋ Filtre » sans tri, plein comme une étiquette avec */
+.tri-bouton.actif {
+  border-style: solid; border-color: var(--accent); background: rgba(102,126,234,.08);
+  color: var(--text); max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+}
+/* (.filtre-popover, plus bas, fixe 290 px : il faut une règle plus précise) */
+.filtre-popover.tri-popover { width: 460px; max-width: calc(100vw - 16px); }
+.tri-criteres { display: flex; flex-direction: column; gap: 6px; }
+.tri-critere { display: flex; align-items: center; gap: 6px; }
+.tri-critere .filter-select { flex: 1; min-width: 120px; max-width: none; }
+.tri-critere .filtre-op { padding: 5px 7px; }
+.tri-rang { width: 30px; flex-shrink: 0; font-size: 11px; color: var(--text-muted); }
+.tri-retirer { border: none; background: none; cursor: pointer; padding: 0; }
+.tri-ajouter { align-self: flex-start; }
+.filtre-lien:disabled { opacity: .5; cursor: default; text-decoration: none; }
+
 /* Panneau en position fixe : la barre des filtres le couperait sinon */
 .filtre-popover {
   position: fixed; z-index: 900; width: 290px;
@@ -491,6 +508,7 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 .filterbar.sur-accueil .filter-sep,
 .filterbar.sur-accueil #filtres-actifs,
 .filterbar.sur-accueil #filtre-ajouter,
+.filterbar.sur-accueil #tri-bouton,
 .filterbar.sur-accueil #vue-enregistrer,
 .filterbar.sur-accueil #filter-reset { display: none; }
 
@@ -768,7 +786,9 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
     <!-- Filtres combinables (#195) : une étiquette par filtre, dessinée par renderFilterChips() -->
     <div id="filtres-actifs" class="filtres-actifs"></div>
     <button id="filtre-ajouter" class="filtre-ajouter">＋ Filtre</button>
-    <button id="vue-enregistrer" class="vue-enregistrer hidden" title="Enregistrer ces filtres dans la vue">💾 Enregistrer la vue</button>
+    <!-- Tri des cartes (#211) : libellé mis à jour par majBoutonTri() -->
+    <button id="tri-bouton" class="filtre-ajouter tri-bouton">⇅ Trier</button>
+    <button id="vue-enregistrer" class="vue-enregistrer hidden" title="Enregistrer ces filtres et ce tri dans la vue">💾 Enregistrer la vue</button>
 
     <button id="filter-reset" class="btn-ghost filter-reset">✕ Réinitialiser</button>
   </div>
@@ -794,10 +814,20 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
     </div>
   </div>
 
+  <!-- Tri des cartes (#211) : critères dessinés par remplirTri() -->
+  <div id="tri-popover" class="filtre-popover tri-popover hidden">
+    <div id="tri-criteres" class="tri-criteres"></div>
+    <button id="tri-ajouter" class="filtre-lien tri-ajouter">＋ Ajouter un critère</button>
+    <p class="vue-aide">Range les cartes dans chaque colonne. Les cartes sans valeur restent en bas ; à égalité, la priorité départage.</p>
+    <div class="filtre-pied">
+      <button id="tri-retirer-tout" class="filtre-lien danger">Retirer le tri</button>
+    </div>
+  </div>
+
   <!-- Vues enregistrées (#196) : saisie du nom (création, renommage ou copie) -->
   <div id="vue-nom-popover" class="filtre-popover hidden">
     <input id="vue-nom" class="filtre-recherche" type="text" placeholder="Nom de la vue" autocomplete="off" />
-    <p id="vue-nom-aide" class="vue-aide">Reprend les filtres et les colonnes affichés.</p>
+    <p id="vue-nom-aide" class="vue-aide">Reprend les filtres, le tri et les colonnes affichés.</p>
     <!-- À la création seulement : vue personnelle (par défaut) ou partagée (#202) -->
     <div id="vue-portee" class="vue-portee">
       <label class="filtre-valeur">
@@ -814,7 +844,7 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
 
   <!-- Vues enregistrées : menu ⋯ de la vue active -->
   <div id="vue-menu-popover" class="filtre-popover vue-menu hidden">
-    <button id="vue-menu-enregistrer" class="vue-menu-item">💾 Enregistrer les filtres</button>
+    <button id="vue-menu-enregistrer" class="vue-menu-item">💾 Enregistrer filtres et tri</button>
     <button id="vue-menu-annuler" class="vue-menu-item">↩ Annuler les modifications</button>
     <button id="vue-menu-renommer" class="vue-menu-item">✏️ Renommer</button>
     <button id="vue-menu-colonnes" class="vue-menu-item">▦ Colonnes…</button>
@@ -855,6 +885,8 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
   <div id="toast" class="toast hidden"></div>
   <!-- Règle de recherche commune (#209), avant fiche.js qui s'en sert -->
   <script src="../_commun/recherche.js"></script>
+  <!-- Comparaison des valeurs pour le tri des cartes (#211) -->
+  <script src="../_commun/tri.js"></script>
   <script src="../_commun/fiche.js"></script>
   <!-- Liens « Bloque / Bloquée par » entre cartes (après fiche.js, dont il dépend) -->
   <script src="../_commun/liens.js"></script>

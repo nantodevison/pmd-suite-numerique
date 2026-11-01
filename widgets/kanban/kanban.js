@@ -3,7 +3,8 @@
    • Onglet « Accueil » (mode d'emploi), puis les vues enregistrées (#196, #197)
    • Filtres combinables sur les colonnes Choix et Référence (#195)
    • Recherche passagère dans toutes les colonnes, et par #numéro (#209)
-   • Tri des cartes par priorité : haute → moyenne → basse
+   • Tri des cartes sur n'importe quelle colonne, enregistré dans la vue (#211)
+   • Sans tri choisi, cartes rangées par priorité : haute → moyenne → basse
    • Hauteur cartes fixe (flex-shrink:0)
    • Curseur horizontal natif
    • Un Kanban = un projet, choisi dans ⚙
@@ -38,6 +39,14 @@ const STATE = {
   filters: [],
   // Colonnes proposées dans les filtres : [{ colId, label, type }]
   colonnesFiltrables: [],
+  // Tri des cartes (#211) : critères [{ col, sens: 'asc' | 'desc' }], du plus
+  // important au moins important ; [] = tri par défaut (priorité). Enregistré
+  // dans la vue, comme les filtres (voir la section 3 bis).
+  tri: [],
+  // Colonnes proposées dans le tri : toutes celles de la table [{ colId, label, type }]
+  colonnesTriables: [],
+  // Type et choix déclarés de chaque colonne, pour comparer : { colId: { type, choix } }
+  infosColonnes: {},
   // Filtre en cours de modification dans le panneau, et ordre de ses valeurs
   filtreEdite: null,
   ordreValeurs: [],
@@ -497,7 +506,8 @@ function majCompteEquipe() {
    - changer de vue recharge ses filtres (aucun pour l'accueil) :
      des filtres modifiés et non enregistrés sont abandonnés ;
    - les colonnes et leur ordre sont enregistrés immédiatement ;
-   - les filtres, eux, passent par « Enregistrer » (l'onglet affiche • sinon).
+   - les filtres et le tri (#211), eux, passent par « Enregistrer » (l'onglet
+     affiche • sinon).
    Vues personnelles (#202) : même format, plus `perso: true`. Elles sont
    gardées dans le navigateur (voir lireVuesPerso), pas dans le document :
    chacun a les siennes, enregistrées aussitôt. Toutes les vues sont dans
@@ -513,10 +523,12 @@ function copieFiltres(filtres) {
   return (filtres || []).map(f => ({ col: f.col, op: f.op, valeurs: [...f.valeurs] }));
 }
 
-/** Filtres de la vue active, ou aucun pour l'accueil. */
+/** Filtres et tri (#211) de la vue active, ou aucun pour l'accueil. */
 function chargerFiltresDeLaVue() {
   const vue = vueEnregistree(STATE.activeView);
   STATE.filters = vue ? copieFiltres(vue.filtres) : [];
+  // Tri.nettoyer renvoie une copie bien formée (la vue vient du document ou du navigateur)
+  STATE.tri = vue ? Tri.nettoyer(vue.tri) : [];
 }
 
 /**
@@ -539,10 +551,11 @@ function signatureFiltres(filtres) {
     .map(f => [f.col, f.op, [...f.valeurs].sort()]));
 }
 
-/** Les filtres affichés diffèrent-ils de ceux enregistrés dans la vue active ? */
+/** Les filtres ou le tri (#211) affichés diffèrent-ils de ceux enregistrés dans la vue active ? */
 function vueModifiee() {
   const vue = vueEnregistree(STATE.activeView);
-  return !!vue && signatureFiltres(STATE.filters) !== signatureFiltres(vue.filtres);
+  return !!vue && (signatureFiltres(STATE.filters) !== signatureFiltres(vue.filtres)
+    || JSON.stringify(STATE.tri) !== JSON.stringify(Tri.nettoyer(vue.tri)));
 }
 
 /**
@@ -764,7 +777,7 @@ function renderVueTabs() {
         const point = document.createElement('span');
         point.className = 'vue-modifiee';
         point.textContent = '•';
-        point.title = 'Filtres modifiés, non enregistrés';
+        point.title = 'Filtres ou tri modifiés, non enregistrés';
         onglet.appendChild(point);
       }
       // Menu ⋯ (seulement sur l'onglet actif : on agit sur la vue affichée)
@@ -803,7 +816,7 @@ function creerVue(nom, perso) {
   const source = vueCourante();
   const filtres = copieFiltres(STATE.filters.filter(f => f.valeurs.length > 0));
   const colonnes = source.preferredOrder.length ? [...source.preferredOrder] : null;
-  const vue = { id: 'vue-' + Date.now().toString(36), nom, filtres, colonnes };
+  const vue = { id: 'vue-' + Date.now().toString(36), nom, filtres, colonnes, tri: Tri.nettoyer(STATE.tri) };
   if (perso) vue.perso = true;
   ajouterVue(vue);
   if (perso) showToast(`✓ Vue personnelle « ${nom} » créée`);
@@ -859,18 +872,19 @@ function supprimerVue() {
   showToast(`✓ Vue « ${vue.nom} » supprimée`);
 }
 
-/** Enregistre les filtres affichés dans la vue active. */
+/** Enregistre les filtres et le tri (#211) affichés dans la vue active. */
 function enregistrerFiltresVue() {
   const vue = vueEnregistree(STATE.activeView);
   if (!vue) return;
   vue.filtres = copieFiltres(STATE.filters.filter(f => f.valeurs.length > 0));
+  vue.tri = Tri.nettoyer(STATE.tri);
   enregistrerVues(vue);
   fermerPopovers();
   renderBoard();
-  showToast('✓ Filtres enregistrés dans la vue');
+  showToast('✓ Filtres et tri enregistrés dans la vue');
 }
 
-/** Revient aux filtres enregistrés de la vue active. */
+/** Revient aux filtres et au tri enregistrés de la vue active. */
 function annulerModificationsVue() {
   fermerPopovers();
   chargerFiltresDeLaVue();
@@ -887,10 +901,10 @@ function placerSous(pop, ancre) {
   pop.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - pop.offsetWidth - 8))}px`;
 }
 
-/** Ferme tous les panneaux ouverts (filtre, nom, menu, colonnes). */
+/** Ferme tous les panneaux ouverts (filtre, tri, nom, menu, colonnes). */
 function fermerPopovers() {
   fermerFiltre();
-  ['vue-nom-popover', 'vue-menu-popover', 'colonnes-popover', 'moi-popover'].forEach(id =>
+  ['vue-nom-popover', 'vue-menu-popover', 'colonnes-popover', 'moi-popover', 'tri-popover'].forEach(id =>
     document.getElementById(id)?.classList.add('hidden'));
 }
 
@@ -910,8 +924,8 @@ function ouvrirNomVue(mode, ancre) {
   document.getElementById('vue-nom-valider').textContent =
     { creer: 'Créer la vue', renommer: 'Renommer', copier: 'Copier' }[mode];
   aide.textContent = mode === 'copier'
-    ? 'Copie, rien que pour vous, les filtres et les colonnes affichés.'
-    : 'Reprend les filtres et les colonnes affichés.';
+    ? 'Copie, rien que pour vous, les filtres, le tri et les colonnes affichés.'
+    : 'Reprend les filtres, le tri et les colonnes affichés.';
   aide.classList.toggle('hidden', mode === 'renommer');
   // Choix 🔒 Pour moi / 👥 Pour tous : à la création seulement, « Pour moi » par défaut
   document.getElementById('vue-portee').classList.toggle('hidden', mode !== 'creer');
@@ -1085,9 +1099,14 @@ function libelleValeur(valeur, detaille = false) {
   return nom ? `${LIBELLE_MOI} (${nom})` : `${LIBELLE_MOI} (à déclarer avec 👤)`;
 }
 
-/** Lit dans les métadonnées Grist les colonnes de la table qui peuvent servir de filtre. */
+/**
+ * Lit dans les métadonnées Grist les colonnes de la table : toutes servent
+ * au tri (#211) ; les colonnes Choix et Référence servent aussi aux filtres.
+ */
 async function chargerColonnesFiltrables() {
   STATE.colonnesFiltrables = [];
+  STATE.colonnesTriables = [];
+  STATE.infosColonnes = {};
   STATE.choix = {};
   try {
     await _tableNamePret;
@@ -1096,19 +1115,21 @@ async function chargerColonnesFiltrables() {
     const idxTable = tables.tableId.indexOf(getTableName());
     if (idxTable === -1) return;
     const numeroTable = tables.id[idxTable];
+    const toutes = [];
     colonnes.id.forEach((_, i) => {
       const colId = colonnes.colId[i];
       const type  = String(colonnes.type[i]);
       if (colonnes.parentId[i] !== numeroTable) return;
       if (colId.startsWith('gristHelper_') || colId === 'manualSort') return; // colonnes internes
-      if (!/^(Choice|ChoiceList|Ref:.+|RefList:.+)$/.test(type)) return;
-      // Choix déclarés (pour proposer des colonnes de statut encore vides, #196)
+      // Choix déclarés (pour proposer des colonnes de statut encore vides, #196,
+      // et pour trier dans l'ordre des choix, #211)
       if (type === 'Choice' || type === 'ChoiceList') {
         try { STATE.choix[colId] = JSON.parse(colonnes.widgetOptions[i] || '{}').choices || []; }
         catch (_) { STATE.choix[colId] = []; }
       }
+      STATE.infosColonnes[colId] = { type, choix: STATE.choix[colId] };
       const rapporte = libelleRapporte(i, numeroTable, tables, colonnes);
-      STATE.colonnesFiltrables.push({
+      toutes.push({
         colId, type,
         label: rapporte ? rapporte.label : (colonnes.label[i] || colId),
         via:   rapporte ? rapporte.via : null,
@@ -1116,21 +1137,23 @@ async function chargerColonnesFiltrables() {
     });
     // Un libellé rapporté qui en double un autre (ex. « Projet ») reçoit sa
     // colonne d'origine entre parenthèses : « Projet (EPIC) »
-    const doublons = STATE.colonnesFiltrables.map(c => c.label)
+    const doublons = toutes.map(c => c.label)
       .filter((l, i, tous) => tous.indexOf(l) !== i);
-    STATE.colonnesFiltrables.forEach(c => {
+    toutes.forEach(c => {
       if (c.via && doublons.includes(c.label)) c.label += ` (${c.via})`;
     });
     // Colonne associée dans ⚙ à un champ du Kanban qui porte un autre nom :
     // on rappelle ce champ, « qui ? (Assigné à) », pour faire le lien avec ⚙
     // et le mode d'emploi (#202)
-    STATE.colonnesFiltrables.forEach(c => {
+    toutes.forEach(c => {
       const champ = Object.keys(PROP_LABELS).find(k => STATE.mapping[k] === c.colId);
       if (champ && pourRecherche(c.label) !== pourRecherche(PROP_LABELS[champ])) {
         c.label += ` (${PROP_LABELS[champ]})`;
       }
     });
-    STATE.colonnesFiltrables.sort((a, b) => a.label.localeCompare(b.label, 'fr'));
+    toutes.sort((a, b) => a.label.localeCompare(b.label, 'fr'));
+    STATE.colonnesTriables   = toutes;
+    STATE.colonnesFiltrables = toutes.filter(c => /^(Choice|ChoiceList|Ref:.+|RefList:.+)$/.test(c.type));
   } catch (err) {
     console.error('Kanban – lecture des colonnes filtrables impossible:', err);
   }
@@ -1233,10 +1256,11 @@ function pourRecherche(texte) {
   return Recherche.simplifier(texte);
 }
 
-/** « ✕ Réinitialiser » : retire les filtres ET la recherche (#209). */
+/** « ✕ Réinitialiser » : retire les filtres, la recherche (#209) et le tri (#211). */
 function resetFilters() {
-  fermerFiltre();
+  fermerPopovers();
   STATE.filters = [];
+  STATE.tri = [];
   changerRecherche('');
 }
 
@@ -1292,10 +1316,13 @@ function renderFilterChips() {
 
   // Nombre de filtres actifs sur le bouton : on sait qu'ils existent même
   // quand des étiquettes sont hors de vue (zone qui défile)
-  // (la recherche en cours compte pour un)
-  const nbActifs = STATE.filters.filter(f => f.valeurs.length > 0).length + (rechercheActive() ? 1 : 0);
+  // (la recherche en cours et le tri comptent chacun pour un)
+  const nbActifs = STATE.filters.filter(f => f.valeurs.length > 0).length
+    + (rechercheActive() ? 1 : 0) + (STATE.tri.length ? 1 : 0);
   const reset = document.getElementById('filter-reset');
   if (reset) reset.textContent = nbActifs ? `✕ Réinitialiser (${nbActifs})` : '✕ Réinitialiser';
+
+  majBoutonTri();
 
   const ajouter = document.getElementById('filtre-ajouter');
   if (ajouter) {
@@ -1326,7 +1353,7 @@ function supprimerFiltre(filtre) {
 /** Ouvre le panneau sous l'élément `ancre` (bouton « ＋ Filtre » ou étiquette). */
 function ouvrirFiltre(filtre, ancre) {
   if (STATE.filtreEdite && STATE.filtreEdite !== filtre) fermerFiltre();
-  ['vue-nom-popover', 'vue-menu-popover', 'colonnes-popover', 'moi-popover'].forEach(id =>
+  ['vue-nom-popover', 'vue-menu-popover', 'colonnes-popover', 'moi-popover', 'tri-popover'].forEach(id =>
     document.getElementById(id)?.classList.add('hidden'));
   STATE.filtreEdite = filtre;
 
@@ -1433,6 +1460,149 @@ function cocherVisibles(cochee) {
   f.valeurs = f.valeurs.filter(v => !visibles.includes(v));
   if (cochee) f.valeurs.push(...visibles);
   remplirPanneauFiltre();
+  renderBoard();
+}
+
+/* ── 3 bis. Tri des cartes (#211) ──────────────────────────────
+   Le tri range les cartes à l'intérieur de chaque colonne de statut. C'est
+   une liste de critères { col, sens } : la carte est d'abord rangée selon le
+   premier critère, puis, à égalité, selon le suivant. Toutes les colonnes de
+   la table sont proposées, plus le numéro de la carte (# Numéro). Comment
+   chaque type se compare (ordre des choix de Grist, dates, A → Z…) : voir
+   ../_commun/tri.js. Les cartes sans valeur restent en bas.
+   Sans critère, ou à égalité sur tous, les cartes sont rangées par priorité
+   (haute → moyenne → basse), comme avant #211.
+   Le tri fait partie de la vue, comme les filtres : le modifier allume •,
+   « 💾 Enregistrer la vue » le garde, « ✕ Réinitialiser » le retire. */
+
+/** Colonne proposée pour trier sur le numéro de la carte (#id). */
+const COLONNE_NUMERO = { colId: 'id', label: '# Numéro', type: 'Int' };
+
+/** Colonnes proposées dans le tri : le numéro de la carte, puis toutes les colonnes. */
+function colonnesProposeesTri() {
+  return [COLONNE_NUMERO, ...STATE.colonnesTriables];
+}
+
+function libelleColonneTri(colId) {
+  const c = colonnesProposeesTri().find(c => c.colId === colId);
+  return c ? c.label : colId;
+}
+
+/** Ordre de deux cartes d'une même colonne : critères du tri, puis priorité. */
+function comparerCartes(a, b) {
+  return Tri.comparerLignes(a, b, STATE.tri, STATE.infosColonnes)
+    || getPrioRank(getField(a, 'priorite')) - getPrioRank(getField(b, 'priorite'));
+}
+
+/** Libellés des deux sens [croissant, décroissant], adaptés au type de la colonne. */
+function libellesSens(colId) {
+  const type = colId === 'id' ? 'Int' : String((STATE.infosColonnes[colId] || {}).type || '');
+  if (/^Date/.test(type))            return ['↑ Ancienne', '↓ Récente'];
+  if (/^(Int|Numeric)$/.test(type))  return ['↑ 1 → 9', '↓ 9 → 1'];
+  if (/^Choice/.test(type))          return ['↑ Ordre Grist', '↓ Inverse'];
+  if (type === 'Bool')               return ['↑ Non', '↓ Oui'];
+  return ['↑ A → Z', '↓ Z → A'];
+}
+
+/** Bouton « ⇅ Trier » de la barre : résume le tri en cours (« ⇅ Échéance ↑ +1 »). */
+function majBoutonTri() {
+  const bouton = document.getElementById('tri-bouton');
+  if (!bouton) return;
+  const fleche = c => (c.sens === 'desc' ? '↓' : '↑');
+  const [premier, ...autres] = STATE.tri;
+  bouton.classList.toggle('actif', !!premier);
+  bouton.textContent = premier
+    ? `⇅ ${libelleColonneTri(premier.col)} ${fleche(premier)}${autres.length ? ` +${autres.length}` : ''}`
+    : '⇅ Trier';
+  bouton.title = premier
+    ? 'Tri : ' + STATE.tri.map(c => `${libelleColonneTri(c.col)} ${fleche(c)}`).join(', puis ')
+    : 'Trier les cartes de chaque colonne (par défaut : par priorité)';
+}
+
+/** Ouvre (ou referme) le panneau du tri sous le bouton. */
+function ouvrirTri(ancre) {
+  const pop = document.getElementById('tri-popover');
+  if (!pop.classList.contains('hidden')) { pop.classList.add('hidden'); return; }
+  fermerPopovers();
+  remplirTri();
+  placerSous(pop, ancre);
+}
+
+/** (Re)dessine les critères du panneau : colonne, sens, ✕. */
+function remplirTri() {
+  const zone = document.getElementById('tri-criteres');
+  zone.innerHTML = '';
+  if (!STATE.tri.length) {
+    zone.innerHTML = '<div class="filtre-aucune">Aucun tri choisi : les cartes sont rangées par priorité.</div>';
+  }
+  const proposees = colonnesProposeesTri();
+  STATE.tri.forEach((critere, i) => {
+    const ligne = document.createElement('div');
+    ligne.className = 'tri-critere';
+
+    const rang = document.createElement('span');
+    rang.className = 'tri-rang';
+    rang.textContent = i === 0 ? 'Par' : 'puis';
+
+    const choix = document.createElement('select');
+    choix.className = 'filter-select';
+    choix.title = 'Colonne';
+    proposees.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.colId; opt.textContent = c.label;
+      choix.appendChild(opt);
+    });
+    // Colonne enregistrée dans la vue mais absente de la table (renommée, supprimée)
+    if (!proposees.some(c => c.colId === critere.col)) {
+      const opt = document.createElement('option');
+      opt.value = critere.col; opt.textContent = `${critere.col} (absente)`;
+      choix.appendChild(opt);
+    }
+    choix.value = critere.col;
+    choix.addEventListener('change', () => { critere.col = choix.value; changerTri(); });
+
+    const sens = document.createElement('div');
+    sens.className = 'filtre-ops';
+    libellesSens(critere.col).forEach((libelle, j) => {
+      const valeur = j === 0 ? 'asc' : 'desc';
+      const bouton = document.createElement('button');
+      bouton.className = 'filtre-op' + (critere.sens === valeur ? ' actif' : '');
+      bouton.textContent = libelle;
+      bouton.addEventListener('click', () => { critere.sens = valeur; changerTri(); });
+      sens.appendChild(bouton);
+    });
+
+    const retirer = document.createElement('button');
+    retirer.className = 'filtre-chip-x tri-retirer';
+    retirer.textContent = '✕';
+    retirer.title = 'Retirer ce critère';
+    retirer.addEventListener('click', () => { STATE.tri.splice(i, 1); changerTri(); });
+
+    ligne.append(rang, choix, sens, retirer);
+    zone.appendChild(ligne);
+  });
+  document.getElementById('tri-retirer-tout').disabled = STATE.tri.length === 0;
+  // Au-delà de Tri.CRITERES_MAX, un critère ne serait pas enregistré dans la vue
+  document.getElementById('tri-ajouter').disabled = STATE.tri.length >= Tri.CRITERES_MAX;
+}
+
+/**
+ * Ajoute un critère : l'Échéance, puis la Priorité (« par échéance, puis par
+ * priorité » est le tri le plus courant), sinon la première colonne pas
+ * encore utilisée. On peut ensuite choisir une autre colonne.
+ */
+function ajouterCritereTri() {
+  const utilisees = STATE.tri.map(c => c.col);
+  const libres = colonnesProposeesTri().filter(c => !utilisees.includes(c.colId)).map(c => c.colId);
+  const col = [STATE.mapping.date, STATE.mapping.priorite].find(c => c && libres.includes(c))
+    || libres[0] || 'id';
+  STATE.tri.push({ col, sens: 'asc' });
+  changerTri();
+}
+
+/** Le tri a changé : on redessine le panneau et le tableau. */
+function changerTri() {
+  remplirTri();
   renderBoard();
 }
 
@@ -1559,14 +1729,8 @@ function renderBoard() {
     groups[s].push(r);
   });
 
-  // Tri des cartes dans chaque colonne : priorité haute → moyenne → basse
-  Object.keys(groups).forEach(s => {
-    groups[s].sort((a, b) => {
-      const pa = getPrioRank(getField(a, 'priorite'));
-      const pb = getPrioRank(getField(b, 'priorite'));
-      return pa - pb;
-    });
-  });
+  // Tri des cartes dans chaque colonne : critères du tri (#211), puis priorité
+  Object.keys(groups).forEach(s => groups[s].sort(comparerCartes));
 
   const statutList = getOrderedStatuts(Object.keys(groups), view);
   board.innerHTML = '';
@@ -1646,10 +1810,11 @@ function renderAccueil(board) {
         <li><strong>＋ Vue</strong> : crée une vue à partir de l'affichage actuel, <strong>🔒 pour vous</strong> (par défaut : gardée aussitôt dans votre navigateur) ou <strong>👥 pour tous</strong> (puis cliquez sur <strong>Enregistrer</strong> de Grist pour la garder). Le menu <strong>⋯</strong> de l'onglet actif permet de la renommer, de la supprimer, ou de copier une vue partagée en vue perso pour l'adapter sans gêner les autres.</li>
         <li><strong>👤 Qui suis-je ?</strong> (en haut à droite) : indiquez votre nom, une fois (rien à enregistrer). Le filtre sur la colonne « Assigné à » propose alors <strong>👤 Moi</strong>, qui montre vos propres cartes ; dans une vue partagée, il montre à chacun les siennes.</li>
         <li><strong>＋ Filtre</strong> : ne garde que certaines cartes (« EPIC est … », « Assigné n'est pas … »). Une vue modifiée affiche <strong>•</strong> : cliquez sur <strong>💾 Enregistrer la vue</strong> pour garder les filtres.</li>
+        <li><strong>⇅ Trier</strong> : range les cartes de chaque colonne selon n'importe quelle colonne (échéance, priorité, titre, # numéro…), puis selon une deuxième à égalité. Les cartes sans valeur restent en bas. Le tri fait partie de la vue, comme les filtres.</li>
         <li><strong>🔍 Rechercher</strong> (en haut) : garde les cartes qui contiennent tous les mots tapés, dans n'importe quelle colonne, sans tenir compte des accents ni des majuscules ; <strong>#203</strong> retrouve une carte par son numéro. La recherche s'ajoute aux filtres et ne s'enregistre nulle part : Échap ou <strong>✕ Réinitialiser</strong> l'efface.</li>
         <li><strong>⋯ › Colonnes…</strong> : choisit les statuts affichés et leur ordre. On peut aussi glisser les en-têtes de colonnes.</li>
         <li><strong>Cartes</strong> : glissez une carte dans une autre colonne pour changer son statut ; cliquez dessus pour ouvrir sa fiche. Dans la fiche, la bande <strong>⛔ Bloquée par / ➡️ Bloque</strong> relie la carte à celles qu'elle attend ou qu'elle retient.</li>
-        <li><strong>⚠️ Deux « Enregistrer »</strong> : <strong>💾 Enregistrer la vue</strong> garde les filtres dans la vue ; pour une vue 👥 partagée, le bouton <strong>Enregistrer</strong> de Grist, en haut à droite, l'inscrit ensuite dans le document, pour tous. Sans ce dernier clic, elle est perdue au rechargement de la page, comme les réglages de ⚙. Les vues 🔒 personnelles, les cartes, l'onglet actif et votre nom sont gardés aussitôt.</li>
+        <li><strong>⚠️ Deux « Enregistrer »</strong> : <strong>💾 Enregistrer la vue</strong> garde les filtres et le tri dans la vue ; pour une vue 👥 partagée, le bouton <strong>Enregistrer</strong> de Grist, en haut à droite, l'inscrit ensuite dans le document, pour tous. Sans ce dernier clic, elle est perdue au rechargement de la page, comme les réglages de ⚙. Les vues 🔒 personnelles, les cartes, l'onglet actif et votre nom sont gardés aussitôt.</li>
       </ol>
       <p class="accueil-plus"><a href="${URL_AIDE}" target="_blank" rel="noopener">📖 En savoir plus (mode d'emploi complet)</a></p>
     </div>`;
@@ -2917,6 +3082,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Filtres combinables (#195)
   document.getElementById('filtre-ajouter')  ?.addEventListener('click', (e) => ajouterFiltre(e.currentTarget));
   document.getElementById('filter-reset')    ?.addEventListener('click', resetFilters);
+  // ⇅ Tri (#211)
+  document.getElementById('tri-bouton')      ?.addEventListener('click', (e) => ouvrirTri(e.currentTarget));
+  document.getElementById('tri-ajouter')     ?.addEventListener('click', ajouterCritereTri);
+  document.getElementById('tri-retirer-tout')?.addEventListener('click', () => { STATE.tri = []; changerTri(); });
   // 🔍 Recherche (#209). Échap vide le champ, sans fermer la fiche ouverte.
   const champRecherche = document.getElementById('recherche');
   champRecherche?.addEventListener('input', (e) => changerRecherche(e.target.value));
@@ -2980,7 +3149,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Un clic ailleurs ferme les panneaux (sauf sur ce qui en ouvre un)
   document.addEventListener('mousedown', (e) => {
-    if (e.target.closest('.filtre-popover, .filtre-chip, #filtre-ajouter, #vue-ajouter, .vue-menu-btn, #btn-moi')) return;
+    if (e.target.closest('.filtre-popover, .filtre-chip, #filtre-ajouter, #vue-ajouter, .vue-menu-btn, #btn-moi, #tri-bouton')) return;
     fermerPopovers();
   });
 

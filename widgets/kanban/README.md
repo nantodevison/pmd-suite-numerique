@@ -2,7 +2,8 @@
 
 Suivi de tâches en colonnes, une colonne par statut : glisser-déposer des cartes
 et des colonnes, création, modification et suppression de cartes, filtres
-combinables, vues enregistrées (filtres + colonnes), tri par priorité.
+combinables, recherche, tri sur n'importe quelle colonne, vues enregistrées
+(filtres + tri + colonnes).
 
 **Auteur : Rémi** ([@Rmemb](https://github.com/Rmemb)), développé pour le projet
 [Observatoire des trafics](../../projets/observatoire-trafics/).
@@ -22,6 +23,7 @@ combinables, vues enregistrées (filtres + colonnes), tri par priorité.
 | [`../_commun/fiche.js`](../_commun/fiche.js), [`fiche.css`](../_commun/fiche.css) | Fiche partagée avec la Galerie : disposition côté / centre, Markdown, menus |
 | [`../_commun/liens.js`](../_commun/liens.js), [`liens.css`](../_commun/liens.css) | Liens « Bloque / Bloquée par » entre cartes (bande « enchaînement », recherche, boucles) |
 | [`../_commun/recherche.js`](../_commun/recherche.js) | Règle de recherche commune avec la Galerie : 🔍, menus et panneaux de recherche |
+| [`../_commun/tri.js`](../_commun/tri.js) | Comparaison de deux valeurs selon le type de leur colonne, pour le tri ⇅ |
 
 Le Kanban dépend du dossier `_commun/` : il ne fonctionne donc qu'**en mode
 URL** (en copier-coller, il faudrait aussi coller les fichiers de `_commun/`).
@@ -104,7 +106,7 @@ apparaissent en tête de liste à l'ouverture de ⚙.
 | Les **cartes** : création, déplacement, champs, suppression | la table Grist | aussitôt, comme toute saisie dans Grist |
 | Les **réglages** de ⚙ : colonnes associées, projet, équipe | le document (options du widget), pour tous | « Appliquer », puis **Enregistrer** de Grist |
 | Les **vues 👥 partagées** : création, nom, colonnes et leur ordre, suppression | le document, pour tous | aussitôt dans le widget, puis **Enregistrer** de Grist |
-| Les **filtres** d'une vue partagée | le document, pour tous | **💾 Enregistrer la vue**, puis **Enregistrer** de Grist |
+| Les **filtres** et le **tri** d'une vue partagée | le document, pour tous | **💾 Enregistrer la vue**, puis **Enregistrer** de Grist |
 | Les **vues 🔒 personnelles** (et leurs filtres) | votre navigateur, pour vous seul | aussitôt (filtres : **💾 Enregistrer la vue**) |
 | L'**onglet actif**, **votre nom** (👤) et la disposition de la fiche (côté / centre) | votre navigateur, pour vous seul | automatiquement |
 | La **recherche** 🔍 | nulle part | jamais : perdue au rechargement de la page |
@@ -207,6 +209,34 @@ trouve « Sécurité des widgets ».
   panneaux (filtre, équipe projet, Qui suis-je ?, liens Bloque / Bloquée
   par) et à la Galerie : elle est écrite une seule fois, dans
   [`../_commun/recherche.js`](../_commun/recherche.js).
+
+## Tri
+
+Le bouton **⇅ Trier**, à côté de « ＋ Filtre », range les cartes **à
+l'intérieur de chaque colonne** de statut. Sans tri choisi, elles sont
+rangées par priorité (haute → moyenne → basse), comme avant.
+
+- **Sur n'importe quelle colonne** de la table, plus **# Numéro** (le numéro
+  de la carte, donc l'ordre de création). « ＋ Ajouter un critère » propose
+  d'abord l'Échéance, puis la Priorité ; on peut choisir une autre colonne
+  dans la liste.
+- **Plusieurs critères** : « Par Échéance ↑, puis Priorité ↑ » range par
+  échéance, et départage par priorité les cartes qui ont la même. À égalité
+  sur tous les critères, la priorité départage.
+- **Chaque type à sa façon** : un Choix suit l'ordre des choix déclarés dans
+  Grist (« ↑ Ordre Grist » : Haute, Moyenne, Basse) ; un nombre, une date ou
+  le numéro, du plus petit au plus grand (« ↑ Ancienne » pour une date) ; un
+  texte ou une référence, de A à Z, sans tenir compte des accents ni des
+  majuscules, et « tâche 2 » avant « tâche 10 » ; une case à cocher, non puis
+  oui. Un choix multiple ou une liste de références : sa première valeur.
+- Les **cartes sans valeur** restent **en bas**, quel que soit le sens.
+- Le tri **fait partie de la vue**, comme les filtres : le modifier affiche •
+  sur l'onglet, **💾 Enregistrer la vue** le garde (puis **Enregistrer** de
+  Grist pour une vue 👥 partagée), **⋯ › Annuler les modifications** y revient.
+  Une nouvelle vue reprend le tri affiché. **✕ Réinitialiser** retire le tri,
+  avec les filtres et la recherche.
+- Le glisser-déposer change seulement le statut d'une carte : il n'y a pas
+  d'ordre « à la main » dans une colonne, c'est le tri qui décide.
 
 ## Qui suis-je ? et le filtre « Moi »
 
