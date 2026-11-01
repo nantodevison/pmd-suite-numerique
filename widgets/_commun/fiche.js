@@ -35,7 +35,8 @@
                     complet au document, et une description contenant du
                     HTML malveillant pourrait sinon exécuter du code. Seules
                     les balises du Markdown sont gardées (voir section 2).
-   Et la feuille de style ../_commun/fiche.css.
+   Et, chargés avant lui : la feuille de style ../_commun/fiche.css, et
+   ../_commun/recherche.js (règle de recherche du menuRecherche).
 
    UTILISATION (exemple)
      Fiche.installer(panneau, { actions, fermer, surBascule });
@@ -463,14 +464,11 @@
     saisie.className = 'fiche-menu-saisie';
     saisie.placeholder = placeholder;
     const liste = document.createElement('div');
-    const simplifier = t => String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
     function afficher() {
-      const mots = simplifier(saisie.value).split(/\s+/).filter(Boolean);
-      const trouvees = options.filter(o => {
-        const texte = simplifier(o.libelle);
-        return mots.every(m => texte.includes(m));
-      });
+      // Règle commune à toutes les recherches (../_commun/recherche.js)
+      const trouvees = options.filter(o =>
+        Recherche.correspond(saisie.value, Recherche.simplifier(o.libelle)));
       liste.replaceChildren();
       if (!trouvees.length) {
         liste.appendChild(Object.assign(document.createElement('div'), { className: 'fiche-menu-vide', textContent: 'Aucun résultat' }));

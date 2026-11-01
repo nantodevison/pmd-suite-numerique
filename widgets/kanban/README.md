@@ -21,6 +21,7 @@ combinables, vues enregistrées (filtres + colonnes), tri par priorité.
 | `kanban.js` | Logique Grist : réception des données, rendu, glisser-déposer, écriture |
 | [`../_commun/fiche.js`](../_commun/fiche.js), [`fiche.css`](../_commun/fiche.css) | Fiche partagée avec la Galerie : disposition côté / centre, Markdown, menus |
 | [`../_commun/liens.js`](../_commun/liens.js), [`liens.css`](../_commun/liens.css) | Liens « Bloque / Bloquée par » entre cartes (bande « enchaînement », recherche, boucles) |
+| [`../_commun/recherche.js`](../_commun/recherche.js) | Règle de recherche commune avec la Galerie : 🔍, menus et panneaux de recherche |
 
 Le Kanban dépend du dossier `_commun/` : il ne fonctionne donc qu'**en mode
 URL** (en copier-coller, il faudrait aussi coller les fichiers de `_commun/`).
@@ -106,6 +107,7 @@ apparaissent en tête de liste à l'ouverture de ⚙.
 | Les **filtres** d'une vue partagée | le document, pour tous | **💾 Enregistrer la vue**, puis **Enregistrer** de Grist |
 | Les **vues 🔒 personnelles** (et leurs filtres) | votre navigateur, pour vous seul | aussitôt (filtres : **💾 Enregistrer la vue**) |
 | L'**onglet actif**, **votre nom** (👤) et la disposition de la fiche (côté / centre) | votre navigateur, pour vous seul | automatiquement |
+| La **recherche** 🔍 | nulle part | jamais : perdue au rechargement de la page |
 
 **Le bouton « Enregistrer » de Grist**, en haut à droite, apparaît dès qu'un
 réglage ou une vue change. Tant qu'on n'a pas cliqué dessus, le changement
@@ -178,9 +180,33 @@ sans effet sur les vues des autres. Elle se manipule comme une vue partagée
 une colonne Choix, Choix multiple, Référence ou Liste de références. Entre les
 valeurs d'un même filtre, c'est un « ou » ; entre filtres, c'est un « et ». Les
 valeurs vides (cellule vide, liste vide…) sont regroupées sous « (vide) ». Le
-panneau propose une recherche (sans accents ni majuscules) et « Tout cocher » /
+panneau propose une recherche (même règle que 🔍, ci-dessous) et « Tout cocher » /
 « Aucun ». Une nouvelle carte reprend l'EPIC d'un filtre « EPIC est X » à une
 seule valeur.
+
+## Recherche
+
+Le champ **🔍 Rechercher**, en haut à droite (masqué sur l'Accueil), ne garde
+que les cartes qui contiennent **tous les mots tapés**, dans n'importe quel
+ordre, sans tenir compte des accents ni des majuscules : « securite widgets »
+trouve « Sécurité des widgets ».
+
+- **Où ?** Dans toutes les colonnes que Grist envoie au widget, quels que
+  soient leurs noms : titre, description, statut, EPIC, personnes… Une
+  référence est cherchée sous le nom affiché dans Grist. Les nombres, dates
+  et cases à cocher sont ignorés (« 2 » trouverait sinon presque tout).
+- **#numéro** : un mot comme `#203` est cherché dans le numéro affiché en bas
+  des cartes, en début de numéro : `#20` trouve #20 et #200 à #209, pas #120.
+- **Passagère** : la recherche s'ajoute aux filtres de la vue, mais n'est
+  enregistrée nulle part (ni la vue n'est marquée « • modifiée », ni
+  « Enregistrer » de Grist ne s'allume). Elle reste quand on change d'onglet ;
+  **Échap** (dans le champ) ou **✕ Réinitialiser** l'efface. Pendant une
+  recherche, « Réinitialiser » la compte comme un filtre, et les colonnes
+  vides sont masquées.
+- La même règle (tous les mots, accents ignorés) sert aux recherches des
+  panneaux (filtre, équipe projet, Qui suis-je ?, liens Bloque / Bloquée
+  par) et à la Galerie : elle est écrite une seule fois, dans
+  [`../_commun/recherche.js`](../_commun/recherche.js).
 
 ## Qui suis-je ? et le filtre « Moi »
 

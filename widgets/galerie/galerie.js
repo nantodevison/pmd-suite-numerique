@@ -18,7 +18,8 @@
      - Contexte     (facultatif, plusieurs colonnes possibles) : rappelé en
                     en-tête de la fiche seulement, avec son libellé.
    La carte ne montre que le titre et les pastilles ; le texte principal
-   se lit dans la fiche (la recherche porte quand même sur lui).
+   se lit dans la fiche. La recherche porte sur toutes les colonnes,
+   comme dans le Kanban (règle commune : ../_commun/recherche.js).
    Couleur d'une pastille : celle du choix dans Grist pour une colonne
    Choix ; une échelle du rouge au vert pour un pourcentage ; sinon un
    pastel fixe propre à chaque valeur.
@@ -35,7 +36,10 @@ const ETAT = {
   table:      null,   // identifiant de la table affichée
   infos:      {},     // colId → { libelle, type, formule, colAffichee, couleursChoix }
   references: {},     // 'table|colonne affichée' → { numéro de ligne: nom affiché }
-  recherche:  '',
+  recherche:  '',     // texte saisi dans la recherche (règle : ../_commun/recherche.js)
+  structureRecherche: null,   // types des colonnes et noms des références, pour la recherche
+  structureAJour:     false,  // false : à relire avant la prochaine recherche
+  structureEnCours:   null,   // lecture en cours (une seule à la fois)
   selection:  null,   // numéro de la ligne sélectionnée dans Grist
   // Carte affichée dans la fiche : numéro de ligne (null pour une nouvelle
   // carte, pas encore créée dans Grist) et colonnes modifiées.
@@ -76,6 +80,9 @@ grist.onRecords(async (lignes, colonnes) => {
     console.error('Galerie – lecture de la structure impossible :', err);
   }
   afficherGrille();
+  // Recherche : un nom de référence a pu changer, la structure sera relue
+  ETAT.structureAJour = false;
+  if (ETAT.recherche.trim()) assurerStructureRecherche();
   // Fiche ouverte sans modification en cours : on la rafraîchit avec les
   // nouvelles valeurs (par exemple juste après une sauvegarde).
   if (ETAT.fiche.id !== null && !ficheModifiee()) remplirFiche(ETAT.fiche.id);
@@ -328,13 +335,33 @@ function afficherGrille() {
   visibles.forEach(ligne => grille.appendChild(construireCarte(ligne)));
 }
 
+/**
+ * Règle commune avec le Kanban (../_commun/recherche.js) : tous les mots,
+ * dans toutes les colonnes reçues de Grist, accents ignorés ; #12 cherche
+ * la ligne n° 12.
+ */
 function correspondRecherche(ligne) {
-  if (!ETAT.recherche) return true;
-  const description = ETAT.colonnes.Description && ligne[ETAT.colonnes.Description];
-  // Texte Notepad : on cherche dans le texte, pas dans son enveloppe JSON.
-  const texte = [ligne[ETAT.colonnes.Titre], description && Fiche.notepadVersMarkdown(String(description))]
-    .filter(Boolean).join(' ').toLowerCase();
-  return texte.includes(ETAT.recherche);
+  return Recherche.ligneCorrespond(ligne, ETAT.recherche, ETAT.structureRecherche);
+}
+
+/**
+ * Structure de la table pour la recherche (types, noms des références) :
+ * lue à la première recherche, relue quand les données ont changé.
+ */
+function assurerStructureRecherche() {
+  if (ETAT.structureAJour || ETAT.structureEnCours) return;
+  ETAT.structureEnCours = (async () => {
+    try {
+      const table = ETAT.table || await grist.getTable().getTableId();
+      ETAT.structureRecherche = await Recherche.lireStructure(table);
+    } catch (err) {
+      // Sans structure, la recherche parcourt quand même les textes
+      console.error('Galerie – structure de la table illisible pour la recherche :', err);
+    }
+    ETAT.structureAJour = true;   // même en cas d'échec : pas de nouvel essai à chaque touche
+    ETAT.structureEnCours = null;
+    if (ETAT.recherche.trim()) afficherGrille();
+  })();
 }
 
 function construireCarte(ligne) {
@@ -773,7 +800,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('bandeau-notepad-bouton').addEventListener('click', () =>
     convertirNotepad().catch(err => afficherToast(`⚠️ Erreur : ${err.message || err}`, 4000)));
   document.getElementById('recherche').addEventListener('input', (e) => {
-    ETAT.recherche = e.target.value.trim().toLowerCase();
+    ETAT.recherche = e.target.value;
+    if (ETAT.recherche.trim()) assurerStructureRecherche();
     afficherGrille();
   });
   document.addEventListener('keydown', (e) => {

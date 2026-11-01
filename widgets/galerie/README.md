@@ -15,6 +15,7 @@ EPICs, objectifs et résultats clés, projets… Les tâches restent gérées pa
 | `index.html` | Structure HTML et styles ; charge `galerie.js` |
 | `galerie.js` | Logique Grist : réception des données, grille, fiche, écriture |
 | [`../_commun/fiche.js`](../_commun/fiche.js), [`fiche.css`](../_commun/fiche.css) | Fiche partagée avec le Kanban : disposition côté / centre, Markdown |
+| [`../_commun/recherche.js`](../_commun/recherche.js) | Règle de recherche commune avec le Kanban |
 
 La Galerie dépend du dossier `_commun/` : elle ne fonctionne qu'**en mode URL**.
 
@@ -100,4 +101,7 @@ l'EPIC ouvert).
 - Les noms affichés des références sont lus au premier affichage : un
   renommage dans la table visée n'apparaît qu'après rechargement du widget.
 - Le contexte n'est pas modifiable depuis la fiche (prévu en amélioration).
-- La recherche porte sur le titre et le texte principal seulement.
+- La recherche (règle commune avec le Kanban : tous les mots, accents
+  ignorés, `#12` pour la ligne n° 12) porte sur toutes les colonnes que
+  Grist envoie au widget, références comprises (sous leur nom affiché) ;
+  les nombres, dates et cases à cocher sont ignorés.

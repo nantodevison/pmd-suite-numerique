@@ -132,7 +132,8 @@ body { display: flex; flex-direction: column; overflow: hidden; }
   <header class="barre">
     <span class="barre-titre" id="titre-table">🖼️ Galerie</span>
     <span class="barre-compte" id="compte">0</span>
-    <input type="search" class="recherche" id="recherche" placeholder="Rechercher…" />
+    <input type="search" class="recherche" id="recherche" placeholder="🔍 Rechercher… ou #numéro"
+           title="Tous les mots, dans n'importe quelle colonne (accents ignorés) ; #12 : ligne n° 12" />
     <button type="button" class="bouton-barre bouton-nouvelle" id="btn-nouvelle">+ Nouvelle carte</button>
     <button type="button" class="bouton-barre" id="btn-reglages" title="Réglages de la Galerie">⚙</button>
   </header>
@@ -177,6 +178,8 @@ body { display: flex; flex-direction: column; overflow: hidden; }
 
   <div class="toast" id="toast"></div>
 
+  <!-- Règle de recherche commune avec le Kanban, avant fiche.js qui s'en sert -->
+  <script src="../_commun/recherche.js"></script>
   <script src="../_commun/fiche.js"></script>
   <script src="galerie.js"></script>
 </body>
