@@ -213,6 +213,11 @@ Une carte est un **aperçu** : le titre, l'EPIC dessous (petit, en italique),
 puis une ligne de badges : priorité, personne(s), échéance. La description se lit dans la fiche. Le titre et les
 badges suivent les mêmes règles visuelles que les cartes de la Galerie.
 
+Le **numéro de la carte** (`#211`, numéro de ligne Grist, celui qu'on cite
+dans les échanges et les messages de commit) s'affiche en petit gris, en bas à
+droite de la carte, et dans la barre de la fiche (« Détails de la carte ·
+#211 »).
+
 ## Fiche d'une carte
 
 Un **clic sur une carte** ouvre sa fiche (le bouton ✏️ fait de même) ; un

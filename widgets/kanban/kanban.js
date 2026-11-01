@@ -1738,7 +1738,14 @@ function buildCard(record, palette) {
   // qui attendent ; liste au survol. Rien si la carte est terminée ou « autre ».
   Liens.badges(INDEX_LIENS, record.id, STATE.classesStatut).forEach(b => footer.appendChild(b));
 
-  if (footer.children.length > 0) card.appendChild(footer);
+  // Numéro de la carte (#203), en petit gris, poussé à droite du pied : c'est
+  // le numéro de ligne Grist, celui qu'on cite (« #183 ») dans les échanges.
+  const numero = document.createElement('span');
+  numero.className   = 'card-id';
+  numero.textContent = '#' + record.id;
+  footer.appendChild(numero);
+
+  card.appendChild(footer);
 
   card.addEventListener('dragstart', onDragStart);
   card.addEventListener('dragend',   onDragEnd);
@@ -2076,6 +2083,8 @@ async function openEditPanel(recordId) {
 function populateEditPanel(record) {
   Fiche.fermerMenu();   // un menu resté ouvert viserait l'ancienne fiche
   STATE.editPanel.record = record;
+  // Numéro de la carte (#203), dans la barre de la fiche, au-dessus du titre
+  document.getElementById('edit-panel-numero').textContent = '· #' + record.id;
   const body = document.getElementById('edit-panel-body');
   body.innerHTML = '';
 
