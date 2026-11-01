@@ -451,6 +451,8 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 }
 
 .card-footer { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; align-items: center; }
+/* Numéro de la carte (#203) : discret, poussé à droite du pied */
+.card-id { margin-left: auto; font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 
 /* ── Badges ── */
 .badge { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: 600; white-space: nowrap; }
@@ -554,6 +556,8 @@ select.modal-input {
   padding: 14px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 10px;
 }
 .edit-panel-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .6px; }
+/* Numéro de la carte (#203) à la suite du libellé de la barre */
+.edit-panel-numero { margin-left: 4px; font-weight: 600; letter-spacing: 0; }
 .edit-panel-header-actions { display: flex; gap: 6px; align-items: center; }
 .edit-panel-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text-muted); padding: 4px 8px; border-radius: 6px; line-height: 1; transition: background .15s; }
 .edit-panel-close:hover { background: var(--col-bg); color: var(--text); }
@@ -712,7 +716,7 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
   <!-- Panneau édition -->
   <div id="edit-panel" class="edit-panel" role="dialog">
     <div class="edit-panel-header">
-      <span class="edit-panel-title">✏️ Détails de la carte</span>
+      <span class="edit-panel-title">✏️ Détails de la carte <span id="edit-panel-numero" class="edit-panel-numero"></span></span>
       <div class="edit-panel-header-actions">
         <span id="edit-dirty-dot" class="edit-dirty-dot"></span>
         <button id="edit-panel-close" class="edit-panel-close">✕</button>
