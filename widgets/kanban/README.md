@@ -24,6 +24,7 @@ combinables, recherche, tri sur n'importe quelle colonne, vues enregistrées
 | [`../_commun/liens.js`](../_commun/liens.js), [`liens.css`](../_commun/liens.css) | Liens « Bloque / Bloquée par » entre cartes (bande « enchaînement », recherche, boucles) |
 | [`../_commun/recherche.js`](../_commun/recherche.js) | Règle de recherche commune avec la Galerie : 🔍, menus et panneaux de recherche |
 | [`../_commun/tri.js`](../_commun/tri.js) | Comparaison de deux valeurs selon le type de leur colonne, pour le tri ⇅ |
+| [`../_commun/fenetre.js`](../_commun/fenetre.js), [`fenetre.css`](../_commun/fenetre.css) | Fenêtre à onglets de ⚙ (étapes, états ✓ / ⚠️ / ℹ️, barre « Appliquer » toujours visible) |
 
 Le Kanban dépend du dossier `_commun/` : il ne fonctionne donc qu'**en mode
 URL** (en copier-coller, il faudrait aussi coller les fichiers de `_commun/`).
@@ -44,11 +45,30 @@ l'avertissement et le niveau d'accès (**accès complet** requis).
 
 ## Configuration
 
-Le bouton ⚙ ouvre un panneau qui associe les colonnes de la table aux champs du
-Kanban : Titre et Statut (obligatoires), Description, Priorité, Assigné à,
-Date / Échéance, EPIC, Projet, ⛔ Bloquée par et ➡️ Bloque (voir
-[« Enchaînement »](#enchaînement-bloque--bloquée-par)). Ce réglage, comme le projet et l'équipe projet,
-est gardé dans le document : voir [« Ce qui est enregistré, et
+Le bouton ⚙ ouvre une fenêtre de configuration en **quatre étapes**, une par
+onglet :
+
+| Étape | Contenu |
+|---|---|
+| ① Projet | Champ Projet (colonne qui porte le projet des cartes) et Projet du Kanban |
+| ② Colonnes | Titre et Statut (obligatoires), Description, Priorité, Assigné à, Date / Échéance, EPIC, ⛔ Bloquée par et ➡️ Bloque (voir [« Enchaînement »](#enchaînement-bloque--bloquée-par)) |
+| ③ Statuts | couleur et classe de chaque statut |
+| ④ Équipe projet | personnes proposées dans « Assigné à » |
+
+- Chaque onglet affiche son état : **✓** réglé, **⚠️** à faire (projet non
+  choisi, Titre ou Statut manquant, classes de statut seulement devinées),
+  **ℹ️** à savoir (pas de Champ Projet, personne de coché dans l'équipe) ; le
+  survol en donne la raison. La fenêtre s'ouvre sur la première étape ⚠️.
+- Les étapes suivent aussitôt ce qui est choisi dans la fenêtre, avant même
+  « Appliquer » : changer le Champ Projet recharge la liste des projets ;
+  changer la colonne Statut ou le projet redessine les statuts (les couleurs
+  et classes déjà retouchées sont gardées) ; changer « Assigné à » recharge
+  l'équipe.
+- « Appliquer » reste visible en bas, avec « • Modifications non appliquées »
+  dès qu'un réglage change ; fermer sans appliquer (✕, Annuler, Échap, clic
+  sur le fond) demande confirmation.
+
+Ces réglages sont gardés dans le document : voir [« Ce qui est enregistré, et
 quand »](#ce-qui-est-enregistré-et-quand).
 
 Par défaut, l'association est préremplie pour la table `Taches` de l'espace
@@ -58,7 +78,7 @@ est ignorée : le champ reste vide dans ⚙.
 
 ### Projet du Kanban : un Kanban = un projet
 
-Le panneau ⚙ comporte aussi le réglage **« Projet du Kanban »**, à choisir une
+L'étape ① de ⚙ comporte le réglage **« Projet du Kanban »**, à choisir une
 fois à l'installation du widget (la liste des projets est celle que vise la
 colonne « Champ Projet »). Ce choix est mémorisé dans le widget ; pour suivre
 un autre projet, on ajoute un **autre** widget Kanban avec son propre réglage.
@@ -79,7 +99,7 @@ Tant qu'aucun projet n'est choisi, le Kanban affiche toutes les tâches, signale
 
 ### Équipe projet
 
-La rubrique **« 👥 Équipe projet »** du panneau ⚙ liste les personnes de la
+L'étape **« ④ Équipe projet »** de ⚙ liste les personnes de la
 table visée par « Assigné à » (par exemple `Contacts`), avec une recherche
 (sans accents ni majuscules). Les personnes cochées sont les seules proposées
 dans « Assigné à », dans la fiche comme à la création d'une carte ; elles
@@ -92,7 +112,7 @@ apparaissent en tête de liste à l'ouverture de ⚙.
   longue avec une table de CRM).
 - L'équipe est gardée avec le nom de la table visée : si « Assigné à » est
   associé à une colonne qui vise une autre table, elle est ignorée.
-- La rubrique est grisée si « Assigné à » n'est pas une colonne Référence ou
+- L'étape est grisée si « Assigné à » n'est pas une colonne Référence ou
   Liste de références.
 
 > **À l'installation (ou après la mise à jour du 2026-10-28 pour un Kanban
@@ -101,7 +121,7 @@ apparaissent en tête de liste à l'ouverture de ⚙.
 
 ### Couleurs des statuts
 
-La rubrique **« 🚦 Statuts : couleur et classe »** du panneau ⚙ donne, pour
+L'étape **« ③ Statuts : couleur et classe »** de ⚙ donne, pour
 chaque statut, sa **couleur** (8 pastels au choix) et sa classe (voir
 « Badges sur les cartes et classes de statut »). La couleur est celle de la
 colonne (fond, bordure, titre, barre de progression) et de la pastille Statut
@@ -365,7 +385,7 @@ Sur le tableau, une carte affiche dans son pied :
 Le survol d'un badge liste les cartes concernées (`#188 Titre · statut`).
 
 Pour savoir qu'une carte est « finie », le widget s'appuie sur les **classes
-de statut**, réglées dans ⚙ (rubrique 🚦, avec la couleur des statuts) : chaque statut est rangé en
+de statut**, réglées dans ⚙ (étape ③, avec la couleur des statuts) : chaque statut est rangé en
 **À faire**, **En cours**, **Terminé** ou **Autre**.
 
 - seules les cartes À faire ou En cours comptent : une carte Terminée ne
@@ -443,4 +463,4 @@ fois ; un `fetchTable('EPICs')` hors du bloc de gestion d'erreur ; préréglage
 `Millésime` au lieu de `Millesime`.
 
 **Autre défaut relevé à la lecture du code :**
-- si la table est vide, le panneau ⚙ ne propose aucune colonne.
+- si la table est vide, la fenêtre ⚙ ne propose aucune colonne.
