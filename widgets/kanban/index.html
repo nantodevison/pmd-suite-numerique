@@ -654,10 +654,16 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
 .config-equipe .config-field label { margin-bottom: 0; }
 .config-aide { font-size: 12px; color: var(--text-muted); margin: 0; }
 .config-equipe .filtre-valeurs { max-height: 220px; }
-/* Classes de statut (#183) : statut à gauche, classe à droite */
-.classes-liste { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; }
-.classe-ligne { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; }
-.classe-nom { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Statuts (#183, #212) : nom à gauche, puis couleur et classe ; une ligne par statut */
+.classes-liste { display: grid; grid-template-columns: 1fr; gap: 6px; }
+.classe-ligne { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.classe-nom { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.couleurs-statut { display: flex; gap: 4px; flex-shrink: 0; }
+.couleur-pastille {
+  width: 18px; height: 18px; padding: 0; border-radius: 50%;
+  border: 2px solid; cursor: pointer;
+}
+.couleur-pastille[aria-pressed="true"] { outline: 2px solid var(--text); outline-offset: 1px; }
 .classe-ligne select {
   flex-shrink: 0; padding: 4px 8px; border: 1.5px solid var(--border); border-radius: 8px;
   font-size: 12px; font-family: var(--font); color: var(--text); background: var(--surface); cursor: pointer;
@@ -699,10 +705,11 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
         <!-- ✅ Projet du Kanban : un Kanban = un projet (choisi une fois, mémorisé dans le widget) -->
         <div class="config-field"><label for="col-projet-kanban">Projet du Kanban</label><select id="col-projet-kanban"><option value="">— choisir —</option></select></div>
       </div>
-      <!-- Classes de statut (#183) : une ligne par statut, dessinées par remplirClasses() -->
+      <!-- Statuts (#183, #212) : une ligne par statut (couleur, classe), dessinées par remplirClasses() -->
       <div class="config-equipe">
-        <div class="config-field"><label>🚦 Classes de statut</label></div>
-        <p class="config-aide">Pour l'enchaînement (⛔ Bloquée par / ➡️ Bloque) : seules les cartes <strong>À faire</strong> ou <strong>En cours</strong> bloquent ou attendent. <strong>Terminé</strong> lève le blocage ; <strong>Autre</strong> (idées, pistes…) n'entre pas dans l'enchaînement. Les classes en italique sont proposées d'après le libellé.</p>
+        <div class="config-field"><label>🚦 Statuts : couleur et classe</label></div>
+        <p class="config-aide"><strong>Couleur</strong> : celle de la colonne et de la pastille Statut de la fiche ; elle suit le statut si l'on déplace la colonne.
+          <strong>Classe</strong>, pour l'enchaînement (⛔ Bloquée par / ➡️ Bloque) : seules les cartes <strong>À faire</strong> ou <strong>En cours</strong> bloquent ou attendent. <strong>Terminé</strong> lève le blocage ; <strong>Autre</strong> (idées, pistes…) n'entre pas dans l'enchaînement. Les classes en italique sont proposées d'après le libellé.</p>
         <div id="classes-liste" class="classes-liste"></div>
       </div>
       <!-- ✅ Équipe projet (#148) : personnes proposées dans « Assigné à », dessinées par remplirEquipe() -->
