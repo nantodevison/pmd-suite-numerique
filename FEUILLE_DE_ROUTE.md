@@ -8,14 +8,14 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-01 21:19_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-02 17:53_
 
 ### 🖐️ À faire
 - [ ] #185 Rendre les pastilles modifiables dans la fiche de la Galerie (Moyenne, EPIC « Améliorer l'interface du kanban »)
 - [ ] #204 Réutiliser les filtres kanban (Moyenne, EPIC « Filtrer la galerie »)
 - [ ] #205 Modifier des pastilles sans ouvrir la carte (Moyenne, EPIC « Rendre les cartes de galerie modifiable »)
 - [ ] #206 Modifier des pastilles dans la carte (Moyenne, EPIC « Rendre les cartes de galerie modifiable »)
-- [ ] #210 Configuration ⚙ en 4 étapes visibles : projet, colonnes, classes de statut, membres du projet (Moyenne, EPIC « Améliorer l'interface du kanban »)
+- [ ] #214 Kanban : regrouper la gestion des vues, filtres, tri et colonnes dans la fenêtre à onglets (widget étroit)  (Moyenne, EPIC « Améliorer l'interface du kanban »)
 - [ ] #184 Ouvrir un objet lié (tâche, EPIC…) d'un clic depuis la fiche de la Galerie (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #186 Préremplir une nouvelle carte de la Galerie avec le filtre de la vue (Sélectionner par) (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #188 Extraire le rendu des cartes et des pastilles dans _commun (carte.js, carte.css), utilisé par la Galerie (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
@@ -25,17 +25,13 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [ ] #192 Remplacer le Kanban par le moteur commun : d'abord sur une copie, puis pour l'Observatoire (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
 - [ ] #200 Kanban : filtrer sur n'importe quelle colonne (texte, nombre, date…) (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #207 Galerie : relations « Bloque » / « Bloquée par » entre les cartes, à reprendre après le moteur de cartes commun (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
-- [ ] #208 Rendre cliquables les cases à cocher des descriptions Markdown (Kanban et Galerie) (Basse, EPIC « Améliorer l'interface du kanban »)
-- [ ] #212 Choisir les couleurs des colonnes de statut (Basse, EPIC « Améliorer l'interface du kanban »)
 
 ### ♻️ En cours
-- [ ] #201 Vérifier la sécurité des widgets et du dépôt public (XSS, dépendances CDN, secrets dans l'historique, sync) (Haute, EPIC « Améliorer la qualité du code du kanban »)
 - [ ] #202 Kanban : profils de vue par utilisateur (Haute, EPIC « Améliorer l'interface du kanban »)
 
 <!-- fin kanban -->
 
 ## ⚠️ Prochaine séance
-- [ ] #201 : sur l'autre poste, supprimer la ligne GITHUB_TOKEN= du .env, puis passer #201 en ✅ Fait
 - [ ] #202 : test avec Vincent et Elisa (👤 Qui suis-je ?, « Créer ma vue Mes tâches », ⋯ › Colonnes…) avant l'étape 3 (Mes onglets)
 
 ## En cours
@@ -53,6 +49,10 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [x] #203 : numéro #id sur les cartes et dans la barre de la fiche (PR #30), 2026-11-01
 - [x] #209 : recherche dans le Kanban et la Galerie, règle commune _commun/recherche.js (PR #31), 2026-11-01
 - [x] #211 : tri des cartes du Kanban sur n'importe quelle colonne, module _commun/tri.js (PR #32), 2026-11-01
+- [x] #201 close : ligne GITHUB_TOKEN retirée du .env de ce poste, 2026-11-02
+- [x] #208 : cases à cocher cliquables dans l'aperçu de la fiche, Kanban et Galerie (PR #33), 2026-11-02
+- [x] #212 : couleur de chaque statut choisie dans ⚙, elle suit le statut (PR #34), 2026-11-02
+- [x] #210 : ⚙ en fenêtre à onglets ① Projet ② Colonnes ③ Statuts ④ Équipe, étape ③ mise à jour aussitôt ; brique commune _commun/fenetre.js (PR #35), 2026-11-02 ; à réutiliser pour les vues et filtres (#214)
 
 ## Prochaines étapes
 (Les étapes du projet sont désormais suivies dans Grist : voir « Kanban (Grist) » ci-dessus.)
@@ -71,6 +71,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - Dépôt .claude : ajouter à taches.py des options --bloque / --bloquee-par (colonnes Bloque / Bloquee_par de Grist), pour lier les tâches sans passer par Grist à la main — demandé le 2026-10-26
 - Sécurité : vider les sorties des notebooks avant chaque commit (contrôle automatique type nbstripout ?) — à formaliser à l'étape 6 de #201
 - Sécurité : CSP dans index.html, reportée (#201) — protège contre un texte piégé, pas contre un code modifié sur GitHub
+- Dépôt .claude : ajouter à taches.py une commande pour lire la description d'une tâche (aujourd'hui, seule une simulation de modification l'affiche)
 
 ## Décisions récentes
 <!-- Une ligne par décision : date — décision — raison en quelques mots -->
@@ -137,3 +138,6 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - 2026-11-01 — numéro #id en bas à droite des cartes et dans la barre de la fiche, simple texte — le titre reste lu en premier, et le titre de la fiche reste un champ libre
 - 2026-11-01 — recherche : parcourt tous les champs texte et les noms des références, quelle que soit la table ; « #N » cherche dans les numéros (début du numéro) ; passagère (jamais enregistrée), vidée par Réinitialiser ; règle commune Kanban, Galerie et menu des liens — robuste quelle que soit la table interrogée
 - 2026-11-01 — tri : rangé selon le type Grist (ordre des choix, nombres, dates, textes à la française), vides toujours en bas, enregistré dans la vue comme les filtres, retiré par Réinitialiser, au plus 10 critères ; sans tri, rangement par priorité inchangé — générique, et rien ne change pour les vues existantes
+- 2026-11-02 — cases à cocher Markdown : cochées dans l'aperçu de la fiche, enregistrées avec « ✓ Sauvegarder » de la fiche ; reliées aux lignes du texte par leur rang (blocs de code exclus), refus si le compte ne concorde pas — mieux vaut une case qui ne répond pas qu'une mauvaise ligne cochée
+- 2026-11-02 — couleurs des statuts choisies dans ⚙ parmi les 8 pastels du Kanban, plutôt que reprises des choix Grist ; enregistrées par rang dans la palette ; sans réglage, couleur de la position comme avant — rendu harmonieux, propre à chaque Kanban, sans droits sur la colonne, rien ne change tant qu'on n'applique pas
+- 2026-11-02 — ⚙ en fenêtre à onglets verticaux (état ✓ / ⚠️ / ℹ️ par étape, ouverture sur la première ⚠️, barre « Appliquer » toujours visible, confirmation si l'on ferme sans appliquer), plutôt qu'une page à faire défiler — bouton d'action jamais caché, une étape à la fois ; brique commune _commun/fenetre.js pour la réutiliser
