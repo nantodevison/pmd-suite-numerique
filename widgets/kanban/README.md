@@ -305,6 +305,12 @@ La **description est en Markdown** (`**gras**`, `*italique*`, `# titre`,
 « ✏️ Modifier ». Le HTML produit
 est nettoyé par DOMPurify avant affichage.
 
+Les **cases à cocher** (`- [ ] à faire`, `- [x] fait`) se cochent d'un clic
+dans l'aperçu, sans passer par « Modifier » ; comme toute modification de la
+fiche, elles sont enregistrées avec « ✓ Sauvegarder ». Si une case ne peut
+pas être reliée à sa ligne (Markdown inhabituel), un message invite à la
+cocher avec « ✏️ Modifier ».
+
 ## Enchaînement (Bloque / Bloquée par)
 
 Une carte peut en attendre d'autres (**⛔ Bloquée par**) et en retenir

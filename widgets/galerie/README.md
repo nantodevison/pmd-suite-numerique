@@ -77,6 +77,9 @@ l'EPIC ouvert).
   (« — » si aucun) ; les **pastilles** dans un encart à droite (au centre) ou
   sous le titre (sur le côté), libellé au survol ; puis le **contexte**, même
   vide (« — »). Références par leur nom affiché, dates au format français.
+- Les **cases à cocher** du texte principal (`- [ ] à faire`) se cochent d'un
+  clic dans l'aperçu, puis s'enregistrent avec « ✓ Sauvegarder » ; elles
+  restent grisées si la colonne est calculée par une formule.
 - Le Markdown est nettoyé par DOMPurify avant affichage.
 - Les textes de l'ancien widget **Notepad** de Grist (format JSON) sont
   affichés convertis en Markdown ; un bandeau propose de les réécrire en

@@ -215,6 +215,38 @@
     });
   }
 
+  /*
+   * Cases à cocher cliquables (#208). Le rendu ne dit pas de quelle ligne du
+   * texte vient une case : on les relie par leur rang. La 3e case affichée
+   * est la 3e ligne « - [ ] » du texte, en ignorant les blocs de code (un
+   * « - [ ] » cité dans un exemple de code n'est pas une case).
+   * Motif d'une ligne-case : « - [ ] », « * [x] », « 1. [ ] »…, éventuellement
+   * dans une citation (« > - [ ] ») ; le crochet est suivi d'une espace.
+   */
+  const MOTIF_CASE = /^((?:\s*>)*\s*(?:[-*+]|\d+[.)])\s+)\[[ xX]\](?=\s)/;
+
+  /**
+   * Coche ou décoche la case de rang « rang » (à partir de 0) d'un texte Markdown.
+   *   total  : nombre de cases affichées dans le rendu
+   *   cochee : nouvel état de la case
+   * Renvoie le nouveau texte, ou null si le texte ne compte pas exactement
+   * « total » cases : rendu et texte ne concordent pas (Markdown inhabituel),
+   * et l'on préfère ne rien toucher plutôt que cocher la mauvaise ligne.
+   */
+  function basculerCase(texte, rang, total, cochee) {
+    const lignes = texte.split('\n');
+    const lignesCases = [];   // numéros des lignes qui portent une case
+    let dansCode = false;
+    lignes.forEach((ligne, i) => {
+      if (/^\s*(```|~~~)/.test(ligne)) { dansCode = !dansCode; return; }
+      if (!dansCode && MOTIF_CASE.test(ligne)) lignesCases.push(i);
+    });
+    if (lignesCases.length !== total || rang < 0 || rang >= total) return null;
+    const i = lignesCases[rang];
+    lignes[i] = lignes[i].replace(MOTIF_CASE, (_, debut) => debut + (cochee ? '[x]' : '[ ]'));
+    return lignes.join('\n');
+  }
+
   /** Markdown → texte brut sur une ligne (pour les aperçus sur les cartes). */
   function markdownVersTexte(texte) {
     if (!texte) return '';
@@ -227,8 +259,11 @@
   /**
    * Champ Markdown modifiable : affiche le texte mis en forme ; le bouton
    * « Modifier » (ou un double-clic sur le texte) passe en saisie brute.
+   * Les cases à cocher (« - [ ] ») se cochent directement dans l'aperçu.
    *   valeur        : texte Markdown de départ
-   *   surChangement : fonction appelée à chaque frappe, avec le nouveau texte
+   *   surChangement : fonction appelée à chaque frappe ou case cochée, avec
+   *                   le nouveau texte (le widget l'enregistre ensuite avec
+   *                   le bouton « Sauvegarder » de sa fiche)
    * Renvoie l'élément à insérer dans la fiche.
    */
   function champMarkdown(valeur, surChangement) {
@@ -246,8 +281,12 @@
     bouton.className = 'fiche-md-bouton';
     const aide = document.createElement('span');
     aide.className = 'fiche-md-aide';
-    aide.textContent = 'Markdown : **gras**, *italique*, # titre, - liste, [lien](url)';
-    barre.append(bouton, aide);
+    aide.textContent = 'Markdown : **gras**, *italique*, # titre, - liste, - [ ] case, [lien](url)';
+    // Message affiché si une case ne peut pas être cochée depuis l'aperçu.
+    const alerte = document.createElement('span');
+    alerte.className = 'fiche-md-alerte';
+    alerte.hidden = true;
+    barre.append(bouton, aide, alerte);
 
     const rendu = document.createElement('div');
     rendu.className = 'fiche-md-rendu';
@@ -264,17 +303,38 @@
       bloc.classList.toggle('en-saisie', enSaisie);
       bouton.textContent = enSaisie ? '👁 Aperçu' : '✏️ Modifier';
       aide.hidden = !enSaisie;
+      alerte.hidden = true;
       if (enSaisie) {
         saisie.focus();
       } else if (texte.trim()) {
         rendu.innerHTML = markdownVersHtml(texte);
+        // Le nettoyage grise toutes les cases ; on ne les rend cliquables
+        // qu'ici, dans un champ modifiable (voir basculerCase).
+        rendu.querySelectorAll('input[type="checkbox"]').forEach(c => { c.disabled = false; });
       } else {
         rendu.innerHTML = '<p class="fiche-md-vide">Aucune description — cliquez sur « Modifier ».</p>';
       }
     }
 
     bouton.addEventListener('click', () => afficher(!bloc.classList.contains('en-saisie')));
-    rendu.addEventListener('dblclick', () => afficher(true));
+    // Un double-clic sur une case la coche deux fois : il n'ouvre pas la saisie.
+    rendu.addEventListener('dblclick', (e) => { if (!e.target.matches('input')) afficher(true); });
+    // Case cochée dans l'aperçu : on reporte « [ ] » ↔ « [x] » dans le texte.
+    rendu.addEventListener('change', (e) => {
+      const caseCliquee = e.target;
+      if (caseCliquee.type !== 'checkbox') return;
+      const cases = [...rendu.querySelectorAll('input[type="checkbox"]')];
+      const nouveau = basculerCase(texte, cases.indexOf(caseCliquee), cases.length, caseCliquee.checked);
+      if (nouveau === null) {
+        caseCliquee.checked = !caseCliquee.checked;   // la case reprend son état
+        alerte.textContent = '⚠️ Case introuvable dans le texte : cochez-la avec « Modifier ».';
+        alerte.hidden = false;
+        return;
+      }
+      texte = nouveau;
+      saisie.value = texte;
+      surChangement(texte);
+    });
     // Un lien du texte s'ouvre dans un nouvel onglet, pas dans le widget.
     rendu.addEventListener('click', (e) => {
       const lien = e.target.closest('a');
