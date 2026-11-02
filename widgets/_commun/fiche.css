@@ -202,6 +202,7 @@ body .fiche-centre.open { transform: translate(-50%, -50%); }
 }
 .fiche-md-bouton:hover { border-color: var(--accent, #667eea); }
 .fiche-md-aide { font-size: 11px; color: var(--text-muted, #718096); }
+.fiche-md-alerte { font-size: 11px; color: #c05621; }
 
 .fiche-md-saisie {
   display: none;
@@ -242,6 +243,9 @@ body .fiche-centre.open { transform: translate(-50%, -50%); }
 .fiche-md-rendu table { border-collapse: collapse; margin-bottom: 8px; }
 .fiche-md-rendu th, .fiche-md-rendu td { border: 1px solid var(--border, #e2e8f0); padding: 4px 8px; }
 .fiche-md-rendu img { max-width: 100%; }
+/* Cases à cocher des listes « - [ ] » : cliquables dans l'aperçu (#208) */
+.fiche-md-rendu input[type="checkbox"] { cursor: pointer; margin-right: 6px; }
+.fiche-md-rendu input[type="checkbox"]:disabled { cursor: default; }
 .fiche-md-vide { color: var(--text-muted, #718096); font-style: italic; }
 
 /* En disposition « centre », le texte dispose de plus de place. */
