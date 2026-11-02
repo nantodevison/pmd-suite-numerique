@@ -320,14 +320,67 @@ function oublierColonnesAbsentes() {
     if (STATE.mapping[key] && !STATE.columns.includes(STATE.mapping[key])) STATE.mapping[key] = '';
   });
 }
+/* ── Fenêtre ⚙ (#210) ───────────────────────────────────────────
+   Quatre étapes en onglets (../_commun/fenetre.js) : ① Projet, ② Colonnes,
+   ③ Statuts, ④ Équipe. Chaque onglet affiche son état : ✓ réglé, ⚠️ à
+   faire, ℹ️ à savoir. Les états sont calculés d'après ce qui est affiché
+   dans la fenêtre, avant même « Appliquer ». */
+let fenetreConfig = null;
+
+const valeurConfig = (id) => document.getElementById(id)?.value || '';
+
+function etatProjet() {
+  if (!valeurConfig('col-projet')) return { etat: 'info', aide: 'Pas de Champ Projet : toutes les cartes de la table sont affichées' };
+  if (!valeurConfig('col-projet-kanban')) return { etat: 'alerte', aide: 'Choisissez le projet du Kanban' };
+  return { etat: 'ok', aide: 'Projet choisi' };
+}
+
+function etatColonnes() {
+  if (!valeurConfig('col-titre') || !valeurConfig('col-statut')) return { etat: 'alerte', aide: 'Titre et Statut sont obligatoires' };
+  return { etat: 'ok', aide: 'Colonnes obligatoires associées' };
+}
+
+function etatStatuts() {
+  const lignes = document.querySelectorAll('#classes-liste .classe-ligne');
+  if (!lignes.length) return { etat: 'alerte', aide: 'Aucun statut : associez la colonne Statut (②)' };
+  if (document.querySelector('#classes-liste .classe-devinee')) {
+    return { etat: 'alerte', aide: 'Classes proposées d\'après le libellé (en italique) : vérifiez-les puis appliquez' };
+  }
+  return { etat: 'ok', aide: 'Statuts réglés' };
+}
+
+function etatEquipe() {
+  if (!STATE.equipePanneau || !STATE.equipePanneau.ref) return { etat: 'info', aide: '« Assigné à » n\'est pas une colonne Référence : pas d\'équipe à choisir' };
+  if (!STATE.equipePanneau.cochees.size) return { etat: 'info', aide: 'Personne de coché : toute la table est proposée' };
+  return { etat: 'ok', aide: 'Équipe choisie' };
+}
+
+/** Crée la fenêtre ⚙ à partir des quatre sections de index.html (une fois, au chargement). */
+function creerFenetreConfig() {
+  const section = (id) => document.getElementById(id);
+  fenetreConfig = Fenetre.creer({
+    titre: '⚙️ Configuration du Kanban',
+    onglets: [
+      { id: 'projet',   libelle: '① Projet',      contenu: section('config-projet'),   etat: etatProjet },
+      { id: 'colonnes', libelle: '② Colonnes',    contenu: section('config-colonnes'), etat: etatColonnes },
+      { id: 'statuts',  libelle: '③ Statuts',     contenu: section('config-statuts'),  etat: etatStatuts },
+      { id: 'equipe',   libelle: '④ Équipe projet', contenu: section('config-equipe'), etat: etatEquipe },
+    ],
+    actions: [
+      { libelle: 'Annuler', classe: 'btn-ghost', fermer: true },
+      { libelle: '✓ Appliquer', classe: 'btn-primary', surClic: saveConfig },
+    ],
+  });
+}
+
 function openConfig()  {
   populateSelects(); syncSelectsToMapping();
+  STATE.configRefProjet = REFS.projet; // projets visés par le Champ Projet affiché (#210)
   remplirChoixProjet(REFS.projet); // ✅ liste « Projet du Kanban »
-  remplirClasses();                // rubrique « Classes de statut » (#183)
+  remplirClasses();                // rubrique « Statuts » (#183, #212)
   preparerEquipe(REFS.assigne);    // ✅ rubrique « Équipe projet »
-  document.getElementById('config-panel').classList.remove('hidden');
+  fenetreConfig.ouvrir();          // sur la première étape ⚠️, sinon la première
 }
-function closeConfig() { document.getElementById('config-panel').classList.add('hidden'); }
 
 /* ✅ Remplit la liste « Projet du Kanban » du panneau ⚙ à partir des projets
    visés par la colonne « Champ Projet » (ref = REFS.projet, ou null). */
@@ -353,6 +406,7 @@ async function saveConfig() {
     STATE.mapping[key] = sel ? sel.value : '';
   });
   if (!STATE.mapping.titre || !STATE.mapping.statut) {
+    fenetreConfig.afficherOnglet('colonnes');
     showToast('⚠️ Titre et Statut sont obligatoires.', 3000); return;
   }
   // ✅ Projet du Kanban : mémorisé dans les options du widget
@@ -376,7 +430,7 @@ async function saveConfig() {
   grist.setOption('equipe', STATE.equipe).catch(() => {});
   grist.setOption('classesStatut', STATE.classesStatut).catch(() => {});
   grist.setOption('couleursStatut', STATE.couleursStatut).catch(() => {});
-  closeConfig();
+  fenetreConfig.fermer({ forcer: true });   // appliqué : rien à confirmer
   await assurerReferences(); // l'association des colonnes a pu changer
   await chargerMoi();        // … et avec elle la table des personnes
   await chargerLiens();      // … et les colonnes de liens (badges ⛔ / ➡️)
@@ -410,7 +464,11 @@ function choixCouleur(ligne, rang) {
     pastille.style.background = palette.bg;
     pastille.style.borderColor = palette.accent;
     pastille.title = 'Couleur de la colonne';
-    pastille.addEventListener('click', () => marquer(i));
+    pastille.addEventListener('click', () => {
+      marquer(i);
+      // Un bouton ne déclenche pas « change » : on le signale à la fenêtre ⚙
+      ligne.dispatchEvent(new Event('change', { bubbles: true }));
+    });
     groupe.appendChild(pastille);
   });
   function marquer(i) {
@@ -421,17 +479,49 @@ function choixCouleur(ligne, rang) {
   return groupe;
 }
 
-/** (Re)dessine la rubrique : une ligne par statut connu, avec sa classe et sa couleur. */
-function remplirClasses() {
+/**
+ * Cartes du projet choisi dans ⚙, avant même « Appliquer » (#210) : d'après
+ * le Champ Projet et le Projet du Kanban affichés. Toutes, si aucun projet.
+ */
+function cartesDuProjetAffiche() {
+  const colProjet = document.getElementById('col-projet')?.value;
+  const id = Number(document.getElementById('col-projet-kanban')?.value);
+  const ref = STATE.configRefProjet;
+  if (!colProjet || !id || !ref) return STATE.records;
+  const option = ref.options.find(o => o.id === id);
+  const nom = option ? option.nom : '';
+  return STATE.records.filter(r => String(r[colProjet] ?? '') === nom);
+}
+
+/**
+ * (Re)dessine la rubrique : une ligne par statut, avec sa couleur et sa classe.
+ * Les statuts sont ceux de la colonne Statut et du projet affichés dans ⚙
+ * (#210) : changer l'un ou l'autre redessine aussitôt la liste.
+ *   garderSaisie : true pour reprendre les couleurs et classes déjà changées
+ *                  dans ⚙ (pas encore appliquées) des statuts toujours présents
+ */
+function remplirClasses(garderSaisie = false) {
   const liste = document.getElementById('classes-liste');
   if (!liste) return;
+  const saisie = {};   // { statut: { couleur, classe, devinee } } en cours dans ⚙
+  if (garderSaisie) {
+    liste.querySelectorAll('.classe-ligne').forEach(l => {
+      saisie[l.dataset.statut] = {
+        couleur: Number(l.dataset.couleur),
+        classe: l.querySelector('select').value,
+        devinee: l.classList.contains('classe-devinee'),
+      };
+    });
+  }
   liste.innerHTML = '';
-  const statuts = statutsConnus({});
+  const colStatut = document.getElementById('col-statut')?.value || STATE.mapping.statut;
+  const statuts = statutsDeColonne(colStatut, cartesDuProjetAffiche());
   if (statuts.length === 0) {
     liste.innerHTML = '<div class="filtre-aucune">Aucun statut connu : associez la colonne Statut.</div>';
     return;
   }
   statuts.forEach(statut => {
+    const enCours = saisie[statut];
     // Une <div> et non un <label> : un clic sur le nom activerait sinon la
     // première pastille de couleur (premier élément cliquable de la ligne).
     const ligne = document.createElement('div');
@@ -447,13 +537,14 @@ function remplirClasses() {
       opt.value = valeur; opt.textContent = libelle;
       sel.appendChild(opt);
     });
-    sel.value = Liens.classeDe(statut, STATE.classesStatut);
+    sel.value = enCours ? enCours.classe : Liens.classeDe(statut, STATE.classesStatut);
     // Classe pas encore enregistrée : on le signale, elle sera retenue à « Appliquer »
-    if (!(statut in STATE.classesStatut)) {
+    if (enCours ? enCours.devinee : !(statut in STATE.classesStatut)) {
       ligne.classList.add('classe-devinee');
       ligne.title = 'Classe proposée d\'après le libellé : vérifiez-la';
     }
-    ligne.append(nom, choixCouleur(ligne, rangCouleur(statut)), sel);
+    const rang = enCours ? enCours.couleur : rangCouleur(statut, statuts);
+    ligne.append(nom, choixCouleur(ligne, rang), sel);
     liste.appendChild(ligne);
   });
 }
@@ -1009,11 +1100,22 @@ function ouvrirMenuVue(ancre) {
  * puis ceux déjà retenus par la vue.
  */
 function statutsConnus(vue) {
-  const liste = [...(STATE.choix[STATE.mapping.statut] || [])];
-  const ajouter = s => { if (s && !liste.includes(s)) liste.push(s); };
-  recordsDuProjet().map(r => getField(r, 'statut')).filter(Boolean).map(String)
-    .sort((a, b) => a.localeCompare(b, 'fr')).forEach(ajouter);
-  (vue.colonnes || []).forEach(ajouter);
+  const liste = statutsDeColonne(STATE.mapping.statut, recordsDuProjet());
+  (vue.colonnes || []).forEach(s => { if (s && !liste.includes(s)) liste.push(s); });
+  return liste;
+}
+
+/**
+ * Statuts d'une colonne : ses choix déclarés dans Grist, dans leur ordre,
+ * puis les autres valeurs présentes dans les cartes données. La colonne est
+ * passée en paramètre : ⚙ s'en sert avant que l'association soit appliquée.
+ */
+function statutsDeColonne(col, cartes) {
+  if (!col) return [];
+  const liste = [...(STATE.choix[col] || [])];
+  cartes.map(r => r[col]).filter(Boolean).map(String)
+    .sort((a, b) => a.localeCompare(b, 'fr'))
+    .forEach(s => { if (!liste.includes(s)) liste.push(s); });
   return liste;
 }
 
@@ -1842,7 +1944,7 @@ function renderAccueil(board) {
         <button id="accueil-creer" class="${mesTaches ? 'btn-ghost' : 'btn-primary'}">＋ ${premiere ? 'Créer ma première vue' : 'Créer une vue'}</button>
       </div>
       <ol class="accueil-etapes">
-        <li><strong>⚙ Configurer</strong> : choisissez le projet du Kanban, associez les colonnes de la table et cochez l'équipe projet (personnes proposées dans « Assigné à »). Puis cliquez sur <strong>Enregistrer</strong>, en haut à droite de Grist.</li>
+        <li><strong>⚙ Configurer</strong> : quatre étapes, une par onglet : ① le projet du Kanban, ② les colonnes de la table, ③ la couleur et la classe des statuts, ④ l'équipe projet (personnes proposées dans « Assigné à »). Un ⚠️ signale une étape à faire. Cliquez sur <strong>Appliquer</strong>, puis sur <strong>Enregistrer</strong>, en haut à droite de Grist.</li>
         <li><strong>＋ Vue</strong> : crée une vue à partir de l'affichage actuel, <strong>🔒 pour vous</strong> (par défaut : gardée aussitôt dans votre navigateur) ou <strong>👥 pour tous</strong> (puis cliquez sur <strong>Enregistrer</strong> de Grist pour la garder). Le menu <strong>⋯</strong> de l'onglet actif permet de la renommer, de la supprimer, ou de copier une vue partagée en vue perso pour l'adapter sans gêner les autres.</li>
         <li><strong>👤 Qui suis-je ?</strong> (en haut à droite) : indiquez votre nom, une fois (rien à enregistrer). Le filtre sur la colonne « Assigné à » propose alors <strong>👤 Moi</strong>, qui montre vos propres cartes ; dans une vue partagée, il montre à chacun les siennes.</li>
         <li><strong>＋ Filtre</strong> : ne garde que certaines cartes (« EPIC est … », « Assigné n'est pas … »). Une vue modifiée affiche <strong>•</strong> : cliquez sur <strong>💾 Enregistrer la vue</strong> pour garder les filtres.</li>
@@ -2472,11 +2574,11 @@ function pastilleStatut() {
  * statuts connus), comme avant #212. Une fois retenue à « Appliquer », la
  * couleur suit le statut : déplacer une colonne ne la change plus.
  */
-function rangCouleur(statut) {
+function rangCouleur(statut, statuts = statutsConnus({})) {
   const choisie = STATE.couleursStatut[statut];
   if (Number.isInteger(choisie) && choisie >= 0) return choisie % PASTEL_PALETTE.length;
   const i = STATE.columnOrder.indexOf(statut);
-  const rang = i >= 0 ? i : Math.max(statutsConnus({}).indexOf(statut), 0);
+  const rang = i >= 0 ? i : Math.max(statuts.indexOf(statut), 0);
   return rang % PASTEL_PALETTE.length;
 }
 
@@ -3090,10 +3192,9 @@ function showToast(msg, duration = 2200) {
 
 document.addEventListener('DOMContentLoaded', () => {
 
-  // Config
+  // Config : fenêtre à onglets (#210)
+  creerFenetreConfig();
   document.getElementById('btn-config')       ?.addEventListener('click', openConfig);
-  document.getElementById('btn-save-config')  ?.addEventListener('click', saveConfig);
-  document.getElementById('btn-close-config') ?.addEventListener('click', closeConfig);
   // ✅ Si l'on change le « Champ Projet », on recharge la liste des projets proposés
   document.getElementById('col-projet')?.addEventListener('change', async (e) => {
     const col = e.target.value;
@@ -3102,14 +3203,24 @@ document.addEventListener('DOMContentLoaded', () => {
       try { ref = await chargerReference(getTableName(), col); }
       catch (err) { console.error('Kanban – lecture des projets impossible:', err); }
     }
+    // Une réponse arrivée après un autre changement de colonne est périmée
+    if (e.target.value !== col) return;
+    STATE.configRefProjet = ref;
     remplirChoixProjet(ref);
+    remplirClasses(true);   // le projet a pu changer : ses statuts aussi (#210)
+    fenetreConfig.majEtats();   // la liste est arrivée après le changement
   });
+  // Statuts de ⚙ redessinés aussitôt si la colonne Statut ou le projet change (#210)
+  document.getElementById('col-statut')        ?.addEventListener('change', () => remplirClasses(true));
+  document.getElementById('col-projet-kanban') ?.addEventListener('change', () => remplirClasses(true));
   // ✅ Équipe projet : recherche, « Tout décocher », et nouvelle liste de
   // personnes si l'on change la colonne « Assigné à »
   document.getElementById('equipe-recherche')?.addEventListener('input', remplirEquipe);
   document.getElementById('equipe-aucun')?.addEventListener('click', () => {
     STATE.equipePanneau.cochees.clear();
     remplirEquipe();
+    // Un bouton ne déclenche pas « change » : on signale la modification à la fenêtre
+    document.getElementById('equipe-liste').dispatchEvent(new Event('change', { bubbles: true }));
   });
   document.getElementById('col-assigne')?.addEventListener('change', async (e) => {
     const col = e.target.value;
@@ -3118,9 +3229,10 @@ document.addEventListener('DOMContentLoaded', () => {
       try { ref = await chargerReference(getTableName(), col); }
       catch (err) { console.error('Kanban – lecture des personnes impossible:', err); }
     }
+    if (e.target.value !== col) return;   // réponse périmée (voir col-projet)
     preparerEquipe(ref);
+    fenetreConfig.majEtats();
   });
-  document.getElementById('config-panel')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeConfig(); });
 
   // Onglets de vue
   document.querySelectorAll('.view-tab[data-view]').forEach(btn => { // onglets codés en dur
@@ -3225,6 +3337,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('edit-cancel-btn') ?.addEventListener('click', () => closeEditPanel());
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      // ⚙ ouverte : Échap ne concerne qu'elle (la fenêtre le gère elle-même)
+      if (fenetreConfig && fenetreConfig.estOuverte()) return;
       const panneauOuvert = [...document.querySelectorAll('.filtre-popover')].some(p => !p.classList.contains('hidden'));
       if (panneauOuvert) { fermerPopovers(); return; }
       const panel = document.getElementById('edit-panel');

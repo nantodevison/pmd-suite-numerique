@@ -18,6 +18,7 @@
   <!-- Fiche partagée avec les autres widgets (mode URL uniquement) -->
   <link rel="stylesheet" href="../_commun/fiche.css" />
   <link rel="stylesheet" href="../_commun/liens.css" />
+  <link rel="stylesheet" href="../_commun/fenetre.css" />
   <style>
 /* ══════════════════════════════════════════════════════════════
    KANBAN GRIST — styles v3
@@ -628,16 +629,8 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
 .edit-dirty-dot { width: 7px; height: 7px; background: var(--warning); border-radius: 50%; display: none; }
 .edit-dirty-dot.visible { display: block; }
 
-/* ── Config panel ── */
-.config-panel {
-  position: fixed; inset: 0; background: rgba(45,55,72,.5);
-  backdrop-filter: blur(3px); z-index: 1000;
-  display: flex; align-items: center; justify-content: center; padding: 20px;
-}
-.config-panel.hidden { display: none; }
-.config-inner { background: var(--surface); border-radius: 14px; padding: 28px 32px; width: 100%; max-width: 620px; box-shadow: 0 20px 60px rgba(9,30,66,.25); max-height: 90vh; overflow-y: auto; }
-.config-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
-.config-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 22px; line-height: 1.5; }
+/* ── Configuration ⚙ (#210) : la fenêtre elle-même est dans ../_commun/fenetre.css ── */
+.config-etape { font-size: 15px; font-weight: 700; margin: 0 0 6px; }
 .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; }
 .config-field label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px; }
 .config-field select {
@@ -650,10 +643,10 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
 .config-field select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(102,126,234,.12); }
 .required { color: var(--danger); }
 /* Équipe projet (#148) : reprend les styles du panneau des filtres */
-.config-equipe { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; }
-.config-equipe .config-field label { margin-bottom: 0; }
+.config-equipe { display: flex; flex-direction: column; gap: 8px; }
+#config-sections .config-aide { margin-bottom: 16px; }
 .config-aide { font-size: 12px; color: var(--text-muted); margin: 0; }
-.config-equipe .filtre-valeurs { max-height: 220px; }
+.config-equipe .filtre-valeurs { max-height: 340px; }
 /* Statuts (#183, #212) : nom à gauche, puis couleur et classe ; une ligne par statut */
 .classes-liste { display: grid; grid-template-columns: 1fr; gap: 6px; }
 .classe-ligne { display: flex; align-items: center; gap: 12px; font-size: 13px; }
@@ -669,7 +662,6 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
   font-size: 12px; font-family: var(--font); color: var(--text); background: var(--surface); cursor: pointer;
 }
 .classe-devinee select { font-style: italic; color: var(--text-muted); }
-.config-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
 
 /* ── Toast ── */
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #2d3748; color: #fff; padding: 10px 22px; border-radius: 10px; font-size: 13px; font-weight: 500; box-shadow: 0 4px 20px rgba(0,0,0,.2); z-index: 2000; pointer-events: none; opacity: 1; transition: opacity .3s; max-width: 90vw; text-align: center; }
@@ -686,11 +678,22 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
 </head>
 <body>
 
-  <!-- Config panel -->
-  <div id="config-panel" class="config-panel hidden">
-    <div class="config-inner">
-      <h2 class="config-title">⚙️ Configuration du Kanban</h2>
-      <p class="config-subtitle">Associez les colonnes de votre table aux champs du Kanban.</p>
+  <!-- Configuration (#210) : quatre sections, une par onglet. Fenetre.creer()
+       (../_commun/fenetre.js, appelé dans kanban.js) les range dans une
+       fenêtre à onglets ; elles restent cachées jusque-là. -->
+  <div id="config-sections" hidden>
+    <section id="config-projet">
+      <h3 class="config-etape">① Projet</h3>
+      <p class="config-aide">Un Kanban = un projet. Choisissez la colonne qui porte le projet de chaque carte, puis le projet de ce Kanban : seules ses cartes sont affichées. Sans Champ Projet, toutes les cartes de la table le sont.</p>
+      <div class="config-grid">
+        <div class="config-field"><label for="col-projet">Champ Projet</label><select id="col-projet"><option value="">— aucune —</option></select></div>
+        <!-- ✅ Projet du Kanban : un Kanban = un projet (choisi une fois, mémorisé dans le widget) -->
+        <div class="config-field"><label for="col-projet-kanban">Projet du Kanban</label><select id="col-projet-kanban"><option value="">— choisir —</option></select></div>
+      </div>
+    </section>
+    <section id="config-colonnes">
+      <h3 class="config-etape">② Colonnes</h3>
+      <p class="config-aide">Associez les colonnes de votre table aux champs du Kanban. <strong>Titre</strong> et <strong>Statut</strong> sont obligatoires ; les autres champs sont facultatifs.</p>
       <div class="config-grid">
         <div class="config-field"><label for="col-titre">Titre <span class="required">*</span></label><select id="col-titre"><option value="">— choisir —</option></select></div>
         <div class="config-field"><label for="col-statut">Statut <span class="required">*</span></label><select id="col-statut"><option value="">— choisir —</option></select></div>
@@ -699,35 +702,28 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
         <div class="config-field"><label for="col-assigne">Assigné à</label><select id="col-assigne"><option value="">— aucune —</option></select></div>
         <div class="config-field"><label for="col-date">Date / Échéance</label><select id="col-date"><option value="">— aucune —</option></select></div>
         <div class="config-field"><label for="col-epic">EPIC</label><select id="col-epic"><option value="">— aucune —</option></select></div>
-        <div class="config-field"><label for="col-projet">Champ Projet</label><select id="col-projet"><option value="">— aucune —</option></select></div>
         <div class="config-field"><label for="col-bloquee-par">⛔ Bloquée par</label><select id="col-bloquee-par"><option value="">— aucune —</option></select></div>
         <div class="config-field"><label for="col-bloque">➡️ Bloque</label><select id="col-bloque"><option value="">— aucune —</option></select></div>
-        <!-- ✅ Projet du Kanban : un Kanban = un projet (choisi une fois, mémorisé dans le widget) -->
-        <div class="config-field"><label for="col-projet-kanban">Projet du Kanban</label><select id="col-projet-kanban"><option value="">— choisir —</option></select></div>
       </div>
-      <!-- Statuts (#183, #212) : une ligne par statut (couleur, classe), dessinées par remplirClasses() -->
-      <div class="config-equipe">
-        <div class="config-field"><label>🚦 Statuts : couleur et classe</label></div>
-        <p class="config-aide"><strong>Couleur</strong> : celle de la colonne et de la pastille Statut de la fiche ; elle suit le statut si l'on déplace la colonne.
-          <strong>Classe</strong>, pour l'enchaînement (⛔ Bloquée par / ➡️ Bloque) : seules les cartes <strong>À faire</strong> ou <strong>En cours</strong> bloquent ou attendent. <strong>Terminé</strong> lève le blocage ; <strong>Autre</strong> (idées, pistes…) n'entre pas dans l'enchaînement. Les classes en italique sont proposées d'après le libellé.</p>
-        <div id="classes-liste" class="classes-liste"></div>
+    </section>
+    <!-- Statuts (#183, #212) : une ligne par statut (couleur, classe), dessinées par remplirClasses() -->
+    <section id="config-statuts">
+      <h3 class="config-etape">③ Statuts : couleur et classe</h3>
+      <p class="config-aide"><strong>Couleur</strong> : celle de la colonne et de la pastille Statut de la fiche ; elle suit le statut si l'on déplace la colonne.
+        <strong>Classe</strong>, pour l'enchaînement (⛔ Bloquée par / ➡️ Bloque) : seules les cartes <strong>À faire</strong> ou <strong>En cours</strong> bloquent ou attendent. <strong>Terminé</strong> lève le blocage ; <strong>Autre</strong> (idées, pistes…) n'entre pas dans l'enchaînement. Les classes en italique sont proposées d'après le libellé.</p>
+      <div id="classes-liste" class="classes-liste"></div>
+    </section>
+    <!-- ✅ Équipe projet (#148) : personnes proposées dans « Assigné à », dessinées par remplirEquipe() -->
+    <section id="config-equipe" class="config-equipe">
+      <h3 class="config-etape">④ Équipe projet</h3>
+      <p class="config-aide">Personnes proposées dans « Assigné à ». Si personne n'est coché, toute la table est proposée.</p>
+      <input id="equipe-recherche" class="filtre-recherche" type="search" placeholder="Rechercher une personne…" autocomplete="off" data-neutre />
+      <div class="filtre-outils">
+        <button id="equipe-aucun" class="filtre-lien">Tout décocher</button>
+        <span id="equipe-compte" class="filtre-compte"></span>
       </div>
-      <!-- ✅ Équipe projet (#148) : personnes proposées dans « Assigné à », dessinées par remplirEquipe() -->
-      <div class="config-equipe">
-        <div class="config-field"><label for="equipe-recherche">👥 Équipe projet</label></div>
-        <p class="config-aide">Personnes proposées dans « Assigné à ». Si personne n'est coché, toute la table est proposée.</p>
-        <input id="equipe-recherche" class="filtre-recherche" type="search" placeholder="Rechercher une personne…" autocomplete="off" />
-        <div class="filtre-outils">
-          <button id="equipe-aucun" class="filtre-lien">Tout décocher</button>
-          <span id="equipe-compte" class="filtre-compte"></span>
-        </div>
-        <div id="equipe-liste" class="filtre-valeurs"></div>
-      </div>
-      <div class="config-actions">
-        <button id="btn-save-config" class="btn-primary">✓ Appliquer</button>
-        <button id="btn-close-config" class="btn-ghost">Annuler</button>
-      </div>
-    </div>
+      <div id="equipe-liste" class="filtre-valeurs"></div>
+    </section>
   </div>
 
   <!-- Modal ajout carte -->
@@ -895,6 +891,8 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
   <!-- Comparaison des valeurs pour le tri des cartes (#211) -->
   <script src="../_commun/tri.js"></script>
   <script src="../_commun/fiche.js"></script>
+  <!-- Fenêtre à onglets de ⚙ (#210) -->
+  <script src="../_commun/fenetre.js"></script>
   <!-- Liens « Bloque / Bloquée par » entre cartes (après fiche.js, dont il dépend) -->
   <script src="../_commun/liens.js"></script>
   <script src="kanban.js"></script>
