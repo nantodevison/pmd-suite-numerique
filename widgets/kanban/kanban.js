@@ -89,6 +89,11 @@ const STATE = {
   // | 'termine' | 'autre' }. Un statut absent reçoit la classe devinée par
   // Liens.devinerClasse. Servent aux badges ⛔ / ➡️ des cartes.
   classesStatut: {},
+
+  // Couleurs des statuts (#212), réglées dans ⚙ : { statut: rang dans
+  // PASTEL_PALETTE }. Un statut absent reçoit la couleur de sa position
+  // (voir rangCouleur).
+  couleursStatut: {},
 };
 
 /* ── Constantes ─────────────────────────────────────────────── */
@@ -118,7 +123,9 @@ const PREREGLAGE_MAPPING = {
 const PROP_ICONS  = { statut:'📋', description:'📝', priorite:'🚦', assigne:'👤', date:'📅', epic:'🏷️' };
 const PROP_LABELS = { statut:'Statut', description:'Description', priorite:'Priorité', assigne:'Assigné à', date:'Échéance', epic:'EPIC' };
 
-/* Palette pastel */
+/* Palette pastel : fond de colonne, accent (bordure, progression), titre.
+   Une couleur de statut réglée dans ⚙ est enregistrée par son rang dans
+   cette liste (#212) : ne pas changer l'ordre, seulement ajouter à la fin. */
 const PASTEL_PALETTE = [
   { bg:'#dbeafe', accent:'#60a5fa', text:'#1d4ed8' },
   { bg:'#dcfce7', accent:'#4ade80', text:'#15803d' },
@@ -243,6 +250,8 @@ grist.onOptions(async (options) => {
   STATE.equipe = (options && options.equipe) || null;
   // Classes de statut (#183), elles aussi dans les options du widget
   STATE.classesStatut = (options && options.classesStatut) || {};
+  // Couleurs des statuts (#212), de même
+  STATE.couleursStatut = (options && options.couleursStatut) || {};
   // Vue active et vues enregistrées (#196) : lues à l'ouverture seulement.
   // Grist rappelle onOptions après chaque setOption, parfois dans le désordre :
   // relire ces options ramènerait un état périmé (vue tout juste créée absente,
@@ -358,10 +367,15 @@ async function saveConfig() {
   document.querySelectorAll('#classes-liste select').forEach(sel => {
     STATE.classesStatut[sel.dataset.statut] = sel.value;
   });
+  // Couleurs des statuts (#212) : de même, toutes celles affichées
+  document.querySelectorAll('#classes-liste .classe-ligne').forEach(ligne => {
+    STATE.couleursStatut[ligne.dataset.statut] = Number(ligne.dataset.couleur);
+  });
   grist.setOption('mapping', STATE.mapping).catch(() => {});
   grist.setOption('projetKanban', STATE.projetKanban).catch(() => {});
   grist.setOption('equipe', STATE.equipe).catch(() => {});
   grist.setOption('classesStatut', STATE.classesStatut).catch(() => {});
+  grist.setOption('couleursStatut', STATE.couleursStatut).catch(() => {});
   closeConfig();
   await assurerReferences(); // l'association des colonnes a pu changer
   await chargerMoi();        // … et avec elle la table des personnes
@@ -376,13 +390,38 @@ async function saveConfig() {
   showToast('✓ Configuration sauvegardée');
 }
 
-/* ── Classes de statut (#183) ───────────────────────────────────
+/* ── Classes et couleurs de statut (#183, #212) ─────────────────
    Chaque statut est rangé dans une classe (À faire, En cours, Terminé,
    Autre) : c'est ce qui dit au widget qu'une carte bloquante est finie, sans
    écrire aucun statut en dur. La classe proposée par défaut est devinée
-   d'après le libellé (voir Liens.devinerClasse). */
+   d'après le libellé (voir Liens.devinerClasse).
+   Chaque statut a aussi sa couleur, choisie parmi les pastels du Kanban ;
+   par défaut, celle de sa position (voir rangCouleur). Classe et couleur
+   affichées sont retenues ensemble à « Appliquer ». */
 
-/** (Re)dessine la rubrique : une ligne par statut connu, avec sa classe. */
+/** Pastilles de couleur d'une ligne de statut ; le choix est noté sur la ligne. */
+function choixCouleur(ligne, rang) {
+  const groupe = document.createElement('span');
+  groupe.className = 'couleurs-statut';
+  PASTEL_PALETTE.forEach((palette, i) => {
+    const pastille = document.createElement('button');
+    pastille.type = 'button';
+    pastille.className = 'couleur-pastille';
+    pastille.style.background = palette.bg;
+    pastille.style.borderColor = palette.accent;
+    pastille.title = 'Couleur de la colonne';
+    pastille.addEventListener('click', () => marquer(i));
+    groupe.appendChild(pastille);
+  });
+  function marquer(i) {
+    ligne.dataset.couleur = String(i);
+    [...groupe.children].forEach((p, j) => p.setAttribute('aria-pressed', String(j === i)));
+  }
+  marquer(rang);
+  return groupe;
+}
+
+/** (Re)dessine la rubrique : une ligne par statut connu, avec sa classe et sa couleur. */
 function remplirClasses() {
   const liste = document.getElementById('classes-liste');
   if (!liste) return;
@@ -393,8 +432,11 @@ function remplirClasses() {
     return;
   }
   statuts.forEach(statut => {
-    const ligne = document.createElement('label');
+    // Une <div> et non un <label> : un clic sur le nom activerait sinon la
+    // première pastille de couleur (premier élément cliquable de la ligne).
+    const ligne = document.createElement('div');
     ligne.className = 'classe-ligne';
+    ligne.dataset.statut = statut;
     const nom = document.createElement('span');
     nom.className = 'classe-nom';
     nom.textContent = statut;
@@ -411,7 +453,7 @@ function remplirClasses() {
       ligne.classList.add('classe-devinee');
       ligne.title = 'Classe proposée d\'après le libellé : vérifiez-la';
     }
-    ligne.append(nom, sel);
+    ligne.append(nom, choixCouleur(ligne, rangCouleur(statut)), sel);
     liste.appendChild(ligne);
   });
 }
@@ -1734,7 +1776,6 @@ function renderBoard() {
 
   const statutList = getOrderedStatuts(Object.keys(groups), view);
   board.innerHTML = '';
-  STATE.couleursStatut = {};   // reprises par la pastille Statut de la fiche
 
   const totalFiltered = filteredRecords.length;
 
@@ -1747,12 +1788,7 @@ function renderBoard() {
     // Masquer les colonnes vides si filtre actif (sauf colonnes de base, choisies dans la vue)
     if (filterActive && isEmptyCol && !isBaseCol) return;
 
-    const colorIdx = STATE.columnOrder.includes(statut)
-      ? STATE.columnOrder.indexOf(statut)
-      : statutList.indexOf(statut);
-    const palette = PASTEL_PALETTE[colorIdx % PASTEL_PALETTE.length];
-    STATE.couleursStatut[statut] = palette;
-
+    const palette = couleurStatut(statut);
     const col = buildColumn(statut, groups[statut] || [], palette, totalFiltered, view);
     board.appendChild(col);
   });
@@ -2430,11 +2466,23 @@ function pastilleStatut() {
   return b;
 }
 
-/** Couleurs de la colonne d'un statut (relevées au dernier affichage du tableau). */
+/**
+ * Rang dans PASTEL_PALETTE de la couleur d'un statut (#212) : celle choisie
+ * dans ⚙, sinon celle de sa position (ordre des colonnes enregistré, puis
+ * statuts connus), comme avant #212. Une fois retenue à « Appliquer », la
+ * couleur suit le statut : déplacer une colonne ne la change plus.
+ */
+function rangCouleur(statut) {
+  const choisie = STATE.couleursStatut[statut];
+  if (Number.isInteger(choisie) && choisie >= 0) return choisie % PASTEL_PALETTE.length;
+  const i = STATE.columnOrder.indexOf(statut);
+  const rang = i >= 0 ? i : Math.max(statutsConnus({}).indexOf(statut), 0);
+  return rang % PASTEL_PALETTE.length;
+}
+
+/** Couleurs (fond, accent, titre) de la colonne d'un statut, reprises par la fiche. */
 function couleurStatut(statut) {
-  if (STATE.couleursStatut && STATE.couleursStatut[statut]) return STATE.couleursStatut[statut];
-  const i = getUniqueFieldValues('statut').indexOf(statut);
-  return PASTEL_PALETTE[Math.max(i, 0) % PASTEL_PALETTE.length];
+  return PASTEL_PALETTE[rangCouleur(statut)];
 }
 
 function pastillePriorite() {

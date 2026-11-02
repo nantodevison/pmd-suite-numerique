@@ -99,12 +99,26 @@ apparaissent en tête de liste à l'ouverture de ⚙.
 > existant) : ouvrir ⚙, cocher l'équipe, « Appliquer », puis « Enregistrer »
 > dans Grist.**
 
+### Couleurs des statuts
+
+La rubrique **« 🚦 Statuts : couleur et classe »** du panneau ⚙ donne, pour
+chaque statut, sa **couleur** (8 pastels au choix) et sa classe (voir
+« Badges sur les cartes et classes de statut »). La couleur est celle de la
+colonne (fond, bordure, titre, barre de progression) et de la pastille Statut
+de la fiche ; deux statuts peuvent partager la même.
+
+- Tant qu'elle n'est pas réglée, la couleur d'un statut dépend de la position
+  de sa colonne, comme avant le 2026-11-02 : déplacer la colonne la change.
+- « Appliquer » retient toutes les couleurs affichées : elles suivent ensuite
+  leur statut, où que soit la colonne. Comme le reste de ⚙, elles ne sont
+  gardées qu'après **Enregistrer** dans Grist.
+
 ## Ce qui est enregistré, et quand
 
 | Quoi | Où | Comment c'est gardé |
 |---|---|---|
 | Les **cartes** : création, déplacement, champs, suppression | la table Grist | aussitôt, comme toute saisie dans Grist |
-| Les **réglages** de ⚙ : colonnes associées, projet, équipe | le document (options du widget), pour tous | « Appliquer », puis **Enregistrer** de Grist |
+| Les **réglages** de ⚙ : colonnes associées, projet, couleurs et classes des statuts, équipe | le document (options du widget), pour tous | « Appliquer », puis **Enregistrer** de Grist |
 | Les **vues 👥 partagées** : création, nom, colonnes et leur ordre, suppression | le document, pour tous | aussitôt dans le widget, puis **Enregistrer** de Grist |
 | Les **filtres** et le **tri** d'une vue partagée | le document, pour tous | **💾 Enregistrer la vue**, puis **Enregistrer** de Grist |
 | Les **vues 🔒 personnelles** (et leurs filtres) | votre navigateur, pour vous seul | aussitôt (filtres : **💾 Enregistrer la vue**) |
@@ -351,7 +365,7 @@ Sur le tableau, une carte affiche dans son pied :
 Le survol d'un badge liste les cartes concernées (`#188 Titre · statut`).
 
 Pour savoir qu'une carte est « finie », le widget s'appuie sur les **classes
-de statut**, réglées dans ⚙ (rubrique 🚦) : chaque statut est rangé en
+de statut**, réglées dans ⚙ (rubrique 🚦, avec la couleur des statuts) : chaque statut est rangé en
 **À faire**, **En cours**, **Terminé** ou **Autre**.
 
 - seules les cartes À faire ou En cours comptent : une carte Terminée ne
