@@ -8,14 +8,13 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-02 17:53_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-05 22:08_
 
 ### 🖐️ À faire
 - [ ] #185 Rendre les pastilles modifiables dans la fiche de la Galerie (Moyenne, EPIC « Améliorer l'interface du kanban »)
 - [ ] #204 Réutiliser les filtres kanban (Moyenne, EPIC « Filtrer la galerie »)
 - [ ] #205 Modifier des pastilles sans ouvrir la carte (Moyenne, EPIC « Rendre les cartes de galerie modifiable »)
 - [ ] #206 Modifier des pastilles dans la carte (Moyenne, EPIC « Rendre les cartes de galerie modifiable »)
-- [ ] #214 Kanban : regrouper la gestion des vues, filtres, tri et colonnes dans la fenêtre à onglets (widget étroit)  (Moyenne, EPIC « Améliorer l'interface du kanban »)
 - [ ] #184 Ouvrir un objet lié (tâche, EPIC…) d'un clic depuis la fiche de la Galerie (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #186 Préremplir une nouvelle carte de la Galerie avec le filtre de la vue (Sélectionner par) (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #188 Extraire le rendu des cartes et des pastilles dans _commun (carte.js, carte.css), utilisé par la Galerie (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
@@ -27,12 +26,12 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [ ] #207 Galerie : relations « Bloque » / « Bloquée par » entre les cartes, à reprendre après le moteur de cartes commun (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
 
 ### ♻️ En cours
-- [ ] #202 Kanban : profils de vue par utilisateur (Haute, EPIC « Améliorer l'interface du kanban »)
+- [ ] #214 Kanban : regrouper la gestion des vues, filtres, tri et colonnes dans la fenêtre à onglets (widget étroit)  (Haute, EPIC « Améliorer l'interface du kanban »)
 
 <!-- fin kanban -->
 
 ## ⚠️ Prochaine séance
-- [ ] #202 : test avec Vincent et Elisa (👤 Qui suis-je ?, « Créer ma vue Mes tâches », ⋯ › Colonnes…) avant l'étape 3 (Mes onglets)
+- [ ] #214 : trancher les 5 questions listées dans la carte avant de coder
 
 ## En cours
 - [x] Fiche dense du Kanban fusionnée sur master (PR #15, feat/fiche-centrale), 2026-10-24 = mise en production du Kanban, vérifiée dans le document de l'Observatoire
@@ -53,6 +52,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [x] #208 : cases à cocher cliquables dans l'aperçu de la fiche, Kanban et Galerie (PR #33), 2026-11-02
 - [x] #212 : couleur de chaque statut choisie dans ⚙, elle suit le statut (PR #34), 2026-11-02
 - [x] #210 : ⚙ en fenêtre à onglets ① Projet ② Colonnes ③ Statuts ④ Équipe, étape ③ mise à jour aussitôt ; brique commune _commun/fenetre.js (PR #35), 2026-11-02 ; à réutiliser pour les vues et filtres (#214)
+- [x] #202 close : test concluant avec Vincent et Elisa, 2026-11-05 ; étapes 3 (Mes onglets) et 4 (export/import) non réalisées, leur sort est à décider dans #214
 
 ## Prochaines étapes
 (Les étapes du projet sont désormais suivies dans Grist : voir « Kanban (Grist) » ci-dessus.)
@@ -141,3 +141,5 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - 2026-11-02 — cases à cocher Markdown : cochées dans l'aperçu de la fiche, enregistrées avec « ✓ Sauvegarder » de la fiche ; reliées aux lignes du texte par leur rang (blocs de code exclus), refus si le compte ne concorde pas — mieux vaut une case qui ne répond pas qu'une mauvaise ligne cochée
 - 2026-11-02 — couleurs des statuts choisies dans ⚙ parmi les 8 pastels du Kanban, plutôt que reprises des choix Grist ; enregistrées par rang dans la palette ; sans réglage, couleur de la position comme avant — rendu harmonieux, propre à chaque Kanban, sans droits sur la colonne, rien ne change tant qu'on n'applique pas
 - 2026-11-02 — ⚙ en fenêtre à onglets verticaux (état ✓ / ⚠️ / ℹ️ par étape, ouverture sur la première ⚠️, barre « Appliquer » toujours visible, confirmation si l'on ferme sans appliquer), plutôt qu'une page à faire défiler — bouton d'action jamais caché, une étape à la fois ; brique commune _commun/fenetre.js pour la réutiliser
+- 2026-11-05 — #202 close sans les étapes 3 et 4 — Vincent et Elisa trouvent déjà le widget très bien
+- 2026-11-05 — #214 passe en cours, priorité haute, propositions d'idéation consignées dans la carte, rien de tranché — besoin de lisibilité sur petit écran, décisions à prendre à tête reposée
