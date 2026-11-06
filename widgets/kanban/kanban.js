@@ -1024,6 +1024,175 @@ function annulerModificationsVue() {
   renderBoard();
 }
 
+/* ── Fenêtre « Gérer la vue » (#214) ────────────────────────────
+   Nom, filtres, tri et colonnes de la vue active, réunis dans une fenêtre
+   (../_commun/fenetre.js) pour rester lisibles sur un widget étroit.
+   Principe : on photographie la vue à l'ouverture, on règle sur l'état
+   courant (le tableau suit, derrière la fenêtre, d'où le compteur), puis :
+     - 💾 Enregistrer écrit tout dans la vue ;
+     - Annuler, ✕ ou Échap restaure la photographie.
+   Il n'y a donc qu'un bouton pour enregistrer, et aucun état intermédiaire.
+
+   Les panneaux de filtre, de tri et de colonnes ne sont pas réécrits : ils
+   sont empruntés à la barre pendant l'ouverture, puis rendus à leur place.
+   Une fenêtre modale passe au-dessus de tout le reste de la page : un
+   panneau resté dans la page serait caché derrière elle. */
+
+let fenetreVue = null;     // la fenêtre (créée une fois, au chargement)
+let _instantVue = null;    // photographie de la vue ; non nulle = fenêtre en cours d'usage
+let _emprunts = [];        // fonctions qui rendent les panneaux à leur place
+
+/** Déplace l'élément `id` dans la zone `idZone` ; un repère garde sa place d'origine. */
+function emprunter(id, idZone) {
+  const el = document.getElementById(id);
+  const repere = document.createComment('emprunté par « Gérer la vue »');
+  el.before(repere);
+  document.getElementById(idZone).appendChild(el);
+  _emprunts.push(() => repere.replaceWith(el));
+}
+
+function creerFenetreVue() {
+  const section = (id) => document.getElementById(id);
+  const info = section('fv-info');
+  info.hidden = false;
+  fenetreVue = Fenetre.creer({
+    titre: '🎛 Gérer la vue',
+    onglets: [
+      { id: 'vue',      libelle: 'Vue',      contenu: section('fv-vue') },
+      { id: 'filtres',  libelle: 'Filtres',  contenu: section('fv-filtres') },
+      { id: 'tri',      libelle: 'Tri',      contenu: section('fv-tri') },
+      { id: 'colonnes', libelle: 'Colonnes', contenu: section('fv-colonnes') },
+    ],
+    actions: [
+      { libelle: 'Annuler', classe: 'btn-ghost', fermer: true },
+      { libelle: '💾 Enregistrer', classe: 'btn-primary', surClic: enregistrerFenetreVue },
+    ],
+    textePied: '• Non enregistré',
+    messageModif: 'Les modifications de cette vue seront perdues. Continuer ?',
+    infoPied: info,
+    surFermeture: quitterFenetreVue,   // Annuler, ✕, Échap, clic sur le fond, 💾
+  });
+
+  section('fv-nom').addEventListener('input', majFenetreVue);
+  section('fv-filtre-ajouter').addEventListener('click', (e) => ajouterFiltre(e.currentTarget));
+  section('fv-supprimer').addEventListener('click', supprimerDepuisFenetreVue);
+}
+
+/** Ouvre la fenêtre sur la vue active, à l'onglet `onglet` (le premier par défaut). */
+function ouvrirFenetreVue(onglet) {
+  const vue = vueEnregistree(STATE.activeView);
+  if (!vue) return;
+  fermerPopovers();
+  _instantVue = {
+    nom: vue.nom,
+    filtres: copieFiltres(STATE.filters),
+    tri: STATE.tri.map(c => ({ ...c })),
+    colonnes: vue.colonnes ? [...vue.colonnes] : null,
+  };
+  emprunter('filtres-actifs', 'fv-filtres-zone');
+  emprunter('filtre-popover', 'fv-filtre-panneau');
+  emprunter('tri-popover', 'fv-tri-zone');
+  emprunter('colonnes-popover', 'fv-colonnes-zone');
+  renderFilterChips();
+  remplirTri();
+  remplirColonnesVue();
+
+  document.getElementById('fv-nom').value = vue.nom;
+  document.getElementById('fv-portee').textContent = vue.perso
+    ? '🔒 Vue personnelle : visible dans ce navigateur seulement.'
+    : '👥 Vue partagée : la même pour tous. Après 💾, le bouton « Enregistrer » de Grist la garde dans le document.';
+  document.getElementById('fv-partagee').hidden = !!vue.perso;
+  const supprimer = document.getElementById('fv-supprimer');
+  supprimer.textContent = '🗑 Supprimer la vue';
+  supprimer.dataset.confirmer = '';
+
+  fenetreVue.ouvrir(onglet);
+  majFenetreVue();
+}
+
+/** Nombre de cartes à l'écran, et sur l'ensemble du projet, dans les colonnes de la vue. */
+function compterCartes() {
+  const colonnes = vueCourante().preferredOrder;
+  const dansLaVue = (r) => !colonnes.length
+    || colonnes.includes(String(getField(r, 'statut') ?? 'Sans statut'));
+  return {
+    affichees: getFilteredRecords().filter(dansLaVue).length,
+    total: recordsDuProjet().filter(dansLaVue).length,
+  };
+}
+
+/** La vue réglée dans la fenêtre diffère-t-elle de la photographie ? */
+function fenetreVueModifiee() {
+  const vue = vueEnregistree(STATE.activeView);
+  return document.getElementById('fv-nom').value.trim() !== _instantVue.nom
+    || signatureFiltres(STATE.filters) !== signatureFiltres(_instantVue.filtres)
+    || JSON.stringify(STATE.tri) !== JSON.stringify(_instantVue.tri)
+    || JSON.stringify(vue?.colonnes ?? null) !== JSON.stringify(_instantVue.colonnes);
+}
+
+/** Met à jour le bas de la fenêtre (appelé à chaque nouveau dessin du tableau). */
+function majFenetreVue() {
+  if (!_instantVue) return;
+  const { affichees, total } = compterCartes();
+  document.getElementById('fv-compteur').textContent =
+    `${affichees} carte${affichees > 1 ? 's' : ''} sur ${total}`;
+  fenetreVue.marquerModifiee(fenetreVueModifiee());
+}
+
+/** 💾 : écrit nom, filtres, tri et colonnes dans la vue, puis ferme. */
+function enregistrerFenetreVue() {
+  const vue = vueEnregistree(STATE.activeView);
+  const champ = document.getElementById('fv-nom');
+  if (!vue) return;
+  if (!champ.value.trim()) {
+    fenetreVue.afficherOnglet('vue');
+    champ.reportValidity();
+    return;
+  }
+  fermerFiltre(); // retire un filtre commencé mais laissé sans valeur
+  vue.nom = champ.value.trim();
+  vue.filtres = copieFiltres(STATE.filters.filter(f => f.valeurs.length > 0));
+  vue.tri = Tri.nettoyer(STATE.tri);
+  _instantVue = null;              // rien à restaurer
+  fenetreVue.fermer({ forcer: true });
+  enregistrerVues(vue);
+  renderBoard();
+  if (vue.perso) showToast('✓ Vue enregistrée');
+  else showToast('✓ Vue enregistrée : cliquez sur « Enregistrer » dans Grist pour la garder pour tous', 4500);
+}
+
+/** Suppression en deux clics, comme dans le menu ⋯. */
+function supprimerDepuisFenetreVue(e) {
+  const b = e.currentTarget;
+  if (!b.dataset.confirmer) {
+    b.dataset.confirmer = 'oui';
+    b.textContent = '🗑 Cliquer encore pour confirmer';
+    return;
+  }
+  _instantVue = null;
+  fenetreVue.fermer({ forcer: true });
+  supprimerVue();
+}
+
+/**
+ * Sortie de la fenêtre, quelle qu'en soit la raison : rend les panneaux et,
+ * s'il reste une photographie (on n'a pas enregistré), la restaure.
+ */
+function quitterFenetreVue() {
+  fermerFiltre();
+  _emprunts.forEach(rendre => rendre());
+  _emprunts = [];
+  ['tri-popover', 'colonnes-popover'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+  if (!_instantVue) return;
+  const instant = _instantVue;
+  _instantVue = null;
+  STATE.filters = instant.filtres;
+  STATE.tri = instant.tri;
+  const vue = vueEnregistree(STATE.activeView);
+  if (vue) vue.colonnes = instant.colonnes;
+  renderBoard();
+}
+
 /* ── Petits panneaux (nom, menu, colonnes) ── */
 
 /** Place un panneau en position fixe sous `ancre`, sans déborder de la fenêtre. */
@@ -1166,11 +1335,15 @@ function remplirColonnesVue() {
   masquees.forEach(s => ligne(s, false));
 }
 
-/** Applique et enregistre aussitôt un changement de colonnes. */
+/**
+ * Applique un changement de colonnes, et l'enregistre aussitôt. Sauf dans la
+ * fenêtre « Gérer la vue » (#214) : c'est alors 💾 qui enregistre, ou Annuler
+ * qui revient en arrière.
+ */
 function majColonnesVue(colonnes) {
   const vue = vueEnregistree(STATE.activeView);
   vue.colonnes = colonnes;
-  enregistrerVues(vue);
+  if (!_instantVue) enregistrerVues(vue);
   remplirColonnesVue();
   renderBoard();
 }
@@ -1440,8 +1613,9 @@ function renderFilterChips() {
   zone.innerHTML = '';
   STATE.filters.forEach(filtre => {
     const noms = filtre.valeurs.map(v => libelleValeur(v));
+    // Dans la fenêtre « Gérer la vue », il y a la place de tout écrire (#214)
     const resume = noms.length === 0 ? '…'
-                 : noms.length <= 2  ? noms.join(', ')
+                 : noms.length <= 2 || _instantVue ? noms.join(', ')
                  : `${noms.length} valeurs`;
     const chip = document.createElement('button');
     chip.className = 'filtre-chip' + (filtre === STATE.filtreEdite ? ' actif' : '');
@@ -1555,7 +1729,7 @@ function valeursVisibles() {
 /** (Re)dessine opérateur, cases à cocher et compteur du panneau. */
 function remplirPanneauFiltre() {
   const f = STATE.filtreEdite;
-  document.querySelectorAll('.filtre-op').forEach(b => b.classList.toggle('actif', b.dataset.op === f.op));
+  document.querySelectorAll('#filtre-popover .filtre-op').forEach(b => b.classList.toggle('actif', b.dataset.op === f.op));
 
   const liste = document.getElementById('filtre-valeurs');
   liste.innerHTML = '';
@@ -1821,6 +1995,7 @@ function renderBoard() {
   renderVueTabs();
   majBarreProjet();
   majBoutonMoi();
+  majFenetreVue();
 
   // Accueil : mode d'emploi à la place des cartes, et pas de filtres
   const accueil = STATE.activeView === ACCUEIL;
@@ -1951,6 +2126,7 @@ function renderAccueil(board) {
         <li><strong>⇅ Trier</strong> : range les cartes de chaque colonne selon n'importe quelle colonne (échéance, priorité, titre, # numéro…), puis selon une deuxième à égalité. Les cartes sans valeur restent en bas. Le tri fait partie de la vue, comme les filtres.</li>
         <li><strong>🔍 Rechercher</strong> (en haut) : garde les cartes qui contiennent tous les mots tapés, dans n'importe quelle colonne, sans tenir compte des accents ni des majuscules ; <strong>#203</strong> retrouve une carte par son numéro. La recherche s'ajoute aux filtres et ne s'enregistre nulle part : Échap ou <strong>✕ Réinitialiser</strong> l'efface.</li>
         <li><strong>⋯ › Colonnes…</strong> : choisit les statuts affichés et leur ordre. On peut aussi glisser les en-têtes de colonnes.</li>
+        <li><strong>⋯ › Gérer la vue…</strong> : réunit le nom, les filtres, le tri et les colonnes de la vue dans une fenêtre. <strong>💾 Enregistrer</strong> garde tout, <strong>Annuler</strong> ne change rien.</li>
         <li><strong>Cartes</strong> : glissez une carte dans une autre colonne pour changer son statut ; cliquez dessus pour ouvrir sa fiche. Dans la fiche, la bande <strong>⛔ Bloquée par / ➡️ Bloque</strong> relie la carte à celles qu'elle attend ou qu'elle retient.</li>
         <li><strong>⚠️ Deux « Enregistrer »</strong> : <strong>💾 Enregistrer la vue</strong> garde les filtres et le tri dans la vue ; pour une vue 👥 partagée, le bouton <strong>Enregistrer</strong> de Grist, en haut à droite, l'inscrit ensuite dans le document, pour tous. Sans ce dernier clic, elle est perdue au rechargement de la page, comme les réglages de ⚙. Les vues 🔒 personnelles, les cartes, l'onglet actif et votre nom sont gardés aussitôt.</li>
       </ol>
@@ -3194,6 +3370,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Config : fenêtre à onglets (#210)
   creerFenetreConfig();
+  creerFenetreVue();
   document.getElementById('btn-config')       ?.addEventListener('click', openConfig);
   // ✅ Si l'on change le « Champ Projet », on recharge la liste des projets proposés
   document.getElementById('col-projet')?.addEventListener('change', async (e) => {
@@ -3264,7 +3441,7 @@ document.addEventListener('DOMContentLoaded', () => {
     remplirPanneauFiltre();
     renderBoard();
   });
-  document.querySelectorAll('.filtre-op').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('#filtre-popover .filtre-op').forEach(b => b.addEventListener('click', () => {
     STATE.filtreEdite.op = b.dataset.op;
     remplirPanneauFiltre();
     renderBoard();
@@ -3285,6 +3462,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('vue-enregistrer') ?.addEventListener('click', enregistrerFiltresVue);
   document.getElementById('vue-nom-valider') ?.addEventListener('click', validerNomVue);
   document.getElementById('vue-nom')         ?.addEventListener('keydown', (e) => { if (e.key === 'Enter') validerNomVue(); });
+  document.getElementById('vue-menu-gerer')      ?.addEventListener('click', () => ouvrirFenetreVue());
   document.getElementById('vue-menu-enregistrer')?.addEventListener('click', enregistrerFiltresVue);
   document.getElementById('vue-menu-annuler')    ?.addEventListener('click', annulerModificationsVue);
   document.getElementById('vue-menu-renommer')   ?.addEventListener('click', () =>
@@ -3309,7 +3487,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Un clic ailleurs ferme les panneaux (sauf sur ce qui en ouvre un)
   document.addEventListener('mousedown', (e) => {
-    if (e.target.closest('.filtre-popover, .filtre-chip, #filtre-ajouter, #vue-ajouter, .vue-menu-btn, #btn-moi, #tri-bouton')) return;
+    if (e.target.closest('.fenetre, .filtre-popover, .filtre-chip, #filtre-ajouter, #vue-ajouter, .vue-menu-btn, #btn-moi, #tri-bouton')) return;
     fermerPopovers();
   });
 

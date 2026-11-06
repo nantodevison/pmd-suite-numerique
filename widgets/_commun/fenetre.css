@@ -7,6 +7,10 @@
 .fenetre {
   width: min(860px, calc(100vw - 32px));
   height: min(620px, calc(100vh - 32px));   /* taille fixe : rien ne saute d'un onglet à l'autre */
+  /* Redimensionnable par le coin bas droit, sans jamais dépasser du widget */
+  resize: both; overflow: hidden;
+  min-width: min(420px, calc(100vw - 16px)); min-height: min(320px, calc(100vh - 16px));
+  max-width: calc(100vw - 16px); max-height: calc(100vh - 16px);
   padding: 0; border: none; border-radius: 14px;
   background: var(--surface, #fff); color: var(--text, #2d3748);
   font-family: var(--font, system-ui, sans-serif);
@@ -19,6 +23,7 @@
 .fenetre-entete {
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 22px; border-bottom: 1px solid var(--border, #e2e8f0);
+  cursor: move; user-select: none; touch-action: none;   /* on déplace la fenêtre par ici */
 }
 .fenetre-titre { font-size: 17px; font-weight: 700; margin: 0; }
 .fenetre-croix {

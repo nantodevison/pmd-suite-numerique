@@ -177,6 +177,11 @@ gardées dans le document et les mêmes pour tous, puis, après elles, les vues
 - **＋ Vue** crée une vue à partir de l'affichage actuel (filtres et colonnes),
   **🔒 pour moi** (choix par défaut) ou **👥 pour tous**. Depuis l'Accueil, la
   vue n'a aucun filtre et affiche tous les statuts présents.
+- **Gérer la vue…** (menu ⋯) : réunit le nom, les filtres, le tri et les
+  colonnes de la vue dans une fenêtre à onglets, pratique sur un widget étroit.
+  Un compteur indique les cartes retenues, car la fenêtre cache le tableau.
+  **💾 Enregistrer** écrit tout dans la vue (pour une vue 👥 partagée, le bouton
+  Enregistrer de Grist reste nécessaire) ; **Annuler** ne change rien.
 - **Menu ⋯** de l'onglet actif : enregistrer ou annuler les modifications des
   filtres, renommer, choisir les colonnes (**Colonnes…**), copier en vue perso
   (vues partagées seulement), supprimer (deux clics pour confirmer).

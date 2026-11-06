@@ -647,6 +647,27 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
 #config-sections .config-aide { margin-bottom: 16px; }
 .config-aide { font-size: 12px; color: var(--text-muted); margin: 0; }
 .config-equipe .filtre-valeurs { max-height: 340px; }
+
+/* ── Fenêtre « Gérer la vue » (#214) : la fenêtre elle-même est dans ../_commun/fenetre.css ── */
+/* Dans la fenêtre, les panneaux empruntés à la barre (voir emprunter() dans
+   kanban.js) ne flottent plus : ils prennent place dans l'onglet. */
+.fenetre .filtre-popover { position: static; width: auto; border: none; box-shadow: none; padding: 0; }
+/* Tri et colonnes restent affichés : fermer un panneau n'a pas de sens ici */
+#fv-tri-zone .filtre-popover.hidden, #fv-colonnes-zone .filtre-popover.hidden { display: flex; }
+.fenetre .tri-popover { max-width: none; }
+.fenetre .filtres-actifs { flex-wrap: wrap; overflow: visible; }
+/* Dans la fenêtre, une étiquette se lit en entier, quitte à prendre deux lignes */
+.fenetre .filtre-chip { max-width: 100%; flex-shrink: 1; white-space: normal; text-align: left; }
+/* Les sections ont quitté #vue-sections : elles sont maintenant dans la fenêtre */
+.fenetre-panneau[id^="fv-"] .config-aide { margin-bottom: 12px; }
+.fv-filtres-tete { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px; }
+.fv-filtres-tete #fv-filtres-zone { flex: 1; min-width: 0; }
+#fv-filtre-ajouter { flex-shrink: 0; }
+#filtre-popover { border-top: 1px solid var(--border); }
+.fv-champ { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; font-size: 12px; font-weight: 600; }
+.fv-supprimer { align-self: flex-start; }
+#fv-info { display: flex; flex-direction: column; font-size: 12px; color: var(--text-muted); }
+#fv-compteur { font-weight: 600; color: var(--text); }
 /* Statuts (#183, #212) : nom à gauche, puis couleur et classe ; une ligne par statut */
 .classes-liste { display: grid; grid-template-columns: 1fr; gap: 6px; }
 .classe-ligne { display: flex; align-items: center; gap: 12px; font-size: 13px; }
@@ -724,6 +745,45 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
       </div>
       <div id="equipe-liste" class="filtre-valeurs"></div>
     </section>
+  </div>
+
+  <!-- Gérer la vue (#214) : une section par onglet. Fenetre.creer() les range
+       dans une fenêtre ; filtres, tri et colonnes sont empruntés à la barre le
+       temps de l'ouverture (voir ouvrirFenetreVue dans kanban.js). data-neutre :
+       le widget calcule lui-même si la vue a changé. -->
+  <div id="vue-sections" hidden>
+    <section id="fv-vue" data-neutre>
+      <h3 class="config-etape">Vue</h3>
+      <p class="config-aide" id="fv-portee"></p>
+      <label class="fv-champ">Nom de la vue
+        <input id="fv-nom" class="filtre-recherche" type="text" autocomplete="off" required />
+      </label>
+      <button id="fv-supprimer" class="filtre-lien danger fv-supprimer">🗑 Supprimer la vue</button>
+    </section>
+    <section id="fv-filtres" data-neutre>
+      <h3 class="config-etape">Filtres</h3>
+      <p class="config-aide">Une carte doit respecter tous les filtres. Cliquez sur une étiquette pour la modifier.</p>
+      <div class="fv-filtres-tete">
+        <div id="fv-filtres-zone"></div>
+        <button id="fv-filtre-ajouter" class="filtre-ajouter">＋ Filtre</button>
+      </div>
+      <div id="fv-filtre-panneau"></div>
+    </section>
+    <section id="fv-tri" data-neutre>
+      <h3 class="config-etape">Tri</h3>
+      <div id="fv-tri-zone"></div>
+    </section>
+    <section id="fv-colonnes" data-neutre>
+      <h3 class="config-etape">Colonnes</h3>
+      <p class="config-aide">Statuts affichés, et leur ordre.</p>
+      <div id="fv-colonnes-zone"></div>
+    </section>
+  </div>
+
+  <!-- Bas de la fenêtre « Gérer la vue » : ce qu'on ne voit pas derrière elle -->
+  <div id="fv-info" hidden>
+    <span id="fv-compteur"></span>
+    <span id="fv-partagee">👥 Partagée</span>
   </div>
 
   <!-- Modal ajout carte -->
@@ -847,6 +907,7 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
 
   <!-- Vues enregistrées : menu ⋯ de la vue active -->
   <div id="vue-menu-popover" class="filtre-popover vue-menu hidden">
+    <button id="vue-menu-gerer" class="vue-menu-item">🎛 Gérer la vue…</button>
     <button id="vue-menu-enregistrer" class="vue-menu-item">💾 Enregistrer filtres et tri</button>
     <button id="vue-menu-annuler" class="vue-menu-item">↩ Annuler les modifications</button>
     <button id="vue-menu-renommer" class="vue-menu-item">✏️ Renommer</button>
