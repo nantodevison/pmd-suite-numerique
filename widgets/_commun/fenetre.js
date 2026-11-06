@@ -20,7 +20,9 @@
      se voient d'un coup d'œil ;
    - une barre du bas toujours visible : on ne rate pas le bouton d'action ;
    - « Modifications non appliquées » dès qu'un champ change, et une
-     confirmation si l'on ferme sans appliquer.
+     confirmation si l'on ferme sans appliquer ;
+   - on la déplace par son en-tête, on la redimensionne par son coin bas
+     droit : elle garde sa place et sa taille jusqu'au rechargement de la page.
    Sous 600 px de large, les onglets passent en haut, sur une ligne.
 
    Ce module ne connaît rien du widget : le contenu de chaque onglet est un
@@ -51,6 +53,9 @@
 (function () {
   'use strict';
 
+  // Partie de la fenêtre (en px) qui reste toujours visible quand on la déplace
+  const GARDE_VISIBLE = 80;
+
   // Symbole affiché pour chaque état d'onglet
   const SYMBOLES = { ok: '✓', alerte: '⚠️', info: 'ℹ️' };
 
@@ -67,9 +72,16 @@
    *             fermer: true → le bouton ferme la fenêtre (avec confirmation
    *             s'il y a des modifications), comme ✕ et Échap
    *   messageModif : texte de la confirmation de fermeture
+   *   textePied : texte de la marque « modifié » de la barre du bas
+   *   infoPied  : facultatif, élément affiché à gauche de la barre du bas
+   *   surFermeture : facultatif, appelée juste après chaque fermeture. Plus
+   *                  sûr que l'événement « close » du navigateur, qui n'arrive
+   *                  qu'au dessin suivant de la page.
    */
   function creer({ titre, onglets, actions = [],
-                   messageModif = 'Des modifications non appliquées seront perdues. Continuer ?' }) {
+                   messageModif = 'Des modifications non appliquées seront perdues. Continuer ?',
+                   textePied = '• Modifications non appliquées', infoPied = null,
+                   surFermeture = null }) {
     let modifiee = false;
     let ongletActif = onglets[0].id;
 
@@ -122,7 +134,8 @@
     pied.className = 'fenetre-pied';
     const marque = document.createElement('span');
     marque.className = 'fenetre-modifiee';
-    marque.textContent = '• Modifications non appliquées';
+    marque.textContent = textePied;
+    if (infoPied) pied.appendChild(infoPied);
     pied.appendChild(marque);
     actions.forEach(a => {
       const b = document.createElement('button');
@@ -141,6 +154,42 @@
     milieu.append(nav, corps);
     dialog.append(entete, milieu, pied);
     document.body.appendChild(dialog);
+
+    // ── Déplacement par l'en-tête ──
+    // Pendant le geste, les événements restent adressés à l'en-tête, même si
+    // le pointeur sort du widget (setPointerCapture).
+    let depart = null;
+    entete.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || e.target.closest('button')) return;
+      const r = dialog.getBoundingClientRect();
+      depart = { x: e.clientX - r.left, y: e.clientY - r.top };
+      entete.setPointerCapture(e.pointerId);
+    });
+    entete.addEventListener('pointermove', (e) => {
+      if (depart) placer(e.clientX - depart.x, e.clientY - depart.y);
+    });
+    const finDeplacement = () => { depart = null; };
+    entete.addEventListener('pointerup', finDeplacement);
+    entete.addEventListener('pointercancel', finDeplacement);
+
+    /** Place la fenêtre, en gardant l'en-tête à portée de souris. */
+    function placer(gauche, haut) {
+      const largeur = dialog.offsetWidth;
+      const gardee = Math.min(GARDE_VISIBLE, largeur);
+      dialog.style.left = `${Math.max(gardee - largeur, Math.min(gauche, window.innerWidth - gardee))}px`;
+      dialog.style.top  = `${Math.max(0, Math.min(haut, window.innerHeight - GARDE_VISIBLE))}px`;
+    }
+
+    /**
+     * Passe du centrage automatique à une position chiffrée, à la première
+     * ouverture. Sinon, la fenêtre recentrée grandirait des deux côtés à la
+     * fois, et son coin ne suivrait pas la souris.
+     */
+    function figerPosition() {
+      const r = dialog.getBoundingClientRect();
+      Object.assign(dialog.style, { margin: '0', right: 'auto', bottom: 'auto' });
+      placer(r.left, r.top);
+    }
 
     // ── Modifications : tout changement de champ, sauf ceux marqués data-neutre ──
     const surChangement = (e) => {
@@ -199,6 +248,9 @@
       const premierAlerte = onglets.find(o => boutonsOnglets[o.id].dataset.etat === 'alerte');
       afficherOnglet(id || (premierAlerte ? premierAlerte.id : onglets[0].id));
       dialog.showModal();
+      // Déjà placée : le widget a pu rétrécir depuis, on la ramène à portée
+      if (dialog.style.left) placer(parseFloat(dialog.style.left), parseFloat(dialog.style.top));
+      else figerPosition();
     }
 
     /** Ferme ; demande confirmation s'il y a des modifications, sauf { forcer: true }. */
@@ -206,6 +258,7 @@
       if (modifiee && !forcer && !confirm(messageModif)) return false;
       marquerModifiee(false);
       dialog.close();
+      if (surFermeture) surFermeture();
       return true;
     }
 

@@ -139,9 +139,9 @@ de la fiche ; deux statuts peuvent partager la même.
 |---|---|---|
 | Les **cartes** : création, déplacement, champs, suppression | la table Grist | aussitôt, comme toute saisie dans Grist |
 | Les **réglages** de ⚙ : colonnes associées, projet, couleurs et classes des statuts, équipe | le document (options du widget), pour tous | « Appliquer », puis **Enregistrer** de Grist |
-| Les **vues 👥 partagées** : création, nom, colonnes et leur ordre, suppression | le document, pour tous | aussitôt dans le widget, puis **Enregistrer** de Grist |
-| Les **filtres** et le **tri** d'une vue partagée | le document, pour tous | **💾 Enregistrer la vue**, puis **Enregistrer** de Grist |
-| Les **vues 🔒 personnelles** (et leurs filtres) | votre navigateur, pour vous seul | aussitôt (filtres : **💾 Enregistrer la vue**) |
+| Les **vues 👥 partagées** : création, suppression, glisser-déposer des colonnes | le document, pour tous | aussitôt dans le widget, puis **Enregistrer** de Grist |
+| Les réglages d'une vue partagée dans **Gérer la vue** : nom, filtres, tri, colonnes | le document, pour tous | **💾 Enregistrer**, puis **Enregistrer** de Grist |
+| Les **vues 🔒 personnelles** et leurs réglages | votre navigateur, pour vous seul | aussitôt (dans Gérer la vue : **💾 Enregistrer**) |
 | L'**onglet actif**, **votre nom** (👤) et la disposition de la fiche (côté / centre) | votre navigateur, pour vous seul | automatiquement |
 | La **recherche** 🔍 | nulle part | jamais : perdue au rechargement de la page |
 
@@ -177,18 +177,25 @@ gardées dans le document et les mêmes pour tous, puis, après elles, les vues
 - **＋ Vue** crée une vue à partir de l'affichage actuel (filtres et colonnes),
   **🔒 pour moi** (choix par défaut) ou **👥 pour tous**. Depuis l'Accueil, la
   vue n'a aucun filtre et affiche tous les statuts présents.
-- **Menu ⋯** de l'onglet actif : enregistrer ou annuler les modifications des
-  filtres, renommer, choisir les colonnes (**Colonnes…**), copier en vue perso
+- **Onglets ou menu** : les vues sont rangées partagées d'abord, puis 🔒, par
+  ordre alphabétique. Quand les onglets ne tiennent plus dans la barre, un
+  bouton les remplace : il affiche la vue active, et **▾** liste les autres.
+- **🔽 Filtres, ⇅ Trier, ▦ Colonnes** : ces boutons résument la vue active (le
+  détail s'affiche au survol) et ouvrent **Gérer la vue** sur le bon onglet.
+- **Gérer la vue** réunit le nom, les filtres, le tri et les colonnes dans une
+  fenêtre à onglets, déplaçable par son en-tête et redimensionnable par son
+  coin. Un compteur indique les cartes retenues, car la fenêtre cache le
+  tableau. **💾 Enregistrer** écrit tout dans la vue (pour une vue 👥 partagée,
+  le bouton Enregistrer de Grist reste nécessaire) ; **Annuler** ne change
+  rien. Il n'y a pas de filtre passager : pour regarder autrement, on crée une
+  vue 🔒.
+- **Menu ⋯** de la vue active : gérer la vue, renommer, copier en vue perso
   (vues partagées seulement), supprimer (deux clics pour confirmer).
-- **Filtres** : une vue modifiée affiche **•**. **💾 Enregistrer la vue** garde
-  les filtres dans la vue (pour une vue partagée, cliquer ensuite sur
-  « Enregistrer » de Grist pour les garder dans le document) ; si on change
-  d'onglet sans enregistrer la vue, les modifications sont abandonnées.
-- **Colonnes** : « Colonnes… » permet d'afficher un statut même sans carte, de
+- **Colonnes** : l'onglet permet d'afficher un statut même sans carte, de
   changer l'ordre (↑ ↓) ou de revenir à « Tous les statuts présents ». Glisser
-  un en-tête de colonne change aussi l'ordre de la vue. Ces changements sont
-  enregistrés aussitôt dans la vue ; pour une vue partagée, reste à cliquer sur
-  « Enregistrer » dans Grist pour les garder dans le document.
+  un en-tête de colonne change aussi l'ordre de la vue, et cela s'enregistre
+  aussitôt dans la vue ; pour une vue partagée, reste à cliquer sur
+  « Enregistrer » dans Grist pour le garder dans le document.
 
 ### Vues personnelles
 
@@ -198,13 +205,12 @@ sans effet sur les vues des autres. Elle se manipule comme une vue partagée
 (menu ⋯, filtres, colonnes).
 
 - **Copier en vue perso** (menu ⋯ d'une vue partagée) : crée une vue
-  personnelle avec les filtres et les colonnes **affichés**, modifications non
-  enregistrées comprises. On part d'une vue commune, on l'adapte, on la garde
-  pour soi.
+  personnelle avec les mêmes filtres, tri et colonnes. On part d'une vue
+  commune, on l'adapte, on la garde pour soi.
 - **👤 Créer ma vue Mes tâches** (Accueil) : crée en un clic une vue
   personnelle « Mes tâches », filtrée sur « Assigné à est 👤 Moi » (voir
   « Qui suis-je ? »), avec tous les statuts présents : masquez ceux qui ne vous
-  servent pas avec ⋯ › Colonnes…. Si elle existe déjà, le bouton l'ouvre.
+  servent pas avec ▦ Colonnes. Si elle existe déjà, le bouton l'ouvre.
 - Les vues personnelles sont propres au document, à la table et au projet du
   Kanban. Sur un autre poste, un autre navigateur ou en navigation privée, on
   ne les retrouve pas ; elles sont perdues si l'on efface les données du site
@@ -234,11 +240,9 @@ trouve « Sécurité des widgets ».
 - **#numéro** : un mot comme `#203` est cherché dans le numéro affiché en bas
   des cartes, en début de numéro : `#20` trouve #20 et #200 à #209, pas #120.
 - **Passagère** : la recherche s'ajoute aux filtres de la vue, mais n'est
-  enregistrée nulle part (ni la vue n'est marquée « • modifiée », ni
-  « Enregistrer » de Grist ne s'allume). Elle reste quand on change d'onglet ;
-  **Échap** (dans le champ) ou **✕ Réinitialiser** l'efface. Pendant une
-  recherche, « Réinitialiser » la compte comme un filtre, et les colonnes
-  vides sont masquées.
+  enregistrée nulle part (« Enregistrer » de Grist ne s'allume pas). Elle reste
+  quand on change d'onglet ; **Échap** (dans le champ) ou la croix du champ
+  l'efface. Pendant une recherche, les colonnes vides sont masquées.
 - La même règle (tous les mots, accents ignorés) sert aux recherches des
   panneaux (filtre, équipe projet, Qui suis-je ?, liens Bloque / Bloquée
   par) et à la Galerie : elle est écrite une seule fois, dans
@@ -264,11 +268,9 @@ rangées par priorité (haute → moyenne → basse), comme avant.
   majuscules, et « tâche 2 » avant « tâche 10 » ; une case à cocher, non puis
   oui. Un choix multiple ou une liste de références : sa première valeur.
 - Les **cartes sans valeur** restent **en bas**, quel que soit le sens.
-- Le tri **fait partie de la vue**, comme les filtres : le modifier affiche •
-  sur l'onglet, **💾 Enregistrer la vue** le garde (puis **Enregistrer** de
-  Grist pour une vue 👥 partagée), **⋯ › Annuler les modifications** y revient.
-  Une nouvelle vue reprend le tri affiché. **✕ Réinitialiser** retire le tri,
-  avec les filtres et la recherche.
+- Le tri **fait partie de la vue**, comme les filtres : il se règle dans
+  **Gérer la vue**, et **💾 Enregistrer** le garde (puis **Enregistrer** de
+  Grist pour une vue 👥 partagée). Une nouvelle vue reprend le tri affiché.
 - Le glisser-déposer change seulement le statut d'une carte : il n'y a pas
   d'ordre « à la main » dans une colonne, c'est le tri qui décide.
 
