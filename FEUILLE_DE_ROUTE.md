@@ -8,10 +8,9 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-07 01:10_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-07 21:21_
 
 ### 🖐️ À faire
-- [ ] #222 Créer une nouvelle carte depuis "bloque" ou "bloqué par" (Haute, EPIC « Améliorer l'interface du kanban »)
 - [ ] #204 Réutiliser les filtres kanban (Moyenne, EPIC « Filtrer la galerie »)
 - [ ] #205 Modifier des pastilles sans ouvrir la carte (Moyenne, EPIC « Rendre les cartes de galerie modifiable »)
 - [ ] #206 Modifier des pastilles dans la carte (Moyenne, EPIC « Rendre les cartes de galerie modifiable »)
@@ -29,8 +28,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 <!-- fin kanban -->
 
 ## ⚠️ Prochaine séance
-- [ ] Après Ctrl + F5, vérifier les vues de l'Observatoire dans le document réel (#214 en production)
-- [ ] Prévenir Vincent et Elisa des changements de la barre et recueillir leur avis
+- [ ] Prévenir Vincent et Elisa des changements de la barre (#214) et de la création de carte liée (#222), et recueillir leur avis
 - [ ] Essayer taches.py voir sur un vrai projet Notion (testé sur faux serveur seulement)
 
 ## En cours
@@ -53,7 +51,8 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [x] #212 : couleur de chaque statut choisie dans ⚙, elle suit le statut (PR #34), 2026-11-02
 - [x] #210 : ⚙ en fenêtre à onglets ① Projet ② Colonnes ③ Statuts ④ Équipe, étape ③ mise à jour aussitôt ; brique commune _commun/fenetre.js (PR #35), 2026-11-02 ; à réutiliser pour les vues et filtres (#214)
 - [x] #202 close : test concluant avec Vincent et Elisa, 2026-11-05 ; étapes 3 (Mes onglets) et 4 (export/import) non réalisées, leur sort est à décider dans #214
-- [x] #214 : fenêtre « Gérer la vue », barre compacte (PR #36), vue « Toutes les cartes », bouton « ? », vues 👥 par projet (PR #37), 2026-11-07
+- [x] #214 : fenêtre « Gérer la vue », barre compacte (PR #36), vue « Toutes les cartes », bouton « ? », vues 👥 par projet (PR #37), 2026-11-07 ; vérifiée dans l'Observatoire le même jour
+- [x] #222 : créer une carte liée depuis « ＋ Bloque… » / « ＋ Bloquée par… » de la fiche (PR #38), 2026-11-07
 
 ## Prochaines étapes
 (Les étapes du projet sont désormais suivies dans Grist : voir « Kanban (Grist) » ci-dessus.)
@@ -155,3 +154,6 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - 2026-11-06 — fenêtres déplaçables par l'en-tête et redimensionnables, ⚙ comprise — retour de test ; brique commune fenetre.js
 - 2026-11-07 — vue 👥 rattachée au projet du Kanban, masquée sinon sans être effacée ; celles créées avant restent visibles partout — même règle que les vues 🔒, aucune vue perdue
 - 2026-11-07 — « ? » et ⚙ à côté du titre, recherche et 👤 à droite — l'outil à gauche, le quotidien à droite
+- 2026-11-07 — carte créée depuis la bande des liens : enregistrée aussitôt avec son lien (titre tapé, projet, EPIC de la carte ouverte, premier statut « À faire » de ⚙ ③), sans quitter la fiche ; « Annuler » ne la supprime pas — pas de carte orpheline si l'on ferme sans sauvegarder
+- 2026-11-07 — « Créer » n'est pas proposé si le titre existe déjà dans le projet (majuscules et accents ignorés, cartes déjà liées comprises) — éviter les doublons
+- 2026-11-07 — création de carte liée limitée à la fiche, pas dans la fenêtre « Nouvelle carte » — une carte créée resterait orpheline si l'on abandonne la création
