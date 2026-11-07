@@ -1,6 +1,7 @@
 /* ══════════════════════════════════════════════════════════════
    KANBAN GRIST — kanban.js v4
-   • Onglet « Accueil » (mode d'emploi), puis les vues enregistrées (#196, #197)
+   • Vue « Toutes les cartes », puis les vues enregistrées (#196, #214)
+   • Mode d'emploi derrière le bouton « ? », ouvert à la première visite (#214)
    • Filtres combinables sur les colonnes Choix et Référence (#195)
    • Recherche passagère dans toutes les colonnes, et par #numéro (#209)
    • Tri des cartes sur n'importe quelle colonne, enregistré dans la vue (#211)
@@ -32,7 +33,7 @@ const STATE = {
   },
 
   columnOrder: [],
-  activeView: 'accueil',
+  activeView: 'defaut',   // voir VUE_DEFAUT
 
   // Filtres combinables (#195) : liste de conditions { col, op, valeurs },
   // voir la section 3. Non mémorisés : ce sera le rôle des vues (#196).
@@ -149,9 +150,11 @@ function getPrioRank(val) {
   return 9;
 }
 
-/* Onglet fixe « Accueil » : mode d'emploi du widget, sans cartes. C'est aussi
-   l'onglet de repli quand aucune vue enregistrée n'est active (#197). */
-const ACCUEIL = 'accueil';
+/* Vue « Toutes les cartes » (#214) : sans filtre ni tri, toujours là, et vue de
+   repli quand aucune autre n'est active. Elle est fabriquée ici et n'est jamais
+   enregistrée : elle n'est donc pas dans STATE.vues, et ne se modifie pas. */
+const DEFAUT = 'defaut';
+const VUE_DEFAUT = { id: DEFAUT, nom: 'Toutes les cartes', filtres: [], colonnes: null, tri: [], defaut: true };
 
 /* Adresse du mode d'emploi complet (README du widget sur GitHub) */
 const URL_AIDE = 'https://github.com/nantodevison/pmd-suite-numerique/blob/master/widgets/kanban/README.md';
@@ -263,7 +266,7 @@ grist.onOptions(async (options) => {
     STATE.vues = (options && Array.isArray(options.vues)) ? options.vues : [];
     // Onglet d'ouverture (#202) : celui mémorisé par ce navigateur, sinon
     // l'ancien réglage commun du document (options.activeView, qui n'est plus
-    // écrit), sinon l'accueil. Une vue supprimée entre-temps, ou un ancien
+    // écrit), sinon « Toutes les cartes ». Une vue supprimée entre-temps, ou un ancien
     // onglet codé en dur (taches, standardiser, lineariser, retirés en #197),
     // est ignorée. La clé de mémoire dépend du document et de la table : on
     // attend de les connaître.
@@ -271,14 +274,15 @@ grist.onOptions(async (options) => {
     // Vues personnelles (#202), retenues par ce navigateur : après les vues partagées
     STATE.vues.push(...lireVuesPerso());
     const candidats = [lireVueMemorisee(), options && options.activeView];
-    STATE.activeView = candidats.find(id => vueEnregistree(id)) || ACCUEIL;
+    STATE.activeView = candidats.find(id => vueEnregistree(id)) || DEFAUT;
     chargerFiltresDeLaVue();
   }
   renderBoard();
   // Les noms des projets et des EPICs sont nécessaires pour filtrer les cartes :
   // on les charge, puis on redessine le tableau.
   // L'identité (« Qui suis-je ? ») se relit ensuite : elle dépend de la table des personnes.
-  assurerReferences().then(chargerColonnesFiltrables).then(chargerMoi).then(renderBoard);
+  assurerReferences().then(chargerColonnesFiltrables).then(chargerMoi).then(renderBoard)
+    .then(ouvrirAideSiPremiereVisite);
 });
 
 /* ══════════════════════════════════════════════════════════════
@@ -437,7 +441,7 @@ async function saveConfig() {
   // Les vues personnelles sont propres au projet : on relit celles du projet choisi
   STATE.vues = STATE.vues.filter(v => !v.perso).concat(lireVuesPerso());
   if (!vueEnregistree(STATE.activeView)) {
-    STATE.activeView = ACCUEIL;
+    STATE.activeView = DEFAUT;
     chargerFiltresDeLaVue();
   }
   renderBoard();
@@ -634,20 +638,29 @@ function majCompteEquipe() {
    des colonnes : liste ordonnée des statuts affichés (même vides), ou null
    pour afficher tous les statuts présents. Elles sont gardées dans les
    options du widget (document Grist), jamais dans le code.
-   Seul onglet fixe : « Accueil » (ACCUEIL), qui n'affiche pas de cartes.
+   Seule vue fixe : « Toutes les cartes » (VUE_DEFAUT).
    Règles :
-   - changer de vue recharge ses filtres (aucun pour l'accueil) :
+   - changer de vue recharge ses filtres :
    - les colonnes et leur ordre sont enregistrés immédiatement ;
    - nom, filtres et tri (#211) se règlent dans « Gérer la vue » (#214) : dans
      la fenêtre, les colonnes aussi attendent 💾.
    Vues personnelles (#202) : même format, plus `perso: true`. Elles sont
    gardées dans le navigateur (voir lireVuesPerso), pas dans le document :
    chacun a les siennes, enregistrées aussitôt. Toutes les vues sont dans
-   STATE.vues ; enregistrerVues(vue) range chaque genre à sa place. */
+   STATE.vues ; enregistrerVues(vue) range chaque genre à sa place.
+   Projet (#214) : une vue partagée retient le projet du Kanban (`projet`) et
+   n'apparaît qu'avec lui. Celles créées avant n'en ont pas : elles restent
+   visibles partout. STATE.vues garde toujours toutes les vues : les masquer
+   ne doit pas les effacer du document à la prochaine écriture. */
 
-/** La vue enregistrée d'identifiant `id`, ou undefined. */
+/** Cette vue s'affiche-t-elle avec le projet du Kanban ? */
+function vueDuProjet(vue) {
+  return !vue.projet || !STATE.projetKanban || vue.projet === STATE.projetKanban;
+}
+
+/** La vue visible d'identifiant `id` (« Toutes les cartes » comprise), ou undefined. */
 function vueEnregistree(id) {
-  return STATE.vues.find(v => v.id === id);
+  return id === DEFAUT ? VUE_DEFAUT : STATE.vues.find(v => v.id === id && vueDuProjet(v));
 }
 
 /** Copie indépendante d'une liste de filtres (pour ne pas modifier la vue par mégarde). */
@@ -655,7 +668,7 @@ function copieFiltres(filtres) {
   return (filtres || []).map(f => ({ col: f.col, op: f.op, valeurs: [...f.valeurs] }));
 }
 
-/** Filtres et tri (#211) de la vue active, ou aucun pour l'accueil. */
+/** Filtres et tri (#211) de la vue active. */
 function chargerFiltresDeLaVue() {
   const vue = vueEnregistree(STATE.activeView);
   STATE.filters = vue ? copieFiltres(vue.filtres) : [];
@@ -666,12 +679,12 @@ function chargerFiltresDeLaVue() {
 /**
  * La vue active sous la forme attendue par le rendu : `preferredOrder` est la
  * liste des colonnes de la vue, ou une liste vide pour « tous les statuts
- * présents » (vue sans liste de colonnes, et accueil).
+ * présents » (vue sans liste de colonnes).
  */
 function vueCourante() {
   const vue = vueEnregistree(STATE.activeView);
   return {
-    label: vue ? vue.nom : 'Accueil',
+    label: vue ? vue.nom : VUE_DEFAUT.nom,
     preferredOrder: (vue && vue.colonnes) || [],
   };
 }
@@ -711,7 +724,7 @@ function switchView(viewId) {
    widgets publiés sur nantodevison.github.io la partagent : la clé contient
    donc le document, la table et le projet du Kanban.
    localStorage peut être refusé (navigation privée, Custom Widget Builder…) :
-   chaque accès est protégé, et le widget retombe alors sur l'accueil. */
+   chaque accès est protégé, et le widget retombe alors sur « Toutes les cartes ». */
 
 /**
  * Clé de mémoire de ce Kanban pour la donnée `nom` (ex. 'vueActive'), ou
@@ -876,10 +889,11 @@ function remplirMoi() {
   document.getElementById('moi-oublier').disabled = !STATE.moi;
 }
 
-/** Les vues partagées puis les personnelles, par ordre alphabétique dans chaque groupe. */
+/** « Toutes les cartes », puis les vues partagées et les personnelles, par ordre alphabétique dans chaque groupe. */
 function vuesRangees() {
   const parNom = (a, b) => a.nom.localeCompare(b.nom, 'fr');
-  return [...STATE.vues.filter(v => !v.perso).sort(parNom),
+  return [VUE_DEFAUT,
+          ...STATE.vues.filter(v => !v.perso && vueDuProjet(v)).sort(parNom),
           ...STATE.vues.filter(v => v.perso).sort(parNom)];
 }
 
@@ -901,12 +915,13 @@ function dessinerOnglets(zone) {
     const onglet = document.createElement('button');
     onglet.className = 'view-tab vue-enregistree' + (vue.perso ? ' perso' : '') + (active ? ' active' : '');
     onglet.textContent = (vue.perso ? '🔒 ' : '') + vue.nom;
-    onglet.title = vue.perso
-      ? 'Vue personnelle : visible dans ce navigateur seulement'
+    onglet.title = vue.defaut ? 'Toutes les cartes du projet'
+      : vue.perso ? 'Vue personnelle : visible dans ce navigateur seulement'
       : 'Vue partagée : la même pour tous';
     onglet.addEventListener('click', () => { if (!active) switchView(vue.id); });
-    // ⋯ seulement sur l'onglet actif : on agit sur la vue affichée
-    if (active) onglet.appendChild(boutonMenuVue(onglet));
+    // ⋯ seulement sur l'onglet actif : on agit sur la vue affichée.
+    // Pas sur « Toutes les cartes » : elle ne se renomme ni ne se supprime.
+    if (active && !vue.defaut) onglet.appendChild(boutonMenuVue(onglet));
     zone.appendChild(onglet);
   });
 }
@@ -916,13 +931,13 @@ function dessinerSelecteur(zone) {
   zone.innerHTML = '';
   const vue = vueEnregistree(STATE.activeView);
   const bouton = document.createElement('button');
-  bouton.className = 'view-tab vue-enregistree vue-selecteur' + (vue ? ' active' : '');
+  bouton.className = 'view-tab vue-enregistree vue-selecteur active';
   const nom = document.createElement('span');
   nom.className = 'vue-selecteur-nom';
-  nom.textContent = vue ? (vue.perso ? '🔒 ' : '') + vue.nom : 'Choisir une vue';
-  bouton.title = vue ? `Vue active : ${vue.nom}. Cliquer pour en changer.` : 'Choisir une vue';
+  nom.textContent = (vue.perso ? '🔒 ' : '') + vue.nom;
+  bouton.title = `Vue active : ${vue.nom}. Cliquer pour en changer.`;
   bouton.append(nom, ' ▾');
-  if (vue) bouton.appendChild(boutonMenuVue(bouton));
+  if (!vue.defaut) bouton.appendChild(boutonMenuVue(bouton));
   bouton.addEventListener('click', () => ouvrirListeVues(bouton));
   zone.appendChild(bouton);
 }
@@ -933,9 +948,6 @@ function dessinerSelecteur(zone) {
  * prennent : ainsi, ils reviennent dès que le widget s'élargit.
  */
 function renderVueTabs() {
-  document.querySelectorAll('.view-tab[data-view]').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.view === STATE.activeView);
-  });
   const zone = document.getElementById('vues-enregistrees');
   const barre = document.getElementById('filterbar');
   if (!zone) return;
@@ -966,7 +978,6 @@ function ouvrirListeVues(ancre) {
     item.addEventListener('click', () => switchView(vue.id));
     pop.appendChild(item);
   });
-  if (!vues.length) pop.innerHTML = '<div class="filtre-aucune">Aucune vue : créez-en une avec ＋ Vue.</div>';
   placerSous(pop, ancre);
 }
 
@@ -980,21 +991,30 @@ function ajouterVue(vue) {
 }
 
 /**
- * Nouvelle vue à partir de ce qui est affiché : filtres de l'utilisateur et
- * colonnes de la vue active. Depuis l'accueil : aucun filtre, et tous les
- * statuts présents (colonnes null). Sert aussi à « Copier en vue perso ».
+ * Nouvelle vue à partir de ce qui est affiché : filtres, tri et colonnes de
+ * la vue active. Sert aussi à « Copier en vue perso ».
  * @param {string}  nom
  * @param {boolean} perso - vue personnelle (navigateur) ou partagée (document)
  */
-function creerVue(nom, perso) {
+function construireVue(nom, perso) {
   const source = vueCourante();
   const filtres = copieFiltres(STATE.filters.filter(f => f.valeurs.length > 0));
   const colonnes = source.preferredOrder.length ? [...source.preferredOrder] : null;
   const vue = { id: 'vue-' + Date.now().toString(36), nom, filtres, colonnes, tri: Tri.nettoyer(STATE.tri) };
-  if (perso) vue.perso = true;
+  if (perso) vue.perso = true;                                   // déjà rangée par projet
+  else if (STATE.projetKanban) vue.projet = STATE.projetKanban;
+  return vue;
+}
+
+/** Ajoute et affiche `vue`, puis dit ce qu'il reste à faire pour la garder. */
+function ajouterEtAnnoncerVue(vue) {
   ajouterVue(vue);
-  if (perso) showToast(`✓ Vue personnelle « ${nom} » créée`);
-  else       showToast(`✓ Vue « ${nom} » créée : cliquez sur « Enregistrer » dans Grist pour la garder`, 4000);
+  if (vue.perso) showToast(`✓ Vue personnelle « ${vue.nom} » créée`);
+  else           showToast(`✓ Vue « ${vue.nom} » créée : cliquez sur « Enregistrer » dans Grist pour la garder`, 4000);
+}
+
+function creerVue(nom, perso) {
+  ajouterEtAnnoncerVue(construireVue(nom, perso));
 }
 
 /**
@@ -1007,7 +1027,7 @@ function vueMesTaches() {
 }
 
 /**
- * Bouton de l'Accueil : ouvre la vue « Mes tâches », ou la crée (vue perso,
+ * Bouton du mode d'emploi : ouvre la vue « Mes tâches », ou la crée (vue perso,
  * « Assigné à est 👤 Moi », tous les statuts présents). Si personne n'est
  * déclaré, le panneau « Qui suis-je ? » s'ouvre ensuite.
  */
@@ -1042,7 +1062,7 @@ function supprimerVue() {
   if (!vue) return;
   STATE.vues = STATE.vues.filter(v => v !== vue);
   enregistrerVues(vue);
-  switchView(ACCUEIL);
+  switchView(DEFAUT);
   showToast(`✓ Vue « ${vue.nom} » supprimée`);
 }
 
@@ -1053,6 +1073,7 @@ function supprimerVue() {
    courant (le tableau suit, derrière la fenêtre, d'où le compteur), puis :
      - 💾 Enregistrer écrit tout dans la vue ;
      - Annuler, ✕ ou Échap restaure la photographie.
+   « Toutes les cartes » ne se modifie pas : 💾 y crée une nouvelle vue.
    Il n'y a donc qu'un bouton pour enregistrer, et aucun état intermédiaire :
    hors de la fenêtre, ce qui est affiché est toujours ce qui est enregistré.
    Les boutons-résumés de la barre ouvrent la fenêtre sur le bon onglet. */
@@ -1092,8 +1113,9 @@ function ouvrirFenetreVue(onglet) {
   const vue = vueEnregistree(STATE.activeView);
   if (!vue) return;
   fermerPopovers();
+  const defaut = !!vue.defaut;
   _instantVue = {
-    nom: vue.nom,
+    nom: defaut ? '' : vue.nom,
     filtres: copieFiltres(STATE.filters),
     tri: STATE.tri.map(c => ({ ...c })),
     colonnes: vue.colonnes ? [...vue.colonnes] : null,
@@ -1102,12 +1124,19 @@ function ouvrirFenetreVue(onglet) {
   remplirTri();
   remplirColonnesVue();
 
-  document.getElementById('fv-nom').value = vue.nom;
-  document.getElementById('fv-portee').textContent = vue.perso
-    ? '🔒 Vue personnelle : visible dans ce navigateur seulement.'
+  document.getElementById('fv-nom').value = _instantVue.nom;
+  document.getElementById('fv-nom-libelle').textContent = defaut ? 'Nom de la nouvelle vue' : 'Nom de la vue';
+  document.getElementById('fv-portee').textContent = defaut
+    ? 'Cette vue montre toutes les cartes et ne se modifie pas : vos réglages créeront une nouvelle vue.'
+    : vue.perso ? '🔒 Vue personnelle : visible dans ce navigateur seulement.'
     : '👥 Vue partagée : la même pour tous. Après 💾, le bouton « Enregistrer » de Grist la garde dans le document.';
-  document.getElementById('fv-partagee').hidden = !!vue.perso;
+  document.getElementById('fv-partagee').hidden = !!vue.perso || defaut;
+  document.getElementById('fv-nouvelle-portee').classList.toggle('hidden', !defaut);
+  document.querySelector('input[name="fv-portee-choix"][value="perso"]').checked = true;
+  fenetreVue.element.querySelector('.fenetre-pied .btn-primary').textContent =
+    defaut ? '💾 Enregistrer comme nouvelle vue' : '💾 Enregistrer';
   const supprimer = document.getElementById('fv-supprimer');
+  supprimer.hidden = defaut;
   supprimer.textContent = '🗑 Supprimer la vue';
   supprimer.dataset.confirmer = '';
 
@@ -1144,7 +1173,7 @@ function majFenetreVue() {
   fenetreVue.marquerModifiee(fenetreVueModifiee());
 }
 
-/** 💾 : écrit nom, filtres, tri et colonnes dans la vue, puis ferme. */
+/** 💾 : écrit nom, filtres, tri et colonnes dans la vue (ou dans une nouvelle vue), puis ferme. */
 function enregistrerFenetreVue() {
   const vue = vueEnregistree(STATE.activeView);
   const champ = document.getElementById('fv-nom');
@@ -1155,6 +1184,13 @@ function enregistrerFenetreVue() {
     return;
   }
   fermerFiltre(); // retire un filtre commencé mais laissé sans valeur
+  if (vue.defaut) {
+    const perso = document.querySelector('input[name="fv-portee-choix"]:checked').value !== 'partagee';
+    const nouvelle = construireVue(champ.value.trim(), perso);
+    fenetreVue.fermer({ forcer: true });   // « Toutes les cartes » retrouve son état
+    ajouterEtAnnoncerVue(nouvelle);
+    return;
+  }
   vue.nom = champ.value.trim();
   vue.filtres = copieFiltres(STATE.filters.filter(f => f.valeurs.length > 0));
   vue.tri = Tri.nettoyer(STATE.tri);
@@ -1190,6 +1226,42 @@ function quitterFenetreVue() {
   const vue = vueEnregistree(STATE.activeView);
   if (vue) vue.colonnes = instant.colonnes;
   renderBoard();
+}
+
+/* ── Mode d'emploi (#214) ───────────────────────────────────────
+   Derrière le bouton « ? », et ouvert de lui-même à la première visite. */
+
+let fenetreAide = null;
+
+/* Une seule fois par navigateur, tous documents confondus */
+const CLE_AIDE_VUE = 'kanban.aideVue';
+
+function creerFenetreAide() {
+  fenetreAide = Fenetre.creer({
+    titre: '📖 Mode d\'emploi',
+    onglets: [{ id: 'aide', libelle: 'Mode d\'emploi', contenu: document.getElementById('aide-contenu') }],
+    actions: [{ libelle: 'Fermer', classe: 'btn-primary', fermer: true }],
+  });
+  fenetreAide.element.classList.add('fenetre-aide');
+}
+
+function ouvrirAide() {
+  remplirAide();
+  fenetreAide.ouvrir();
+}
+
+/**
+ * Ouvre le mode d'emploi si ce navigateur ne l'a jamais montré. Si sa mémoire
+ * est refusée, on n'ouvre rien : sinon il s'ouvrirait à chaque chargement.
+ */
+function ouvrirAideSiPremiereVisite() {
+  try {
+    if (localStorage.getItem(CLE_AIDE_VUE)) return;
+    localStorage.setItem(CLE_AIDE_VUE, 'oui');
+  } catch (err) {
+    return;
+  }
+  ouvrirAide();
 }
 
 /* ── Petits panneaux (nom, menu, colonnes) ── */
@@ -1981,15 +2053,6 @@ function renderBoard() {
   majBoutonMoi();
   majFenetreVue();
 
-  // Accueil : mode d'emploi à la place des cartes, et pas de filtres
-  const accueil = STATE.activeView === ACCUEIL;
-  document.getElementById('filterbar')?.classList.toggle('sur-accueil', accueil);
-  document.getElementById('recherche')?.classList.toggle('hidden', accueil);
-  if (accueil) {
-    renderAccueil(board);
-    return;
-  }
-
   if (!STATE.mapping.titre || !STATE.mapping.statut) {
     board.innerHTML = `<div class="empty-state"><div class="empty-icon">⚙️</div><p>Configuration requise</p><p class="empty-hint">Cliquez sur ⚙ pour associer les colonnes.</p></div>`;
     return;
@@ -2082,41 +2145,46 @@ function majBarreProjet() {
 }
 
 /**
- * Accueil : court mode d'emploi du widget, à la place des cartes.
+ * Court mode d'emploi du widget.
  * Texte fixe (aucune donnée de Grist), d'où l'usage d'innerHTML.
  */
-function renderAccueil(board) {
-  const premiere = STATE.vues.length === 0;
+function remplirAide() {
+  const premiere = vuesRangees().length === 1;   // seulement « Toutes les cartes »
   // Bouton « Mes tâches » (#202) : seulement si « Assigné à » est une référence
   const mesTaches = (STATE.mapping.assigne && REFS.assigne)
-    ? `<button id="accueil-mes-taches" class="btn-primary">👤 ${vueMesTaches() ? 'Ouvrir' : 'Créer'} ma vue Mes tâches</button>`
+    ? `<button id="aide-mes-taches" class="btn-primary">👤 ${vueMesTaches() ? 'Ouvrir' : 'Créer'} ma vue Mes tâches</button>`
     : '';
-  board.innerHTML = `
-    <div class="accueil">
+  document.getElementById('aide-contenu').innerHTML = `
+    <div class="aide">
       <h2>Bienvenue dans le Kanban</h2>
-      <p class="accueil-intro">Les cartes s'affichent dans des <strong>vues</strong> : un onglet = une vue,
-        avec ses filtres et ses colonnes. ${premiere
-          ? 'Ce Kanban n\'a pas encore de vue : créez-en une pour voir les cartes.'
-          : 'Cliquez sur un onglet pour retrouver les cartes.'}</p>
-      <div class="accueil-boutons">
+      <p class="aide-intro">Les cartes s'affichent dans des <strong>vues</strong>, chacune avec ses filtres,
+        son tri et ses colonnes. <strong>Toutes les cartes</strong> montre tout le projet ; créez vos vues
+        pour retrouver d'un clic ce qui vous intéresse.</p>
+      <div class="aide-boutons">
         ${mesTaches}
-        <button id="accueil-creer" class="${mesTaches ? 'btn-ghost' : 'btn-primary'}">＋ ${premiere ? 'Créer ma première vue' : 'Créer une vue'}</button>
+        <button id="aide-creer" class="${mesTaches ? 'btn-ghost' : 'btn-primary'}">＋ ${premiere ? 'Créer ma première vue' : 'Créer une vue'}</button>
       </div>
-      <ol class="accueil-etapes">
+      <ol class="aide-etapes">
         <li><strong>⚙ Configurer</strong> : quatre étapes, une par onglet : ① le projet du Kanban, ② les colonnes de la table, ③ la couleur et la classe des statuts, ④ l'équipe projet (personnes proposées dans « Assigné à »). Un ⚠️ signale une étape à faire. Cliquez sur <strong>Appliquer</strong>, puis sur <strong>Enregistrer</strong>, en haut à droite de Grist.</li>
         <li><strong>＋ Vue</strong> : crée une vue à partir de l'affichage actuel, <strong>🔒 pour vous</strong> (par défaut : gardée aussitôt dans votre navigateur) ou <strong>👥 pour tous</strong> (puis cliquez sur <strong>Enregistrer</strong> de Grist pour la garder). Le menu <strong>⋯</strong> de l'onglet actif permet de la renommer, de la supprimer, ou de copier une vue partagée en vue perso pour l'adapter sans gêner les autres.</li>
         <li><strong>👤 Qui suis-je ?</strong> (en haut à droite) : indiquez votre nom, une fois (rien à enregistrer). Le filtre sur la colonne « Assigné à » propose alors <strong>👤 Moi</strong>, qui montre vos propres cartes ; dans une vue partagée, il montre à chacun les siennes.</li>
-        <li><strong>🔽 Filtres</strong>, <strong>⇅ Trier</strong> et <strong>▦ Colonnes</strong> : ces boutons résument la vue et ouvrent <strong>Gérer la vue</strong>, qui règle son nom, ses filtres (« EPIC est … », « Assigné n'est pas … »), son tri et ses colonnes. <strong>💾 Enregistrer</strong> garde tout, <strong>Annuler</strong> ne change rien. Pour une consultation à part, créez une vue 🔒.</li>
+        <li><strong>🔽 Filtres</strong>, <strong>⇅ Trier</strong> et <strong>▦ Colonnes</strong> : ces boutons résument la vue et ouvrent <strong>Gérer la vue</strong>, qui règle son nom, ses filtres (« EPIC est … », « Assigné n'est pas … »), son tri et ses colonnes. <strong>💾 Enregistrer</strong> garde tout, <strong>Annuler</strong> ne change rien. Sur <strong>Toutes les cartes</strong>, 💾 crée une nouvelle vue.</li>
         <li><strong>Tri</strong> : range les cartes de chaque colonne selon n'importe quelle colonne (échéance, priorité, titre, # numéro…), puis selon une deuxième à égalité. Les cartes sans valeur restent en bas.</li>
         <li><strong>🔍 Rechercher</strong> (en haut) : garde les cartes qui contiennent tous les mots tapés, dans n'importe quelle colonne, sans tenir compte des accents ni des majuscules ; <strong>#203</strong> retrouve une carte par son numéro. La recherche s'ajoute aux filtres et ne s'enregistre nulle part : Échap l'efface.</li>
         <li><strong>Cartes</strong> : glissez une carte dans une autre colonne pour changer son statut ; cliquez dessus pour ouvrir sa fiche. Dans la fiche, la bande <strong>⛔ Bloquée par / ➡️ Bloque</strong> relie la carte à celles qu'elle attend ou qu'elle retient.</li>
         <li><strong>⚠️ Deux « Enregistrer »</strong> : <strong>💾 Enregistrer</strong> garde les réglages dans la vue ; pour une vue 👥 partagée, le bouton <strong>Enregistrer</strong> de Grist, en haut à droite, l'inscrit ensuite dans le document, pour tous. Sans ce dernier clic, elle est perdue au rechargement de la page, comme les réglages de ⚙. Les vues 🔒 personnelles, les cartes, l'onglet actif et votre nom sont gardés aussitôt.</li>
       </ol>
-      <p class="accueil-plus"><a href="${URL_AIDE}" target="_blank" rel="noopener">📖 En savoir plus (mode d'emploi complet)</a></p>
+      <p class="aide-plus"><a href="${URL_AIDE}" target="_blank" rel="noopener">📖 En savoir plus (mode d'emploi complet)</a></p>
     </div>`;
-  document.getElementById('accueil-creer')
-    ?.addEventListener('click', (e) => ouvrirNomVue('creer', e.currentTarget));
-  document.getElementById('accueil-mes-taches')?.addEventListener('click', ouvrirMesTaches);
+  // La fenêtre passe au-dessus de tout : on la ferme d'abord
+  document.getElementById('aide-creer')?.addEventListener('click', () => {
+    fenetreAide.fermer();
+    ouvrirNomVue('creer', document.getElementById('vue-ajouter'));
+  });
+  document.getElementById('aide-mes-taches')?.addEventListener('click', () => {
+    fenetreAide.fermer();
+    ouvrirMesTaches();
+  });
 }
 
 function getOrderedStatuts(statutList, view) {
@@ -3353,6 +3421,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Config : fenêtre à onglets (#210)
   creerFenetreConfig();
   creerFenetreVue();
+  creerFenetreAide();
   document.getElementById('btn-config')       ?.addEventListener('click', openConfig);
   // ✅ Si l'on change le « Champ Projet », on recharge la liste des projets proposés
   document.getElementById('col-projet')?.addEventListener('change', async (e) => {
@@ -3393,13 +3462,8 @@ document.addEventListener('DOMContentLoaded', () => {
     fenetreConfig.majEtats();
   });
 
-  // Onglets de vue
-  document.querySelectorAll('.view-tab[data-view]').forEach(btn => { // onglets codés en dur
-    btn.addEventListener('click', () => switchView(btn.dataset.view));
-  });
-
-  // Filtres combinables (#195)
   // Résumés de la barre (#214) : ouvrent « Gérer la vue » sur le bon onglet
+  document.getElementById('btn-aide')        ?.addEventListener('click', ouvrirAide);
   document.getElementById('filtres-bouton')  ?.addEventListener('click', () => ouvrirFenetreVue('filtres'));
   document.getElementById('tri-bouton')      ?.addEventListener('click', () => ouvrirFenetreVue('tri'));
   document.getElementById('colonnes-bouton') ?.addEventListener('click', () => ouvrirFenetreVue('colonnes'));
