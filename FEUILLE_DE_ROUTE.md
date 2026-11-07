@@ -8,13 +8,14 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-05 22:08_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-07 01:10_
 
 ### 🖐️ À faire
-- [ ] #185 Rendre les pastilles modifiables dans la fiche de la Galerie (Moyenne, EPIC « Améliorer l'interface du kanban »)
+- [ ] #222 Créer une nouvelle carte depuis "bloque" ou "bloqué par" (Haute, EPIC « Améliorer l'interface du kanban »)
 - [ ] #204 Réutiliser les filtres kanban (Moyenne, EPIC « Filtrer la galerie »)
 - [ ] #205 Modifier des pastilles sans ouvrir la carte (Moyenne, EPIC « Rendre les cartes de galerie modifiable »)
 - [ ] #206 Modifier des pastilles dans la carte (Moyenne, EPIC « Rendre les cartes de galerie modifiable »)
+- [ ] #223 Contextualiser les listes de choix d'une référence (EPIC, personne…) pour s'y repérer quand elles grandissent (Moyenne, EPIC « Améliorer l'interface du kanban »)
 - [ ] #184 Ouvrir un objet lié (tâche, EPIC…) d'un clic depuis la fiche de la Galerie (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #186 Préremplir une nouvelle carte de la Galerie avec le filtre de la vue (Sélectionner par) (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #188 Extraire le rendu des cartes et des pastilles dans _commun (carte.js, carte.css), utilisé par la Galerie (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
@@ -25,13 +26,12 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [ ] #200 Kanban : filtrer sur n'importe quelle colonne (texte, nombre, date…) (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #207 Galerie : relations « Bloque » / « Bloquée par » entre les cartes, à reprendre après le moteur de cartes commun (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
 
-### ♻️ En cours
-- [ ] #214 Kanban : regrouper la gestion des vues, filtres, tri et colonnes dans la fenêtre à onglets (widget étroit)  (Haute, EPIC « Améliorer l'interface du kanban »)
-
 <!-- fin kanban -->
 
 ## ⚠️ Prochaine séance
-- [ ] #214 : trancher les 5 questions listées dans la carte avant de coder
+- [ ] Après Ctrl + F5, vérifier les vues de l'Observatoire dans le document réel (#214 en production)
+- [ ] Prévenir Vincent et Elisa des changements de la barre et recueillir leur avis
+- [ ] Essayer taches.py voir sur un vrai projet Notion (testé sur faux serveur seulement)
 
 ## En cours
 - [x] Fiche dense du Kanban fusionnée sur master (PR #15, feat/fiche-centrale), 2026-10-24 = mise en production du Kanban, vérifiée dans le document de l'Observatoire
@@ -53,6 +53,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [x] #212 : couleur de chaque statut choisie dans ⚙, elle suit le statut (PR #34), 2026-11-02
 - [x] #210 : ⚙ en fenêtre à onglets ① Projet ② Colonnes ③ Statuts ④ Équipe, étape ③ mise à jour aussitôt ; brique commune _commun/fenetre.js (PR #35), 2026-11-02 ; à réutiliser pour les vues et filtres (#214)
 - [x] #202 close : test concluant avec Vincent et Elisa, 2026-11-05 ; étapes 3 (Mes onglets) et 4 (export/import) non réalisées, leur sort est à décider dans #214
+- [x] #214 : fenêtre « Gérer la vue », barre compacte (PR #36), vue « Toutes les cartes », bouton « ? », vues 👥 par projet (PR #37), 2026-11-07
 
 ## Prochaines étapes
 (Les étapes du projet sont désormais suivies dans Grist : voir « Kanban (Grist) » ci-dessus.)
@@ -71,7 +72,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - Dépôt .claude : ajouter à taches.py des options --bloque / --bloquee-par (colonnes Bloque / Bloquee_par de Grist), pour lier les tâches sans passer par Grist à la main — demandé le 2026-10-26
 - Sécurité : vider les sorties des notebooks avant chaque commit (contrôle automatique type nbstripout ?) — à formaliser à l'étape 6 de #201
 - Sécurité : CSP dans index.html, reportée (#201) — protège contre un texte piégé, pas contre un code modifié sur GitHub
-- Dépôt .claude : ajouter à taches.py une commande pour lire la description d'une tâche (aujourd'hui, seule une simulation de modification l'affiche)
+- (suggestion de Claude) Garder dans le dépôt un banc d'essai du Kanban : Chrome sans affichage et faux Grist, 114 vérifications pour #214 ; il n'existe aujourd'hui que dans un dossier temporaire
 
 ## Décisions récentes
 <!-- Une ligne par décision : date — décision — raison en quelques mots -->
@@ -143,3 +144,14 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - 2026-11-02 — ⚙ en fenêtre à onglets verticaux (état ✓ / ⚠️ / ℹ️ par étape, ouverture sur la première ⚠️, barre « Appliquer » toujours visible, confirmation si l'on ferme sans appliquer), plutôt qu'une page à faire défiler — bouton d'action jamais caché, une étape à la fois ; brique commune _commun/fenetre.js pour la réutiliser
 - 2026-11-05 — #202 close sans les étapes 3 et 4 — Vincent et Elisa trouvent déjà le widget très bien
 - 2026-11-05 — #214 passe en cours, priorité haute, propositions d'idéation consignées dans la carte, rien de tranché — besoin de lisibilité sur petit écran, décisions à prendre à tête reposée
+- 2026-11-06 — commande taches.py voir, en lecture seule, pour Grist et Notion — lire une carte sans détourner une simulation de modifier
+- 2026-11-06 — vue choisie par onglets tant qu'ils tiennent, sinon par un menu — garder un clic sur grand écran, gagner de la place sur widget étroit
+- 2026-11-06 — un seul bouton 💾, ni Appliquer, ni « • », ni Réinitialiser ; plus de filtre passager — objectif : comprendre d'un coup d'œil ; on définit ses vues, quitte à en avoir beaucoup
+- 2026-11-06 — dans « Gérer la vue », les colonnes attendent 💾 ; le glisser-déposer des en-têtes reste enregistré aussitôt — Annuler ne doit rien changer
+- 2026-11-06 — Accueil remplacé par la vue « Toutes les cartes », jamais enregistrée et non modifiable (💾 y crée une nouvelle vue), et par le bouton « ? » — tout est une vue ; revient sur la décision du 2026-10-27
+- 2026-11-06 — mode d'emploi ouvert une fois par navigateur ; rien d'ouvert si la mémoire est refusée — guider les nouveaux sans ouvrir à chaque chargement
+- 2026-11-06 — vues rangées partagées puis 🔒, par ordre alphabétique, sans ordre manuel ni masquage ; export/import des vues abandonné — suffisant aujourd'hui, solde les étapes 3 et 4 de #202
+- 2026-11-06 — EPIC terminés et listes de choix sortis de #214 dans #223 — besoin plus général : se repérer dans une liste qui grandit
+- 2026-11-06 — fenêtres déplaçables par l'en-tête et redimensionnables, ⚙ comprise — retour de test ; brique commune fenetre.js
+- 2026-11-07 — vue 👥 rattachée au projet du Kanban, masquée sinon sans être effacée ; celles créées avant restent visibles partout — même règle que les vues 🔒, aucune vue perdue
+- 2026-11-07 — « ? » et ⚙ à côté du titre, recherche et 👤 à droite — l'outil à gauche, le quotidien à droite
