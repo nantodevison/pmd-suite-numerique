@@ -57,16 +57,15 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
   flex-shrink: 0;
 }
 .toolbar-left { display: flex; align-items: center; gap: 10px; }
-/* Droite : nom du projet, puis ⚙ */
+/* Gauche : le titre, le mode d'emploi et ⚙. Droite : la recherche, 👤 et le nom du projet */
 .toolbar-right { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .toolbar-title { font-weight: 700; font-size: 15px; letter-spacing: -.3px; }
-/* 🔍 Recherche (#209), masquée sur l'Accueil */
+/* 🔍 Recherche (#209) */
 .recherche {
   width: min(240px, 30vw); padding: 5px 10px; font-size: 13px; font-family: var(--font);
   border: 1.5px solid var(--border); border-radius: 8px; color: var(--text);
 }
 .recherche:focus { outline: none; border-color: var(--accent); }
-.recherche.hidden { display: none; }
 .toolbar-table-name {
   font-size: 11px; color: var(--text-muted); background: var(--col-bg);
   border-radius: 5px; padding: 3px 10px; max-width: 420px;
@@ -483,20 +482,18 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 .empty-icon { font-size: 44px; line-height: 1; }
 .empty-hint { font-size: 11.5px; opacity: .7; max-width: 300px; }
 
-/* ── Accueil : mode d'emploi (#197) ── */
-.accueil {
+/* ── Mode d'emploi (#214) : un seul panneau, donc pas de colonne d'onglets ── */
+.fenetre-aide .fenetre-onglets { display: none; }
+.aide {
   width: 100%; max-width: 640px; height: 100%; margin: 0 auto; overflow-y: auto;
   padding: 24px 8px 40px; color: var(--text); font-size: 13px; line-height: 1.5;
 }
-.accueil h2 { font-size: 20px; margin: 0 0 8px; }
-.accueil-intro { color: var(--text-muted); margin: 0 0 16px; }
-.accueil-etapes { margin: 20px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; }
-.accueil-plus { margin-top: 20px; }
-.accueil-boutons { display: flex; flex-wrap: wrap; gap: 8px; }
-.accueil-plus a { color: var(--accent); }
-/* Sur l'accueil, pas de cartes : les commandes de filtre sont masquées */
-.filterbar.sur-accueil .filter-sep,
-.filterbar.sur-accueil .resume-vue { display: none; }
+.aide h2 { font-size: 20px; margin: 0 0 8px; }
+.aide-intro { color: var(--text-muted); margin: 0 0 16px; }
+.aide-etapes { margin: 20px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; }
+.aide-plus { margin-top: 20px; }
+.aide-boutons { display: flex; flex-wrap: wrap; gap: 8px; }
+.aide-plus a { color: var(--accent); }
 
 /* ══════════════════════════════════════════════════════════════
    MODAL D'AJOUT DE CARTE
@@ -646,7 +643,8 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
 #fv-filtre-ajouter { flex-shrink: 0; }
 #filtre-popover { border-top: 1px solid var(--border); }
 .fv-champ { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; font-size: 12px; font-weight: 600; }
-.fv-supprimer { align-self: flex-start; }
+.fv-supprimer[hidden] { display: none; }
+#fv-nouvelle-portee { margin-bottom: 16px; }
 #fv-info { display: flex; flex-direction: column; font-size: 12px; color: var(--text-muted); }
 #fv-compteur { font-weight: 600; color: var(--text); }
 /* Statuts (#183, #212) : nom à gauche, puis couleur et classe ; une ligne par statut */
@@ -735,9 +733,16 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
     <section id="fv-vue" data-neutre>
       <h3 class="config-etape">Vue</h3>
       <p class="config-aide" id="fv-portee"></p>
-      <label class="fv-champ">Nom de la vue
+      <label class="fv-champ"><span id="fv-nom-libelle">Nom de la vue</span>
         <input id="fv-nom" class="filtre-recherche" type="text" autocomplete="off" required />
       </label>
+      <!-- Depuis « Toutes les cartes » : pour qui est la nouvelle vue -->
+      <div id="fv-nouvelle-portee" class="vue-portee hidden">
+        <label class="filtre-valeur"><input type="radio" name="fv-portee-choix" value="perso" checked />
+          <span>🔒 <strong>Pour moi</strong> <span class="vue-aide">— ce navigateur seulement</span></span></label>
+        <label class="filtre-valeur"><input type="radio" name="fv-portee-choix" value="partagee" />
+          <span>👥 <strong>Pour tous</strong> <span class="vue-aide">— le document, puis « Enregistrer » de Grist</span></span></label>
+      </div>
       <button id="fv-supprimer" class="filtre-lien danger fv-supprimer">🗑 Supprimer la vue</button>
     </section>
     <section id="fv-filtres" data-neutre>
@@ -795,6 +800,11 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
     </section>
   </div>
 
+  <!-- Mode d'emploi (#214) : contenu dessiné par remplirAide() -->
+  <div id="aide-sections" hidden>
+    <section id="aide-contenu" data-neutre></section>
+  </div>
+
   <!-- Bas de la fenêtre « Gérer la vue » : ce qu'on ne voit pas derrière elle -->
   <div id="fv-info" hidden>
     <span id="fv-compteur"></span>
@@ -836,18 +846,16 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
   <header class="toolbar">
     <div class="toolbar-left">
       <span class="toolbar-title">📋 Kanban</span>
-      <!-- Onglet fixe, à part des vues du projet : mode d'emploi, et repli
-           quand aucune vue n'est active (#197) -->
-      <button class="view-tab active" data-view="accueil">🏠 Accueil</button>
+      <button id="btn-aide" class="btn-icon" title="Mode d'emploi">?</button>
+      <button id="btn-config" class="btn-icon" title="Configurer">⚙</button>
     </div>
     <div class="toolbar-right">
       <!-- Recherche passagère (#209) : s'ajoute aux filtres, jamais enregistrée -->
-      <input type="search" id="recherche" class="recherche hidden" placeholder="🔍 Rechercher… ou #numéro"
+      <input type="search" id="recherche" class="recherche" placeholder="🔍 Rechercher… ou #numéro"
              title="Tous les mots, dans n'importe quelle colonne (accents ignorés) ; #203 : carte n° 203" autocomplete="off" />
       <!-- « Qui suis-je ? » (#202) : nom de la personne, retenu par le navigateur -->
       <button id="btn-moi" class="btn-moi hidden">👤 Qui suis-je ?</button>
       <span id="toolbar-table-name" class="toolbar-table-name"></span>
-      <button id="btn-config" class="btn-icon" title="Configurer">⚙</button>
     </div>
   </header>
 

@@ -154,29 +154,34 @@ document. Changer d'onglet ne fait plus apparaître ce bouton (#202).
 **Onglet actif.** Votre navigateur le retient (`localStorage`), séparément pour
 chaque document, table et projet : chacun retrouve le dernier onglet qu'il a
 regardé. Sur un autre poste, un autre navigateur ou en navigation privée, le
-Kanban s'ouvre sur l'Accueil, ou sur l'onglet enregistré dans le document par
+Kanban s'ouvre sur « Toutes les cartes », ou sur l'onglet enregistré dans le document par
 une version du widget antérieure au 2026-10-28.
 
-## Accueil
+## Toutes les cartes et mode d'emploi
 
-L'onglet **🏠 Accueil**, en haut à côté de « Kanban », est fixe : on ne peut ni
-le supprimer ni le renommer. Il affiche un court mode d'emploi, un bouton
+La vue **Toutes les cartes** est fixe : sans filtre ni tri, elle montre tout le
+projet, et on ne peut ni la renommer, ni la supprimer, ni la modifier. C'est
+aussi la vue de repli : le Kanban s'y ouvre au premier lancement, ou quand la
+vue retenue par votre navigateur n'existe plus. Si l'on y règle des filtres
+dans **Gérer la vue**, 💾 propose d'**enregistrer comme nouvelle vue**.
+
+Le bouton **?**, à côté de ⚙, ouvre un court mode d'emploi, avec un bouton
 **👤 Créer ma vue Mes tâches** (voir « Vues personnelles »), un bouton pour
-créer une vue et un lien vers cette page. C'est aussi l'onglet de repli : le
-Kanban s'y ouvre au premier lancement, ou quand la vue retenue par votre
-navigateur n'existe plus.
+créer une vue et un lien vers cette page. Il s'ouvre de lui-même une fois, à
+la première visite dans chaque navigateur.
 
 ## Vues
 
 Une vue est un onglet de la deuxième ligne. Elle a un nom, des filtres et une
 liste de colonnes (statuts affichés et leur ordre). Les vues sont propres à
-chaque widget Kanban. Il en existe deux sortes : les vues **👥 partagées**,
+chaque widget Kanban et à son projet : une vue 👥 créée pour un projet n'apparaît
+qu'avec lui, et revient si on le choisit de nouveau dans ⚙ (celles créées
+avant le 2026-11-07 restent visibles partout). Il en existe deux sortes : les vues **👥 partagées**,
 gardées dans le document et les mêmes pour tous, puis, après elles, les vues
 **🔒 personnelles** (bordure en pointillés), voir plus bas.
 
 - **＋ Vue** crée une vue à partir de l'affichage actuel (filtres et colonnes),
-  **🔒 pour moi** (choix par défaut) ou **👥 pour tous**. Depuis l'Accueil, la
-  vue n'a aucun filtre et affiche tous les statuts présents.
+  **🔒 pour moi** (choix par défaut) ou **👥 pour tous**.
 - **Onglets ou menu** : les vues sont rangées partagées d'abord, puis 🔒, par
   ordre alphabétique. Quand les onglets ne tiennent plus dans la barre, un
   bouton les remplace : il affiche la vue active, et **▾** liste les autres.
@@ -207,7 +212,7 @@ sans effet sur les vues des autres. Elle se manipule comme une vue partagée
 - **Copier en vue perso** (menu ⋯ d'une vue partagée) : crée une vue
   personnelle avec les mêmes filtres, tri et colonnes. On part d'une vue
   commune, on l'adapte, on la garde pour soi.
-- **👤 Créer ma vue Mes tâches** (Accueil) : crée en un clic une vue
+- **👤 Créer ma vue Mes tâches** (mode d'emploi, bouton ?) : crée en un clic une vue
   personnelle « Mes tâches », filtrée sur « Assigné à est 👤 Moi » (voir
   « Qui suis-je ? »), avec tous les statuts présents : masquez ceux qui ne vous
   servent pas avec ▦ Colonnes. Si elle existe déjà, le bouton l'ouvre.
@@ -228,7 +233,7 @@ seule valeur.
 
 ## Recherche
 
-Le champ **🔍 Rechercher**, en haut à droite (masqué sur l'Accueil), ne garde
+Le champ **🔍 Rechercher**, en haut à droite, ne garde
 que les cartes qui contiennent **tous les mots tapés**, dans n'importe quel
 ordre, sans tenir compte des accents ni des majuscules : « securite widgets »
 trouve « Sécurité des widgets ».
