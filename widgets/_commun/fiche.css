@@ -118,6 +118,8 @@ button.fiche-pastille:hover { border-color: var(--accent, #667eea); }
 .fiche-menu-item.choisi { font-weight: 700; }
 .fiche-menu-item-vide { font-style: italic; color: var(--text-muted, #718096); }
 .fiche-menu-vide { padding: 6px 10px; font-size: 12px; color: var(--text-muted, #718096); }
+/* Ligne « ＋ Créer « … » » du menu de recherche, séparée des résultats */
+.fiche-menu-creer { border-top: 1px solid var(--border, #e2e8f0); color: var(--accent, #667eea); font-weight: 600; }
 .fiche-menu-date, .fiche-menu-saisie {
   margin: 4px; padding: 6px 8px; font-family: inherit; font-size: 13px;
   border: 1.5px solid var(--border, #e2e8f0); border-radius: 6px;

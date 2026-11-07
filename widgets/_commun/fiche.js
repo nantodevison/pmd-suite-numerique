@@ -513,10 +513,19 @@
    *   options     : [{ valeur, libelle, detail }] (detail : texte gris, facultatif)
    *   placeholder : texte affiché dans le champ vide
    *   surChoix    : appelée avec la valeur choisie (le menu se ferme)
+   *   creer       : facultatif, appelée avec le texte saisi pour créer un
+   *                 nouvel élément (le menu se ferme). Une ligne « ＋ Créer
+   *                 « … » » est alors proposée en fin de liste, sauf si le
+   *                 nom existe déjà (aux majuscules et accents près) : on
+   *                 évite ainsi les doublons.
+   *   existants   : facultatif, avec creer : tous les noms déjà pris, y compris
+   *                 ceux qui ne sont pas proposés dans le menu ; à défaut, les
+   *                 noms des options (champ « nom », sinon le libellé).
    * La recherche ignore majuscules et accents, et chaque mot saisi doit
-   * figurer dans le libellé. Entrée choisit le premier résultat.
+   * figurer dans le libellé. Entrée choisit le premier résultat (la ligne
+   * « Créer » quand rien d'autre ne correspond).
    */
-  function menuRecherche(ancre, { options, placeholder = 'Rechercher…', surChoix }) {
+  function menuRecherche(ancre, { options, placeholder = 'Rechercher…', surChoix, creer, existants }) {
     const menu = ouvrirMenu(ancre);
     menu.classList.add('fiche-menu-recherche');
     const saisie = document.createElement('input');
@@ -532,7 +541,6 @@
       liste.replaceChildren();
       if (!trouvees.length) {
         liste.appendChild(Object.assign(document.createElement('div'), { className: 'fiche-menu-vide', textContent: 'Aucun résultat' }));
-        return;
       }
       trouvees.slice(0, 50).forEach(o => {   // au-delà, mieux vaut préciser la recherche
         const item = document.createElement('button');
@@ -551,6 +559,22 @@
         item.addEventListener('click', () => { fermerMenu(); surChoix(o.valeur); });
         liste.appendChild(item);
       });
+      if (creer) ligneCreer();
+    }
+
+    // Ligne « ＋ Créer « texte saisi » », en fin de liste
+    function ligneCreer() {
+      const texte = saisie.value.trim();
+      if (!texte) return;
+      const cle = Recherche.simplifier(texte);
+      const noms = existants || options.map(o => o.nom ?? o.libelle);
+      if (noms.some(n => Recherche.simplifier(String(n)) === cle)) return;
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'fiche-menu-item fiche-menu-creer';
+      item.textContent = `＋ Créer « ${texte} »`;   // textContent : aucun HTML interprété
+      item.addEventListener('click', () => { fermerMenu(); creer(texte); });
+      liste.appendChild(item);
     }
 
     saisie.addEventListener('input', afficher);

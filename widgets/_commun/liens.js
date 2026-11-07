@@ -19,8 +19,9 @@
 
    3. bande() : la bande « enchaînement » d'une fiche,
         [cartes qui la bloquent] ▶ [cette carte] ▶ [cartes qu'elle bloque]
-      avec ＋ (chercher une carte à lier), × (retirer un lien) et un clic
-      sur une carte liée pour l'ouvrir.
+      avec ＋ (chercher une carte à lier, ou en créer une nouvelle si le
+      widget le permet, #222), × (retirer un lien) et un clic sur une
+      carte liée pour l'ouvrir.
 
    4. badges() : « ⛔ 2 » / « ➡️ 1 » sur une carte du tableau, d'après les
       classes de statut (À faire, En cours, Terminé, Autre) réglées par
@@ -142,15 +143,24 @@
    *   bloque        : numéros des cartes qu'elle bloque, ou null
    *   candidats     : numéros des cartes que l'on peut lier (ex. celles du
    *                   projet) ; une carte liée hors de cette liste est grisée
-   *   surChangement : appelée avec { bloqueePar, bloque } à chaque ajout ou retrait
+   *   surChangement : appelée avec { bloqueePar, bloque } à chaque ajout ou
+   *                   retrait, et un second argument { dejaEnregistre: true }
+   *                   quand le lien vient d'être écrit dans Grist (voir surCreer)
    *   surOuvrir     : appelée avec le numéro d'une carte liée cliquée (facultatif)
+   *   surCreer      : facultatif (#222) ; propose « ＋ Créer « … » » dans le
+   *                   menu de recherche. Appelée avec (titre, cote), elle crée
+   *                   la carte et renvoie une promesse de
+   *                   { id, statut, enregistre } (enregistre : le lien a été
+   *                   écrit avec la nouvelle carte), ou null en cas d'échec.
    * Renvoie l'élément à insérer dans la fiche.
    */
-  function bande({ index, carte, bloqueePar, bloque, candidats, surChangement, surOuvrir }) {
+  function bande({ index, carte, bloqueePar, bloque, candidats, surChangement, surOuvrir, surCreer }) {
     const etat = {
       bloqueePar: bloqueePar ? [...bloqueePar] : null,
       bloque:     bloque     ? [...bloque]     : null,
     };
+    // Copie : une carte créée depuis la bande s'y ajoute (voir creer)
+    candidats = [...candidats];
     const racine = document.createElement('div');
     racine.className = 'liens-bande';
     const grille = document.createElement('div');
@@ -166,9 +176,9 @@
         colonne('bloqueePar'), fleche(etat.bloqueePar), centre(), fleche(etat.bloque), colonne('bloque'));
     }
 
-    function changer() {
+    function changer(precisions) {
       dessiner();
-      surChangement({ bloqueePar: etat.bloqueePar, bloque: etat.bloque });
+      surChangement({ bloqueePar: etat.bloqueePar, bloque: etat.bloque }, precisions || {});
     }
 
     function colonne(cote) {
@@ -254,11 +264,14 @@
         .filter(id => !exclues.has(id) && index.has(id))
         .map(id => index.get(id))
         .sort((a, b) => b.id - a.id)   // les plus récentes d'abord
-        .map(c => ({ valeur: c.id, libelle: `#${c.id} ${c.titre}`, detail: c.statut }));
+        .map(c => ({ valeur: c.id, libelle: `#${c.id} ${c.titre}`, nom: c.titre, detail: c.statut }));
 
       Fiche.menuRecherche(ancre, {
         options,
-        placeholder: 'Titre ou #numéro…',
+        placeholder: surCreer ? 'Titre ou #numéro, ou nouveau titre…' : 'Titre ou #numéro…',
+        creer: surCreer ? (titre) => creer(cote, titre) : undefined,
+        // Doublons : toutes les cartes du projet, même déjà liées ou affichée
+        existants: [carte.titre, ...candidats.filter(id => index.has(id)).map(id => index.get(id).titre)],
         surChoix: (id) => {
           const essai = { ...etat, [cote]: [...etat[cote], id] };
           // Côté non associé : on se fie à ce que Grist a enregistré
@@ -274,6 +287,27 @@
           changer();
         },
       });
+    }
+
+    /*
+     * Nouvelle carte liée (#222) : surCreer la crée dans Grist, puis on
+     * l'ajoute à la bande. Pas de recherche de boucle : une carte toute neuve
+     * n'a pas d'autre lien. La carte est aussi ajoutée à l'index et aux
+     * candidats de la bande, qui ne la connaissent pas encore (Grist renverra
+     * la table à jour un peu plus tard).
+     */
+    async function creer(cote, titre) {
+      const creee = await surCreer(titre, cote);
+      if (!creee) return;
+      const lie = carte.id ? [carte.id] : [];
+      index.set(creee.id, {
+        id: creee.id, titre, statut: creee.statut || '', projet: 0,
+        bloque:     cote === 'bloqueePar' ? lie : [],
+        bloqueePar: cote === 'bloque'     ? lie : [],
+      });
+      candidats.push(creee.id);
+      etat[cote] = [...etat[cote], creee.id];
+      changer({ dejaEnregistre: Boolean(creee.enregistre) });
     }
 
     dessiner();
