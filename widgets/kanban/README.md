@@ -378,9 +378,25 @@ Dans la fiche, sous le titre, la bande reprend l'enchaînement :
   intermédiaire) demande une confirmation ;
 - comme le reste de la fiche, les liens ne sont écrits qu'à **Sauvegarder**.
 
+**Créer une carte liée sans quitter la fiche** : si le titre tapé après **＋**
+ne correspond exactement à aucune carte du projet, le menu propose en dernière
+ligne **＋ Créer « titre »** (Entrée la choisit quand rien d'autre ne
+correspond). La nouvelle carte est créée **aussitôt** dans Grist, avec :
+
+- le titre tapé, le projet du Kanban et l'EPIC de la carte ouverte ;
+- le premier statut, dans l'ordre des colonnes, rangé en **À faire** dans
+  ⚙ ③ Statuts (à défaut, la première colonne) ;
+- son lien avec la carte ouverte, déjà enregistré : fermer la fiche sans
+  sauvegarder ne laisse donc pas de carte orpheline. « Annuler » ne la
+  supprime pas non plus : au besoin, ouvrez-la d'un clic et supprimez-la.
+
+On reste dans la fiche, ce qui permet de construire une chaîne de cartes
+d'un trait. Exception : si seule une des deux colonnes de liens est associée
+dans ⚙, le lien n'est écrit qu'à **Sauvegarder**, comme les autres.
+
 Dans une fiche étroite (sur le côté), les deux listes passent l'une sous
-l'autre. La fenêtre de création propose la même bande : les liens sont écrits
-avec la carte.
+l'autre. La fenêtre de création propose la même bande, sans la création de
+carte liée : les liens sont écrits avec la carte.
 
 ### Badges sur les cartes et classes de statut
 

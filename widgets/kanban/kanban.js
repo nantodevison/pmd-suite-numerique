@@ -2699,14 +2699,22 @@ function populateEditPanel(record) {
 
   // Enchaînement (#183) : cartes qui bloquent celle-ci, et cartes qu'elle
   // bloque. Écrit à « Sauvegarder », comme le reste ; Grist met alors à jour
-  // les cartes liées.
+  // les cartes liées. Exception (#222) : une carte créée depuis la bande est
+  // enregistrée aussitôt, avec son lien (voir creerCarteLiee).
   if (liensAssocies()) {
     body.appendChild(bandeLiens(record.id, getField(record, 'titre') || '',
-      (liens) => {
-        if (STATE.mapping.bloqueePar) markDirty('bloqueePar', liens.bloqueePar);
-        if (STATE.mapping.bloque)     markDirty('bloque', liens.bloque);
+      (liens, { dejaEnregistre } = {}) => {
+        ['bloqueePar', 'bloque'].forEach(key => {
+          if (!STATE.mapping[key]) return;
+          // Lien déjà écrit dans Grist : rien à sauvegarder de ce côté, sauf
+          // s'il a déjà des modifications en attente (la liste notée doit
+          // alors inclure la nouvelle carte, sinon « Sauvegarder » l'effacerait).
+          if (dejaEnregistre && !(key in STATE.editPanel.fields)) return;
+          markDirty(key, liens[key]);
+        });
       },
-      (id) => openEditPanel(id)));
+      (id) => openEditPanel(id),
+      creerCarteLiee));
   }
 
   if (STATE.mapping.description) {
@@ -3297,8 +3305,9 @@ function candidatsLiens() {
 /**
  * Bande « enchaînement » d'une carte (id 0 : carte en cours de création).
  * Un côté dont la colonne n'est pas associée est masqué (valeur null).
+ * surCreer (facultatif) : voir creerCarteLiee.
  */
-function bandeLiens(id, titre, surChangement, surOuvrir) {
+function bandeLiens(id, titre, surChangement, surOuvrir, surCreer) {
   const enregistree = INDEX_LIENS.get(id) || { bloqueePar: [], bloque: [] };
   return Liens.bande({
     index:      INDEX_LIENS,
@@ -3308,7 +3317,76 @@ function bandeLiens(id, titre, surChangement, surOuvrir) {
     candidats:  candidatsLiens(),
     surChangement,
     surOuvrir,
+    surCreer,
   });
+}
+
+/**
+ * Statut d'une carte créée depuis la bande (#222) : le premier statut rangé
+ * en « À faire », dans l'ordre de ⚙ ③ Statuts (choix déclarés dans Grist,
+ * puis autres valeurs) ; à défaut, le premier statut de cette liste.
+ * Aucun statut n'est écrit en dur. (L'ordre des colonnes du tableau ne
+ * convient pas : il dépend de la vue et range les statuts non classés par
+ * ordre alphabétique.)
+ */
+function statutNouvelleCarteLiee() {
+  const statuts = statutsDeColonne(STATE.mapping.statut, STATE.records);
+  return statuts.find(s => Liens.classeDe(s, STATE.classesStatut) === 'afaire') || statuts[0] || '';
+}
+
+/**
+ * Crée une carte depuis la bande de la fiche ouverte (#222), sans quitter
+ * cette fiche. La nouvelle carte reçoit :
+ *   - le titre tapé dans le menu ;
+ *   - le projet du Kanban (choisi dans ⚙) ;
+ *   - le statut donné par statutNouvelleCarteLiee ;
+ *   - l'EPIC de la carte ouverte (une chaîne reste en général dans le même EPIC) ;
+ *   - son lien vers la carte ouverte : si celle-ci « Bloque » la nouvelle,
+ *     la nouvelle est « Bloquée par » elle, et inversement. Grist complète
+ *     alors de lui-même la carte ouverte (référence à double sens).
+ * Le lien est écrit avec la nouvelle carte, et non à « Sauvegarder » : fermer
+ * la fiche sans sauvegarder ne laisse pas de carte orpheline. Si la colonne
+ * du sens inverse n'est pas associée dans ⚙, le lien attend « Sauvegarder ».
+ *   cote : 'bloque' ou 'bloqueePar', côté de la bande où la carte est ajoutée
+ * Renvoie { id, statut, enregistre }, ou null en cas d'échec.
+ */
+async function creerCarteLiee(titre, cote) {
+  const carteOuverte = STATE.editPanel.recordId;
+  if (!carteOuverte) return null;
+  const statut = statutNouvelleCarteLiee();
+
+  const nouvelle = {};
+  if (STATE.mapping.titre)  nouvelle[STATE.mapping.titre]  = titre;
+  if (STATE.mapping.statut && statut) nouvelle[STATE.mapping.statut] = statut;
+  if (STATE.mapping.projet && STATE.projetKanban) nouvelle[STATE.mapping.projet] = STATE.projetKanban;
+
+  // EPIC de la carte ouverte (valeur affichée dans la fiche, modifiée ou non)
+  if (STATE.mapping.epic) {
+    if (REFS.epic) {
+      const ids = idsFiche('epic');
+      if (ids.length) nouvelle[STATE.mapping.epic] = REFS.epic.estListe ? ['L', ...ids] : ids[0];
+    } else {
+      const texte = valeurFiche('epic');
+      if (texte) nouvelle[STATE.mapping.epic] = texte;
+    }
+  }
+
+  // Lien, écrit dans la colonne du sens inverse de la nouvelle carte
+  const inverse = cote === 'bloque' ? 'bloqueePar' : 'bloque';
+  const enregistre = Boolean(STATE.mapping[inverse]);
+  if (enregistre) nouvelle[STATE.mapping[inverse]] = ['L', carteOuverte];
+
+  try {
+    const resultat = await grist.docApi.applyUserActions([['AddRecord', getTableName(), null, nouvelle]]);
+    const id = resultat && resultat.retValues && resultat.retValues[0];
+    if (!id) throw new Error('numéro de la nouvelle carte inconnu');
+    showToast(`✓ Carte #${id} « ${titre} » créée` + (statut ? ` dans « ${statut} »` : ''));
+    return { id, statut, enregistre };
+  } catch (err) {
+    showToast(`⚠️ Erreur : ${err.message || err}`, 4000);
+    console.error('Kanban – erreur création carte liée:', err);
+    return null;
+  }
 }
 
 /**
