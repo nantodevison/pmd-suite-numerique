@@ -8,15 +8,14 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-07 21:21_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-10 00:53_
 
 ### 🖐️ À faire
 - [ ] #204 Réutiliser les filtres kanban (Moyenne, EPIC « Filtrer la galerie »)
 - [ ] #205 Modifier des pastilles sans ouvrir la carte (Moyenne, EPIC « Rendre les cartes de galerie modifiable »)
 - [ ] #206 Modifier des pastilles dans la carte (Moyenne, EPIC « Rendre les cartes de galerie modifiable »)
-- [ ] #223 Contextualiser les listes de choix d'une référence (EPIC, personne…) pour s'y repérer quand elles grandissent (Moyenne, EPIC « Améliorer l'interface du kanban »)
-- [ ] #184 Ouvrir un objet lié (tâche, EPIC…) d'un clic depuis la fiche de la Galerie (Basse, EPIC « Améliorer l'interface du kanban »)
-- [ ] #186 Préremplir une nouvelle carte de la Galerie avec le filtre de la vue (Sélectionner par) (Basse, EPIC « Améliorer l'interface du kanban »)
+- [ ] #184 Ouvrir un objet lié (tâche, EPIC…) d'un clic depuis la fiche de la Galerie (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
+- [ ] #186 Préremplir une nouvelle carte de la Galerie avec le filtre de la vue (Sélectionner par) (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
 - [ ] #188 Extraire le rendu des cartes et des pastilles dans _commun (carte.js, carte.css), utilisé par la Galerie (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
 - [ ] #189 Ajouter à la Galerie un mode tableau : cartes groupées en colonnes selon une colonne Choix associée (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
 - [ ] #190 Permettre le glisser-déposer des cartes entre colonnes dans le mode tableau (change la valeur de la colonne de regroupement) (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
@@ -24,11 +23,12 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [ ] #192 Remplacer le Kanban par le moteur commun : d'abord sur une copie, puis pour l'Observatoire (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
 - [ ] #200 Kanban : filtrer sur n'importe quelle colonne (texte, nombre, date…) (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #207 Galerie : relations « Bloque » / « Bloquée par » entre les cartes, à reprendre après le moteur de cartes commun (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
+- [ ] #226 Afficher les attributs d'une référence dans les menus EPIC de la fiche et de la création de carte (#223, étape 2) (Basse, EPIC « Améliorer l'interface du kanban »)
 
 <!-- fin kanban -->
 
 ## ⚠️ Prochaine séance
-- [ ] Prévenir Vincent et Elisa des changements de la barre (#214) et de la création de carte liée (#222), et recueillir leur avis
+- [ ] Prévenir Vincent et Elisa des changements de la barre (#214), de la création de carte liée (#222) et des attributs dans les filtres (#223, colonnes « EPIC › … »), et recueillir leur avis
 - [ ] Essayer taches.py voir sur un vrai projet Notion (testé sur faux serveur seulement)
 
 ## En cours
@@ -53,6 +53,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [x] #202 close : test concluant avec Vincent et Elisa, 2026-11-05 ; étapes 3 (Mes onglets) et 4 (export/import) non réalisées, leur sort est à décider dans #214
 - [x] #214 : fenêtre « Gérer la vue », barre compacte (PR #36), vue « Toutes les cartes », bouton « ? », vues 👥 par projet (PR #37), 2026-11-07 ; vérifiée dans l'Observatoire le même jour
 - [x] #222 : créer une carte liée depuis « ＋ Bloque… » / « ＋ Bloquée par… » de la fiche (PR #38), 2026-11-07
+- [x] #223 étape 1 : attributs d'une référence affichables dans le panneau des filtres (🏷 Afficher), aux couleurs des choix Grist ; colonnes rapportées nommées « EPIC › Priorite » (PR #39), 2026-11-10 ; testée dans le document réel
 
 ## Prochaines étapes
 (Les étapes du projet sont désormais suivies dans Grist : voir « Kanban (Grist) » ci-dessus.)
@@ -157,3 +158,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - 2026-11-07 — carte créée depuis la bande des liens : enregistrée aussitôt avec son lien (titre tapé, projet, EPIC de la carte ouverte, premier statut « À faire » de ⚙ ③), sans quitter la fiche ; « Annuler » ne la supprime pas — pas de carte orpheline si l'on ferme sans sauvegarder
 - 2026-11-07 — « Créer » n'est pas proposé si le titre existe déjà dans le projet (majuscules et accents ignorés, cartes déjà liées comprises) — éviter les doublons
 - 2026-11-07 — création de carte liée limitée à la fiche, pas dans la fenêtre « Nouvelle carte » — une carte créée resterait orpheline si l'on abandonne la création
+- 2026-11-09 — #223 simplifiée : attributs d'une référence affichés dans le panneau du filtre, proposés à partir des colonnes rapportées de la table ($EPIC.X), sans réglage dans ⚙ ; choix retenu par le navigateur, pour chaque colonne filtrée — les pistes « masquer les terminés » réglées dans ⚙ alourdissaient trop
+- 2026-11-10 — colonne rapportée toujours nommée « Référence › Attribut » (EPIC › Priorite), à la place de « Projet (EPIC) » réservé aux doublons exacts — « Priorite » et « Priorité » se confondaient ; se range sous sa référence
+- 2026-11-10 — attributs affichés aux couleurs des choix de la colonne rapportée dans Grist, en texte gris sinon — même lecture que dans Grist
+- 2026-11-10 — attributs choisis par des pastilles dans le panneau plutôt que par un menu ▾ — le menu de fiche.js, ajouté hors de la fenêtre, aurait fermé le panneau
