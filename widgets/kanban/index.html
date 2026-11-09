@@ -217,6 +217,22 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 .filtre-valeur.vide .filtre-valeur-nom { font-style: italic; color: var(--text-muted); }
 .filtre-valeur-nom { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .filtre-valeur-nb { font-size: 11px; color: var(--text-muted); }
+/* Attributs d'une référence (#223) : pastilles à cocher, puis texte gris sur chaque ligne */
+.filtre-attributs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 12px; }
+.filtre-attributs.hidden { display: none; }
+.filtre-attributs-titre { color: var(--text-muted); margin-right: 2px; }
+.filtre-attribut {
+  padding: 1px 8px; border: 1.5px dashed var(--border); border-radius: 10px;
+  background: none; color: var(--text-muted); font-size: 11px; font-family: var(--font); cursor: pointer;
+}
+.filtre-attribut:hover { border-color: var(--accent); }
+.filtre-attribut.actif { border-style: solid; border-color: var(--accent); background: rgba(102,126,234,.12); color: var(--text); }
+.filtre-valeur-detail {
+  flex: 0 1 auto; max-width: 45%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 11px; color: var(--text-muted);
+}
+.filtre-valeur-detail:empty { display: none; }
+.filtre-valeur-pastille { padding: 0 6px; border-radius: 8px; background: var(--col-bg); color: var(--text); }
 .filtre-aucune { padding: 8px 4px; font-size: 12px; color: var(--text-muted); font-style: italic; }
 .filtre-pied { border-top: 1px solid var(--border); padding-top: 6px; }
 
@@ -763,6 +779,8 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
           </div>
         </div>
         <input id="filtre-recherche" class="filtre-recherche" type="search" placeholder="Rechercher…" autocomplete="off" />
+        <!-- Attributs de la référence à afficher (#223), dessinés par remplirAttributs() -->
+        <div id="filtre-attributs" class="filtre-attributs hidden"></div>
         <div class="filtre-outils">
           <button id="filtre-tout" class="filtre-lien">Tout cocher</button>
           <button id="filtre-aucun" class="filtre-lien">Aucun</button>
