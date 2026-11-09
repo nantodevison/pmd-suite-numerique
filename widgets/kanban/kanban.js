@@ -2,7 +2,8 @@
    KANBAN GRIST — kanban.js v4
    • Vue « Toutes les cartes », puis les vues enregistrées (#196, #214)
    • Mode d'emploi derrière le bouton « ? », ouvert à la première visite (#214)
-   • Filtres combinables sur les colonnes Choix et Référence (#195)
+   • Filtres combinables sur les colonnes Choix et Référence (#195), avec
+     les attributs de la référence affichables dans le panneau (#223)
    • Recherche passagère dans toutes les colonnes, et par #numéro (#209)
    • Tri des cartes sur n'importe quelle colonne, enregistré dans la vue (#211)
    • Sans tri choisi, cartes rangées par priorité : haute → moyenne → basse
@@ -51,6 +52,10 @@ const STATE = {
   // Filtre en cours de modification dans le panneau, et ordre de ses valeurs
   filtreEdite: null,
   ordreValeurs: [],
+  // Attributs affichés dans le panneau d'un filtre (#223) : { colId: [colId d'attribut…] }.
+  // Copie en mémoire de ce que retient le navigateur ; null = pas encore relu.
+  attributsAffiches: null,
+  attributsCle: null, // clé de mémoire sous laquelle ils ont été lus
   // Choix déclarés des colonnes Choix / Choix multiple : { colId: [choix…] }
   choix: {},
 
@@ -1502,24 +1507,29 @@ async function chargerColonnesFiltrables() {
       if (colId.startsWith('gristHelper_') || colId === 'manualSort') return; // colonnes internes
       // Choix déclarés (pour proposer des colonnes de statut encore vides, #196,
       // et pour trier dans l'ordre des choix, #211)
+      // Styles des choix dans Grist (couleur de fond et de texte), repris par
+      // les attributs affichés dans le panneau d'un filtre (#223)
+      let styles = {};
       if (type === 'Choice' || type === 'ChoiceList') {
-        try { STATE.choix[colId] = JSON.parse(colonnes.widgetOptions[i] || '{}').choices || []; }
-        catch (_) { STATE.choix[colId] = []; }
+        try {
+          const options = JSON.parse(colonnes.widgetOptions[i] || '{}');
+          STATE.choix[colId] = options.choices || [];
+          styles = options.choiceOptions || {};
+        } catch (_) { STATE.choix[colId] = []; }
       }
-      STATE.infosColonnes[colId] = { type, choix: STATE.choix[colId] };
+      STATE.infosColonnes[colId] = { type, choix: STATE.choix[colId], styles };
       const rapporte = libelleRapporte(i, numeroTable, tables, colonnes);
       toutes.push({
         colId, type,
-        label: rapporte ? rapporte.label : (colonnes.label[i] || colId),
+        // Colonne rapportée : toujours précédée de sa référence, « EPIC › Priorite »,
+        // pour ne pas la confondre avec une colonne de même nom de la table (#223)
+        label: rapporte ? `${rapporte.via} › ${rapporte.label}` : (colonnes.label[i] || colId),
         via:   rapporte ? rapporte.via : null,
+        // Colonne rapportée (#223) : référence dont elle est un attribut
+        // (ex. 'EPIC' pour $EPIC.Priorite) et libellé court de l'attribut
+        ref:      rapporte ? rapporte.colRef : null,
+        attribut: rapporte ? rapporte.label  : null,
       });
-    });
-    // Un libellé rapporté qui en double un autre (ex. « Projet ») reçoit sa
-    // colonne d'origine entre parenthèses : « Projet (EPIC) »
-    const doublons = toutes.map(c => c.label)
-      .filter((l, i, tous) => tous.indexOf(l) !== i);
-    toutes.forEach(c => {
-      if (c.via && doublons.includes(c.label)) c.label += ` (${c.via})`;
     });
     // Colonne associée dans ⚙ à un champ du Kanban qui porte un autre nom :
     // on rappelle ce champ, « qui ? (Assigné à) », pour faire le lien avec ⚙
@@ -1543,8 +1553,9 @@ async function chargerColonnesFiltrables() {
  * exactement « $EPIC.objectif_resultat_cle » : Grist la nomme
  * « EPIC_objectifs résultats clé », on préfère le libellé de la colonne d'origine.
  * @param {number} i - position de la colonne dans `colonnes` (_grist_Tables_column)
- * @returns {{label:string, via:string}|null} libellé d'origine et libellé de la
- *          colonne de référence (ex. 'EPIC') ; null si ce n'est pas une colonne rapportée.
+ * @returns {{label:string, via:string, colRef:string}|null} libellé d'origine,
+ *          libellé de la colonne de référence (ex. 'EPIC') et son identifiant
+ *          Grist ; null si ce n'est pas une colonne rapportée.
  */
 function libelleRapporte(i, numeroTable, tables, colonnes) {
   const m = /^\$(\w+)\.(\w+)$/.exec(String(colonnes.formula[i] || '').trim());
@@ -1566,6 +1577,7 @@ function libelleRapporte(i, numeroTable, tables, colonnes) {
   return {
     label: colonnes.label[idxSource] || colSource,
     via:   colonnes.label[idxRef] || colRef,
+    colRef,
   };
 }
 
@@ -1628,6 +1640,159 @@ function valeursProposees(colId, dejaCochees) {
     proposees.unshift({ valeur: MOI, nb: nom ? (comptes.get(nom) || 0) : 0 });
   }
   return proposees;
+}
+
+/* ── Attributs d'une référence dans le panneau d'un filtre (#223) ──
+   Quand on filtre sur une référence (ex. EPIC), on peut afficher, en gris à
+   côté de chaque valeur, des attributs de l'objet visé (ex. sa priorité).
+   Sont proposées les colonnes « rapportées » de la table, c'est-à-dire dont
+   la formule est exactement $EPIC.X (menu de Grist « ajouter une colonne
+   depuis la référence ») : aucun réglage, il suffit d'ajouter la colonne.
+   La valeur de l'attribut est lue dans les cartes qui portent cette valeur.
+   Le choix des attributs est retenu par le navigateur, pour chaque colonne
+   filtrée : chacun le sien, rien n'est écrit dans le document. */
+
+/** Colonnes rapportées de la référence `colId` (ex. pour 'EPIC' : EPIC_Priorite…). */
+function attributsDe(colId) {
+  return STATE.colonnesTriables.filter(c => c.ref === colId);
+}
+
+/** Attributs affichés pour la colonne `colId`, limités à ceux qui existent encore. */
+function attributsAffiches(colId) {
+  // Relu si la clé change (document ou projet du Kanban connus plus tard)
+  const cle = cleMemoire('attributs');
+  if (!STATE.attributsAffiches || STATE.attributsCle !== cle) {
+    STATE.attributsAffiches = {};
+    STATE.attributsCle = cle;
+    try {
+      const lus = cle && JSON.parse(localStorage.getItem(cle) || '{}');
+      if (lus && typeof lus === 'object') STATE.attributsAffiches = lus;
+    } catch (err) { /* mémoire indisponible : rien d'affiché par défaut */ }
+  }
+  const possibles = attributsDe(colId).map(c => c.colId);
+  return (STATE.attributsAffiches[colId] || []).filter(a => possibles.includes(a));
+}
+
+/** Affiche ou masque un attribut, et le retient dans ce navigateur. */
+function basculerAttribut(colId, attribut, affiche) {
+  // Ordre des pastilles (alphabétique), plutôt que l'ordre des clics
+  const choisis = new Set(attributsAffiches(colId));
+  if (affiche) choisis.add(attribut); else choisis.delete(attribut);
+  STATE.attributsAffiches[colId] = attributsDe(colId).map(c => c.colId).filter(a => choisis.has(a));
+  try {
+    if (!STATE.attributsCle) throw new Error('document inconnu');
+    localStorage.setItem(STATE.attributsCle, JSON.stringify(STATE.attributsAffiches));
+  } catch (err) { /* le choix vaut pour la séance seulement */ }
+  calculerDetails();
+  remplirPanneauFiltre();
+}
+
+/**
+ * Texte lisible d'une cellule d'attribut : dates en jj/mm/aaaa (Grist les
+ * envoie en secondes depuis 1970), case cochée en ✓, listes séparées par
+ * des virgules. '' si la cellule est vide.
+ */
+function texteAttribut(valeur, type) {
+  if (valeur === null || valeur === undefined || valeur === '') return '';
+  if (Array.isArray(valeur)) return valeur.map(v => texteAttribut(v, type)).filter(Boolean).join(', ');
+  if (/^Date/.test(type) && typeof valeur === 'number') {
+    return new Date(valeur * 1000).toLocaleDateString('fr-FR', { timeZone: 'UTC' });
+  }
+  if (type === 'Bool') return valeur ? '✓' : '';
+  return String(valeur).replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Style Grist d'un choix (couleur de fond et de texte réglées dans la
+ * colonne), ou null s'il n'en a pas. Seules les colonnes Choix en ont.
+ */
+function styleChoix(colId, texte) {
+  const style = STATE.infosColonnes[colId]?.styles?.[texte];
+  return style && (style.fillColor || style.textColor)
+    ? { fond: style.fillColor || '', texte: style.textColor || '' }
+    : null;
+}
+
+/**
+ * Pour chaque valeur du panneau, ses attributs affichés (ex. « Then · Cerema ») :
+ *   p.detail  : le texte entier, pour la recherche et la bulle ;
+ *   p.morceaux: [[{ texte, style }…] par attribut], pour l'affichage.
+ * Lus dans les cartes du projet qui portent cette valeur ; si elles ne sont
+ * pas d'accord (cas d'une liste de références), toutes les valeurs sont données.
+ */
+function calculerDetails() {
+  const f = STATE.filtreEdite;
+  const attributs = attributsAffiches(f.col)
+    .map(a => STATE.colonnesTriables.find(c => c.colId === a))
+    .filter(Boolean);
+  // Valeur filtrée → pour chaque attribut, l'ensemble des textes rencontrés
+  const textes = new Map();
+  if (attributs.length) {
+    recordsDuProjet().forEach(r => {
+      valeursCellule(r[f.col]).forEach(v => {
+        if (!textes.has(v)) textes.set(v, attributs.map(() => new Set()));
+        attributs.forEach((a, i) => {
+          const t = texteAttribut(r[a.colId], a.type);
+          if (t) textes.get(v)[i].add(t);
+        });
+      });
+    });
+  }
+  STATE.ordreValeurs.forEach(p => {
+    const ensembles = textes.get(p.valeur);
+    p.morceaux = ensembles
+      ? ensembles.map((e, i) => [...e].map(t => ({ texte: t, style: styleChoix(attributs[i].colId, t) })))
+                 .filter(m => m.length)
+      : [];
+    p.detail = p.morceaux.map(m => m.map(x => x.texte).join(', ')).join(' · ');
+  });
+}
+
+/**
+ * Dessine les attributs d'une valeur dans `zone` : texte gris, ou pastille
+ * aux couleurs de Grist si le choix en a ; « · » entre deux attributs.
+ */
+function dessinerMorceaux(zone, morceaux) {
+  morceaux.forEach((attribut, i) => {
+    if (i) zone.append(' · ');
+    attribut.forEach((m, j) => {
+      if (j) zone.append(', ');
+      if (!m.style) { zone.append(m.texte); return; }
+      const pastille = document.createElement('span');
+      pastille.className = 'filtre-valeur-pastille';
+      pastille.textContent = m.texte;
+      if (m.style.fond)  pastille.style.background = m.style.fond;
+      if (m.style.texte) pastille.style.color = m.style.texte;
+      zone.appendChild(pastille);
+    });
+  });
+}
+
+/** Pastilles « 🏷 Afficher : … » du panneau ; rien si la colonne n'a pas d'attribut. */
+function remplirAttributs() {
+  const zone = document.getElementById('filtre-attributs');
+  if (!zone) return;
+  const f = STATE.filtreEdite;
+  const possibles = attributsDe(f.col);
+  zone.innerHTML = '';
+  zone.classList.toggle('hidden', possibles.length === 0);
+  if (!possibles.length) return;
+  const choisis = attributsAffiches(f.col);
+  const titre = document.createElement('span');
+  titre.className = 'filtre-attributs-titre';
+  titre.textContent = '🏷 Afficher :';
+  titre.title = 'Attributs à afficher à côté de chaque valeur (retenu par ce navigateur)';
+  zone.appendChild(titre);
+  possibles.forEach(c => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    const affiche = choisis.includes(c.colId);
+    b.className = 'filtre-attribut' + (affiche ? ' actif' : '');
+    b.textContent = c.attribut;
+    b.title = affiche ? `Masquer « ${c.attribut} »` : `Afficher « ${c.attribut} »`;
+    b.addEventListener('click', () => basculerAttribut(f.col, c.colId, !affiche));
+    zone.appendChild(b);
+  });
 }
 
 /** Texte comparable pour la recherche : sans accents ni majuscules. */
@@ -1783,23 +1948,26 @@ function calculerOrdreValeurs() {
     ...proposees.filter(p => f.valeurs.includes(p.valeur)),
     ...proposees.filter(p => !f.valeurs.includes(p.valeur)),
   ];
+  calculerDetails();
 }
 
-/** Valeurs affichées compte tenu du texte de recherche. */
+/** Valeurs affichées compte tenu du texte de recherche (qui porte aussi sur les attributs affichés, #223). */
 function valeursVisibles() {
   const saisie = document.getElementById('filtre-recherche').value;
-  return STATE.ordreValeurs.filter(p => Recherche.correspond(saisie, pourRecherche(libelleValeur(p.valeur, true))));
+  return STATE.ordreValeurs.filter(p =>
+    Recherche.correspond(saisie, pourRecherche(`${libelleValeur(p.valeur, true)} ${p.detail || ''}`)));
 }
 
 /** (Re)dessine opérateur, cases à cocher et compteur du panneau. */
 function remplirPanneauFiltre() {
   const f = STATE.filtreEdite;
   document.querySelectorAll('#filtre-popover .filtre-op').forEach(b => b.classList.toggle('actif', b.dataset.op === f.op));
+  remplirAttributs();
 
   const liste = document.getElementById('filtre-valeurs');
   liste.innerHTML = '';
   const visibles = valeursVisibles();
-  visibles.forEach(({ valeur, nb }) => {
+  visibles.forEach(({ valeur, nb, detail, morceaux }) => {
     const ligne = document.createElement('label');
     ligne.className = 'filtre-valeur' + (valeur === VIDE ? ' vide' : valeur === MOI ? ' moi' : '');
     const caseACocher = document.createElement('input');
@@ -1809,10 +1977,16 @@ function remplirPanneauFiltre() {
     const nom = document.createElement('span');
     nom.className = 'filtre-valeur-nom';
     nom.textContent = libelleValeur(valeur, true);
+    nom.title = nom.textContent;
+    // Attributs affichés (#223), en gris ou aux couleurs de Grist ; le texte entier au survol
+    const attributs = document.createElement('span');
+    attributs.className = 'filtre-valeur-detail';
+    dessinerMorceaux(attributs, morceaux || []);
+    attributs.title = detail || '';
     const compte = document.createElement('span');
     compte.className = 'filtre-valeur-nb';
     compte.textContent = nb;
-    ligne.append(caseACocher, nom, compte);
+    ligne.append(caseACocher, nom, attributs, compte);
     liste.appendChild(ligne);
   });
   if (visibles.length === 0) {
@@ -2168,7 +2342,7 @@ function remplirAide() {
         <li><strong>⚙ Configurer</strong> : quatre étapes, une par onglet : ① le projet du Kanban, ② les colonnes de la table, ③ la couleur et la classe des statuts, ④ l'équipe projet (personnes proposées dans « Assigné à »). Un ⚠️ signale une étape à faire. Cliquez sur <strong>Appliquer</strong>, puis sur <strong>Enregistrer</strong>, en haut à droite de Grist.</li>
         <li><strong>＋ Vue</strong> : crée une vue à partir de l'affichage actuel, <strong>🔒 pour vous</strong> (par défaut : gardée aussitôt dans votre navigateur) ou <strong>👥 pour tous</strong> (puis cliquez sur <strong>Enregistrer</strong> de Grist pour la garder). Le menu <strong>⋯</strong> de l'onglet actif permet de la renommer, de la supprimer, ou de copier une vue partagée en vue perso pour l'adapter sans gêner les autres.</li>
         <li><strong>👤 Qui suis-je ?</strong> (en haut à droite) : indiquez votre nom, une fois (rien à enregistrer). Le filtre sur la colonne « Assigné à » propose alors <strong>👤 Moi</strong>, qui montre vos propres cartes ; dans une vue partagée, il montre à chacun les siennes.</li>
-        <li><strong>🔽 Filtres</strong>, <strong>⇅ Trier</strong> et <strong>▦ Colonnes</strong> : ces boutons résument la vue et ouvrent <strong>Gérer la vue</strong>, qui règle son nom, ses filtres (« EPIC est … », « Assigné n'est pas … »), son tri et ses colonnes. <strong>💾 Enregistrer</strong> garde tout, <strong>Annuler</strong> ne change rien. Sur <strong>Toutes les cartes</strong>, 💾 crée une nouvelle vue.</li>
+        <li><strong>🔽 Filtres</strong>, <strong>⇅ Trier</strong> et <strong>▦ Colonnes</strong> : ces boutons résument la vue et ouvrent <strong>Gérer la vue</strong>, qui règle son nom, ses filtres (« EPIC est … », « Assigné n'est pas … »), son tri et ses colonnes. <strong>💾 Enregistrer</strong> garde tout, <strong>Annuler</strong> ne change rien. Sur <strong>Toutes les cartes</strong>, 💾 crée une nouvelle vue. Dans le filtre d'une référence, <strong>🏷 Afficher</strong> montre un attribut de chaque valeur (la priorité d'un EPIC…), si la table a une colonne ajoutée « depuis la référence ».</li>
         <li><strong>Tri</strong> : range les cartes de chaque colonne selon n'importe quelle colonne (échéance, priorité, titre, # numéro…), puis selon une deuxième à égalité. Les cartes sans valeur restent en bas.</li>
         <li><strong>🔍 Rechercher</strong> (en haut) : garde les cartes qui contiennent tous les mots tapés, dans n'importe quelle colonne, sans tenir compte des accents ni des majuscules ; <strong>#203</strong> retrouve une carte par son numéro. La recherche s'ajoute aux filtres et ne s'enregistre nulle part : Échap l'efface.</li>
         <li><strong>Cartes</strong> : glissez une carte dans une autre colonne pour changer son statut ; cliquez dessus pour ouvrir sa fiche. Dans la fiche, la bande <strong>⛔ Bloquée par / ➡️ Bloque</strong> relie la carte à celles qu'elle attend ou qu'elle retient.</li>
