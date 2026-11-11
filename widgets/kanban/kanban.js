@@ -1673,12 +1673,10 @@ function attributsAffiches(colId) {
   return (STATE.attributsAffiches[colId] || []).filter(a => possibles.includes(a));
 }
 
-/** Affiche ou masque un attribut, et le retient dans ce navigateur. */
-function basculerAttribut(colId, attribut, affiche) {
-  // Ordre des pastilles (alphabétique), plutôt que l'ordre des clics
-  const choisis = new Set(attributsAffiches(colId));
-  if (affiche) choisis.add(attribut); else choisis.delete(attribut);
-  STATE.attributsAffiches[colId] = attributsDe(colId).map(c => c.colId).filter(a => choisis.has(a));
+/** Retient dans ce navigateur les attributs affichés pour la colonne `colId`. */
+function definirAttributs(colId, choisis) {
+  // Ordre de la liste (alphabétique), plutôt que l'ordre des clics
+  STATE.attributsAffiches[colId] = attributsDe(colId).map(c => c.colId).filter(a => choisis.includes(a));
   try {
     if (!STATE.attributsCle) throw new Error('document inconnu');
     localStorage.setItem(STATE.attributsCle, JSON.stringify(STATE.attributsAffiches));
@@ -1768,30 +1766,40 @@ function dessinerMorceaux(zone, morceaux) {
   });
 }
 
-/** Pastilles « 🏷 Afficher : … » du panneau ; rien si la colonne n'a pas d'attribut. */
-function remplirAttributs() {
-  const zone = document.getElementById('filtre-attributs');
-  if (!zone) return;
+/**
+ * Bouton « Afficher (n) ▾ » du panneau (#226) : caché si la colonne n'a pas
+ * d'attribut ; (n) = nombre d'attributs affichés, pour que le réglage se voie.
+ */
+function majBoutonAfficher() {
+  const bouton = document.getElementById('filtre-afficher');
+  if (!bouton) return;
   const f = STATE.filtreEdite;
   const possibles = attributsDe(f.col);
-  zone.innerHTML = '';
-  zone.classList.toggle('hidden', possibles.length === 0);
-  if (!possibles.length) return;
+  bouton.classList.toggle('hidden', possibles.length === 0);
   const choisis = attributsAffiches(f.col);
-  const titre = document.createElement('span');
-  titre.className = 'filtre-attributs-titre';
-  titre.textContent = '🏷 Afficher :';
-  titre.title = 'Attributs à afficher à côté de chaque valeur (retenu par ce navigateur)';
-  zone.appendChild(titre);
-  possibles.forEach(c => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    const affiche = choisis.includes(c.colId);
-    b.className = 'filtre-attribut' + (affiche ? ' actif' : '');
-    b.textContent = c.attribut;
-    b.title = affiche ? `Masquer « ${c.attribut} »` : `Afficher « ${c.attribut} »`;
-    b.addEventListener('click', () => basculerAttribut(f.col, c.colId, !affiche));
-    zone.appendChild(b);
+  bouton.classList.toggle('actif', choisis.length > 0);
+  bouton.textContent = choisis.length ? `Afficher (${choisis.length}) ▾` : 'Afficher ▾';
+  bouton.title = choisis.length
+    ? 'Attributs affichés à côté de chaque valeur : '
+      + possibles.filter(c => choisis.includes(c.colId)).map(c => c.attribut).join(', ')
+      + ' (retenu par ce navigateur)'
+    : 'Afficher des attributs à côté de chaque valeur (retenu par ce navigateur)';
+}
+
+/**
+ * Liste à cocher des attributs, ouverte sous le bouton « Afficher ». Elle
+ * reste ouverte tant qu'on coche (menu « multiple » de fiche.js) et se ferme
+ * par un clic ailleurs ou par Échap.
+ */
+function ouvrirMenuAfficher() {
+  const f = STATE.filtreEdite;
+  if (!f) return;
+  const col = f.col;
+  Fiche.menuChoix(document.getElementById('filtre-afficher'), {
+    options: attributsDe(col).map(c => ({ valeur: c.colId, libelle: c.attribut })),
+    selection: attributsAffiches(col),
+    multiple: true,
+    surChoix: (choisis) => definirAttributs(col, choisis),
   });
 }
 
@@ -1931,6 +1939,7 @@ function fermerFiltre() {
   const pop = document.getElementById('filtre-popover');
   if (pop) pop.classList.add('hidden');
   if (!STATE.filtreEdite) return;
+  Fiche.fermerMenu(); // la liste « Afficher » (#226), si elle est ouverte
   STATE.filtreEdite = null;
   STATE.filters = STATE.filters.filter(f => f.valeurs.length > 0);
   renderFilterChips();
@@ -1962,7 +1971,7 @@ function valeursVisibles() {
 function remplirPanneauFiltre() {
   const f = STATE.filtreEdite;
   document.querySelectorAll('#filtre-popover .filtre-op').forEach(b => b.classList.toggle('actif', b.dataset.op === f.op));
-  remplirAttributs();
+  majBoutonAfficher();
 
   const liste = document.getElementById('filtre-valeurs');
   liste.innerHTML = '';
@@ -2342,7 +2351,7 @@ function remplirAide() {
         <li><strong>⚙ Configurer</strong> : quatre étapes, une par onglet : ① le projet du Kanban, ② les colonnes de la table, ③ la couleur et la classe des statuts, ④ l'équipe projet (personnes proposées dans « Assigné à »). Un ⚠️ signale une étape à faire. Cliquez sur <strong>Appliquer</strong>, puis sur <strong>Enregistrer</strong>, en haut à droite de Grist.</li>
         <li><strong>＋ Vue</strong> : crée une vue à partir de l'affichage actuel, <strong>🔒 pour vous</strong> (par défaut : gardée aussitôt dans votre navigateur) ou <strong>👥 pour tous</strong> (puis cliquez sur <strong>Enregistrer</strong> de Grist pour la garder). Le menu <strong>⋯</strong> de l'onglet actif permet de la renommer, de la supprimer, ou de copier une vue partagée en vue perso pour l'adapter sans gêner les autres.</li>
         <li><strong>👤 Qui suis-je ?</strong> (en haut à droite) : indiquez votre nom, une fois (rien à enregistrer). Le filtre sur la colonne « Assigné à » propose alors <strong>👤 Moi</strong>, qui montre vos propres cartes ; dans une vue partagée, il montre à chacun les siennes.</li>
-        <li><strong>🔽 Filtres</strong>, <strong>⇅ Trier</strong> et <strong>▦ Colonnes</strong> : ces boutons résument la vue et ouvrent <strong>Gérer la vue</strong>, qui règle son nom, ses filtres (« EPIC est … », « Assigné n'est pas … »), son tri et ses colonnes. <strong>💾 Enregistrer</strong> garde tout, <strong>Annuler</strong> ne change rien. Sur <strong>Toutes les cartes</strong>, 💾 crée une nouvelle vue. Dans le filtre d'une référence, <strong>🏷 Afficher</strong> montre un attribut de chaque valeur (la priorité d'un EPIC…), si la table a une colonne ajoutée « depuis la référence ».</li>
+        <li><strong>🔽 Filtres</strong>, <strong>⇅ Trier</strong> et <strong>▦ Colonnes</strong> : ces boutons résument la vue et ouvrent <strong>Gérer la vue</strong>, qui règle son nom, ses filtres (« EPIC est … », « Assigné n'est pas … »), son tri et ses colonnes. <strong>💾 Enregistrer</strong> garde tout, <strong>Annuler</strong> ne change rien. Sur <strong>Toutes les cartes</strong>, 💾 crée une nouvelle vue. Dans le filtre d'une référence, le bouton <strong>Afficher ▾</strong> montre des attributs de chaque valeur (la priorité d'un EPIC…), si la table a une colonne ajoutée « depuis la référence ».</li>
         <li><strong>Tri</strong> : range les cartes de chaque colonne selon n'importe quelle colonne (échéance, priorité, titre, # numéro…), puis selon une deuxième à égalité. Les cartes sans valeur restent en bas.</li>
         <li><strong>🔍 Rechercher</strong> (en haut) : garde les cartes qui contiennent tous les mots tapés, dans n'importe quelle colonne, sans tenir compte des accents ni des majuscules ; <strong>#203</strong> retrouve une carte par son numéro. La recherche s'ajoute aux filtres et ne s'enregistre nulle part : Échap l'efface.</li>
         <li><strong>Cartes</strong> : glissez une carte dans une autre colonne pour changer son statut ; cliquez dessus pour ouvrir sa fiche. Dans la fiche, la bande <strong>⛔ Bloquée par / ➡️ Bloque</strong> relie la carte à celles qu'elle attend ou qu'elle retient.</li>
@@ -3755,6 +3764,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('filtre-tout')     ?.addEventListener('click', () => cocherVisibles(true));
   document.getElementById('filtre-aucun')    ?.addEventListener('click', () => cocherVisibles(false));
   document.getElementById('filtre-supprimer')?.addEventListener('click', () => supprimerFiltre(STATE.filtreEdite));
+  document.getElementById('filtre-afficher') ?.addEventListener('click', ouvrirMenuAfficher);
   // Vues enregistrées (#196)
   document.getElementById('vue-ajouter')     ?.addEventListener('click', (e) => ouvrirNomVue('creer', e.currentTarget));
   document.getElementById('vue-nom-valider') ?.addEventListener('click', validerNomVue);

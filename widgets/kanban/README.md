@@ -142,7 +142,7 @@ de la fiche ; deux statuts peuvent partager la même.
 | Les **vues 👥 partagées** : création, suppression, glisser-déposer des colonnes | le document, pour tous | aussitôt dans le widget, puis **Enregistrer** de Grist |
 | Les réglages d'une vue partagée dans **Gérer la vue** : nom, filtres, tri, colonnes | le document, pour tous | **💾 Enregistrer**, puis **Enregistrer** de Grist |
 | Les **vues 🔒 personnelles** et leurs réglages | votre navigateur, pour vous seul | aussitôt (dans Gérer la vue : **💾 Enregistrer**) |
-| L'**onglet actif**, **votre nom** (👤), la disposition de la fiche (côté / centre) et les **attributs affichés** dans les filtres (🏷) | votre navigateur, pour vous seul | automatiquement |
+| L'**onglet actif**, **votre nom** (👤), la disposition de la fiche (côté / centre) et les **attributs affichés** dans les filtres (Afficher ▾) | votre navigateur, pour vous seul | automatiquement |
 | La **recherche** 🔍 | nulle part | jamais : perdue au rechargement de la page |
 
 **Le bouton « Enregistrer » de Grist**, en haut à droite, apparaît dès qu'un
@@ -231,7 +231,7 @@ panneau propose une recherche (même règle que 🔍, ci-dessous) et « Tout coc
 « Aucun ». Une nouvelle carte reprend l'EPIC d'un filtre « EPIC est X » à une
 seule valeur.
 
-### Attributs d'une référence (🏷 Afficher)
+### Attributs d'une référence (Afficher ▾)
 
 Quand on filtre sur une référence (EPIC, Assigné à…), le panneau peut afficher,
 en gris à côté de chaque valeur, des **attributs** de l'objet visé : la priorité
@@ -242,12 +242,14 @@ retrouve les EPICs terminés).
 - **Proposer un attribut** : dans la table du Kanban, ajoutez la colonne avec le
   menu de Grist « ajouter une colonne depuis la référence » (sa formule est
   alors `$EPIC.Priorite`). Le panneau du filtre EPIC propose aussitôt
-  **🏷 Afficher : Priorite**, sans réglage dans ⚙. Seules les formules de cette
-  forme exacte sont reconnues, et seulement pour une colonne Référence (pas une
-  Liste de références).
-- **Afficher ou masquer** : cliquez sur la pastille de l'attribut. Plusieurs
-  attributs s'affichent séparés par « · ». Une valeur de colonne Choix garde
-  les couleurs de fond et de texte réglées dans Grist.
+  « Priorite » dans le bouton **Afficher ▾**, sans réglage dans ⚙. Seules les
+  formules de cette forme exacte sont reconnues, et seulement pour une colonne
+  Référence (pas une Liste de références).
+- **Afficher ou masquer** : le bouton **Afficher ▾**, à droite sous la
+  recherche, ouvre la liste des attributs à cocher ; il indique entre
+  parenthèses combien sont affichés. Plusieurs attributs s'affichent séparés
+  par « · ». Une valeur de colonne Choix garde les couleurs de fond et de texte
+  réglées dans Grist.
 - Partout ailleurs (choix de la colonne d'un filtre, tri), une colonne
   rapportée est nommée avec sa référence, **EPIC › Priorite**, pour ne pas la
   confondre avec une colonne « Priorité » de la table.

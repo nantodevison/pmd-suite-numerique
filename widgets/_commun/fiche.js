@@ -427,7 +427,10 @@
     fermerMenu();
     const menu = document.createElement('div');
     menu.className = 'fiche-menu';
-    document.body.appendChild(menu);
+    // Dans une fenêtre <dialog> (ex. « Gérer la vue » du Kanban), le menu doit
+    // être ajouté à la fenêtre elle-même : elle s'affiche par-dessus toute la
+    // page, et un menu ajouté à la page resterait caché derrière elle (#226).
+    (ancre.closest('dialog') || document.body).appendChild(menu);
     menuOuvert = menu;
     // « true » : ces écouteurs passent avant ceux du widget (Échap → fiche).
     document.addEventListener('mousedown', clicHorsMenu, true);
