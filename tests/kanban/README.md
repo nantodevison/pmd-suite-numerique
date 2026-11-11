@@ -21,6 +21,17 @@ py tests/kanban/jouer.py --largeurs 1200 -v   # une largeur, toutes les lignes
 Le bilan s'affiche par scénario et par largeur (`BILAN 42 OK, 0 KO`), suivi des
 lignes en échec. Le code de sortie vaut 0 si tout est OK.
 
+## Ce qui est vérifié (143 vérifications par largeur)
+
+| Scénario | Fonctions |
+|---|---|
+| `vues` | Vues enregistrées (#196, #214) : créer une vue partagée ou perso, changer de vue, Annuler, colonnes de la vue, supprimer ; onglet actif et vues perso retenus par le navigateur (#202) |
+| `liens` | Bloque / Bloquée par (#183, #222) : badges ⛔ / ➡️, bande de la fiche, confirmation avant de terminer une carte bloquée, carte liée créée depuis la fiche, suppression d'une carte liée |
+| `tri-recherche` | Tri sur toute colonne et enregistré dans la vue (#211) ; recherche 🔍 (#209) : accents, tous les mots, #numéro, références, colonnes masquées |
+| `fiche` | Numéro #id (#203), couleur de statut choisie dans ⚙ (#212), cases à cocher de l'aperçu (#208), sauvegarde et fermeture de la fiche |
+| `attributs-filtre` | Panneau des filtres compacté et bouton « Afficher ▾ » (#226, étape 1) |
+| `attributs-menus` | Attributs dans les menus de la fiche et de « Nouvelle carte », colonnes masquées reçues (#226, étape 2) |
+
 Pour obtenir la page à coller dans le Custom Widget Builder :
 
 ```powershell
@@ -32,7 +43,8 @@ py tests/kanban/assembler.py    # → tests/kanban/genere/kanban-builder.html
 | Fichier | Rôle |
 |---|---|
 | `assembler.py` | Recopie dans `index.html` les styles et scripts locaux (`_commun`, `kanban.js`) : une seule page, comme pour le builder. |
-| `faux-grist.js` | Imite l'API Grist (`onRecords`, `fetchTable`…) avec des tables inventées ; note ce que le widget écrit. |
+| `faux-grist.js` | Imite l'API Grist (`onRecords`, `fetchTable`…) avec des tables inventées ; note ce que le widget écrit (`FAUX_GRIST.actions`, `FAUX_GRIST.options`). |
+| `outils-scenario.js` | Outils communs des scénarios : `Banc.ok`, `Banc.demarrer`, `Banc.cartes`… ; remplace `window.confirm` (aucune fenêtre, réponse choisie par le scénario). |
 | `scenarios/*.js` | Un scénario par fonction : il manipule le widget comme un utilisateur et écrit un bilan OK / KO. |
 | `jouer.py` | Construit une page par scénario, l'ouvre dans le navigateur sans affichage (profil neuf à chaque fois) et lit le bilan. |
 
@@ -40,10 +52,23 @@ Les pages générées vont dans `genere/`, ignoré par Git.
 
 ## Ajouter un scénario
 
-Copier un scénario existant dans `scenarios/` et garder sa structure :
-`FAUX_GRIST.demarrer()`, puis des appels `ok('ce qui est vérifié', condition)`,
-et le bilan final dans `<pre id="resultats">`. Les fonctions du widget
-(`ouvrirFenetreVue`, `openEditPanel`…) sont appelables directement.
+Créer `scenarios/<fonction>.js` sur le modèle de `fiche.js` :
+
+```js
+Banc.lancer(async () => {
+  await Banc.demarrer();                    // options possibles : { couleursStatut: … }
+  Banc.ok('quatre cartes affichées', Banc.cartes().length === 4);
+  Banc.repondre(false);                     // le prochain confirm() répondra « Annuler »
+});
+```
+
+Les fonctions du widget (`ouvrirFenetreVue`, `openEditPanel`, `saveEditPanel`…)
+sont appelables directement. Si une donnée manque, l'ajouter au faux Grist
+(données inventées), puis rejouer **tous** les scénarios.
+
+Pour s'assurer qu'une vérification sert à quelque chose, la faire échouer
+une fois : casser la fonction dans une copie du widget, hors du dépôt, et
+constater le KO.
 
 ## Limites connues
 

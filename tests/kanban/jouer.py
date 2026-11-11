@@ -2,7 +2,8 @@
 
 Pour chaque scénario de scenarios/ et chaque largeur de fenêtre :
   1. assemble le widget (assembler.py) ;
-  2. remplace l'API Grist par faux-grist.js et ajoute le scénario en fin de page ;
+  2. remplace l'API Grist par faux-grist.js et ajoute en fin de page les
+     outils communs (outils-scenario.js) puis le scénario ;
   3. ouvre la page dans le navigateur sans affichage, avec un profil neuf
      (mémoire du navigateur vide), et lit le bilan écrit par le scénario.
 
@@ -59,7 +60,8 @@ def construire_page(widget, scenario):
     if API_GRIST not in widget:
         raise RuntimeError("Le widget ne charge plus l'API Grist attendue : mettre à jour API_GRIST.")
     faux = (ICI / 'faux-grist.js').read_text(encoding='utf-8')
-    code = scenario.read_text(encoding='utf-8')
+    # Outils communs (Banc.ok, Banc.demarrer…), puis le scénario lui-même
+    code = (ICI / 'outils-scenario.js').read_text(encoding='utf-8') + '\n' + scenario.read_text(encoding='utf-8')
     page = widget.replace(API_GRIST, '<script>\n' + faux + '\n</script>')
     return page.replace('</body>', '<script>\nwindow.addEventListener("load", () => {\n'
                         + code + '\n});\n</script>\n</body>')
