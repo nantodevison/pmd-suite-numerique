@@ -8,27 +8,28 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-10 00:53_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-12 00:38_
 
 ### 🖐️ À faire
+- [ ] #188 Extraire le rendu des cartes et des pastilles dans _commun (carte.js, carte.css), utilisé par la Galerie (Haute, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
+- [ ] #189 Ajouter à la Galerie un mode tableau : cartes groupées en colonnes selon une colonne Choix associée (Haute, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
+- [ ] #190 Permettre le glisser-déposer des cartes entre colonnes dans le mode tableau (change la valeur de la colonne de regroupement) (Haute, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
+- [ ] #191 Reprendre dans le moteur commun les réglages du Kanban : ordre des colonnes, filtres EPIC et personne, projet du widget (Haute, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
+- [ ] #192 Remplacer le Kanban par le moteur commun : d'abord sur une copie, puis pour l'Observatoire (Haute, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
 - [ ] #204 Réutiliser les filtres kanban (Moyenne, EPIC « Filtrer la galerie »)
 - [ ] #205 Modifier des pastilles sans ouvrir la carte (Moyenne, EPIC « Rendre les cartes de galerie modifiable »)
 - [ ] #206 Modifier des pastilles dans la carte (Moyenne, EPIC « Rendre les cartes de galerie modifiable »)
 - [ ] #184 Ouvrir un objet lié (tâche, EPIC…) d'un clic depuis la fiche de la Galerie (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
 - [ ] #186 Préremplir une nouvelle carte de la Galerie avec le filtre de la vue (Sélectionner par) (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
-- [ ] #188 Extraire le rendu des cartes et des pastilles dans _commun (carte.js, carte.css), utilisé par la Galerie (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
-- [ ] #189 Ajouter à la Galerie un mode tableau : cartes groupées en colonnes selon une colonne Choix associée (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
-- [ ] #190 Permettre le glisser-déposer des cartes entre colonnes dans le mode tableau (change la valeur de la colonne de regroupement) (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
-- [ ] #191 Reprendre dans le moteur commun les réglages du Kanban : ordre des colonnes, filtres EPIC et personne, projet du widget (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
-- [ ] #192 Remplacer le Kanban par le moteur commun : d'abord sur une copie, puis pour l'Observatoire (Basse, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
 - [ ] #200 Kanban : filtrer sur n'importe quelle colonne (texte, nombre, date…) (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #207 Galerie : relations « Bloque » / « Bloquée par » entre les cartes, à reprendre après le moteur de cartes commun (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
-- [ ] #226 Afficher les attributs d'une référence dans les menus EPIC de la fiche et de la création de carte (#223, étape 2) (Basse, EPIC « Améliorer l'interface du kanban »)
+- [ ] #227 Rechercher dans les menus de choix d'une référence quand la liste est longue (Basse, EPIC « Améliorer l'interface du kanban »)
+- [ ] #228 Proposer les colonnes natives de la table visée comme attributs d'une référence (façon Notion) (Basse, EPIC « Améliorer l'interface du kanban »)
 
 <!-- fin kanban -->
 
 ## ⚠️ Prochaine séance
-- [ ] Prévenir Vincent et Elisa des changements de la barre (#214), de la création de carte liée (#222) et des attributs dans les filtres (#223, colonnes « EPIC › … »), et recueillir leur avis
+- [ ] Prévenir Vincent et Elisa des changements de la barre (#214), de la création de carte liée (#222), des attributs dans les filtres (#223, colonnes « EPIC › … ») et de #226 (panneau des filtres compacté, « Afficher ▾ » dans les menus, EPIC / Assigné en pastilles dans « Nouvelle carte »), et recueillir leur avis
 - [ ] Essayer taches.py voir sur un vrai projet Notion (testé sur faux serveur seulement)
 
 ## En cours
@@ -54,6 +55,8 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [x] #214 : fenêtre « Gérer la vue », barre compacte (PR #36), vue « Toutes les cartes », bouton « ? », vues 👥 par projet (PR #37), 2026-11-07 ; vérifiée dans l'Observatoire le même jour
 - [x] #222 : créer une carte liée depuis « ＋ Bloque… » / « ＋ Bloquée par… » de la fiche (PR #38), 2026-11-07
 - [x] #223 étape 1 : attributs d'une référence affichables dans le panneau des filtres (🏷 Afficher), aux couleurs des choix Grist ; colonnes rapportées nommées « EPIC › Priorite » (PR #39), 2026-11-10 ; testée dans le document réel
+- [x] #226 : panneau des filtres compacté, bouton « Afficher ▾ », attributs dans les menus de la fiche et de « Nouvelle carte », toutes les colonnes reçues (includeColumns normal) (PR #40), 2026-11-11 ; testée dans le builder
+- [x] #229, #230 : banc d'essai du Kanban dans tests/kanban (PR #41, #42) : 143 vérifications par largeur, casses volontaires détectées, 2026-11-12
 
 ## Prochaines étapes
 (Les étapes du projet sont désormais suivies dans Grist : voir « Kanban (Grist) » ci-dessus.)
@@ -72,7 +75,6 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - Dépôt .claude : ajouter à taches.py des options --bloque / --bloquee-par (colonnes Bloque / Bloquee_par de Grist), pour lier les tâches sans passer par Grist à la main — demandé le 2026-10-26
 - Sécurité : vider les sorties des notebooks avant chaque commit (contrôle automatique type nbstripout ?) — à formaliser à l'étape 6 de #201
 - Sécurité : CSP dans index.html, reportée (#201) — protège contre un texte piégé, pas contre un code modifié sur GitHub
-- (suggestion de Claude) Garder dans le dépôt un banc d'essai du Kanban : Chrome sans affichage et faux Grist, 114 vérifications pour #214 ; il n'existe aujourd'hui que dans un dossier temporaire
 
 ## Décisions récentes
 <!-- Une ligne par décision : date — décision — raison en quelques mots -->
@@ -162,3 +164,12 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - 2026-11-10 — colonne rapportée toujours nommée « Référence › Attribut » (EPIC › Priorite), à la place de « Projet (EPIC) » réservé aux doublons exacts — « Priorite » et « Priorité » se confondaient ; se range sous sa référence
 - 2026-11-10 — attributs affichés aux couleurs des choix de la colonne rapportée dans Grist, en texte gris sinon — même lecture que dans Grist
 - 2026-11-10 — attributs choisis par des pastilles dans le panneau plutôt que par un menu ▾ — le menu de fiche.js, ajouté hors de la fenêtre, aurait fermé le panneau
+- 2026-11-11 — #226 limitée à l'interface ; colonnes natives de la table visée (façon Notion) reportées dans #228, recherche dans les menus dans #227 — lire les tables visées pose d'autres problèmes : valeurs non rafraîchies (onRecords ne suit que la table du widget), références reçues sous leur nom
+- 2026-11-11 — panneau des filtres en deux lignes, bouton « Afficher (n) ▾ » à la place de la rangée de pastilles — gagner de la place
+- 2026-11-11 — un menu de fiche.js ouvert dans une fenêtre <dialog> y est ajouté — sinon il restait caché derrière (cause du renoncement du 2026-11-10)
+- 2026-11-11 — « Nouvelle carte » : EPIC et Assigné à en pastilles qui ouvrent le menu de la fiche — une liste déroulante ne montre que du texte
+- 2026-11-11 — un seul réglage d'attributs par colonne, commun au filtre et aux menus ; générique pour Référence et Liste de références — cohérence
+- 2026-11-11 — onRecords avec includeColumns 'normal' ; la recherche parcourt aussi les colonnes masquées (accepté) — une colonne masquée dans le widget était proposée sans valeurs (attributs, tri, filtres)
+- 2026-11-12 — EPIC 34 « Vérifier les widgets avant leur mise en production » ; banc d'essai dans tests/<widget>/ (Python et Chrome ou Edge, sans npm), à jouer avant toute PR d'un widget en service — le banc de #214 avait été perdu dans un dossier temporaire
+- 2026-11-12 — section « Sécurité : priorité absolue » dans CLAUDE.md ; données de test inventées — dépôt public publié par GitHub Pages (noms réels retirés du banc avant publication)
+- 2026-11-12 — nouvelle priorité : moteur de cartes commun Galerie / Kanban (#188 à #192 en priorité haute) — décision de Martin
