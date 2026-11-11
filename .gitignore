@@ -427,3 +427,6 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Banc d'essai des widgets : pages assemblées et générées (tests/<widget>/genere/)
+tests/**/genere/
