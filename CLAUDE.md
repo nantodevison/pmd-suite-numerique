@@ -8,6 +8,15 @@ Boîte à outils du groupe PMD (Politique de Mobilité Durable, Cerema Sud-Ouest
 
 Le code, les commentaires et les messages sont en français. Le dépôt est **public** : jamais de données (contacts, retours, écoutes client…) ni de secrets ; ceux-ci vont dans `.env` (non versionné).
 
+## Sécurité : priorité absolue
+
+La sécurité passe **avant tout le reste** (fonctionnalité, délai, confort), quoi qu'il arrive. Au moindre doute, s'arrêter et demander plutôt que publier.
+
+- **Tout le dépôt est public et publié par GitHub Pages** : aucune donnée réelle (noms de personnes, contacts, noms d'EPIC ou de projets internes, identifiants de documents) ni secret, **y compris** dans les tests, les exemples, les captures et les messages de commit ou de PR. Les données de test sont inventées.
+- **Avant chaque commit** : relire le diff à la recherche de données réelles ; quand des fichiers sont ajoutés, lancer gitleaks (`%LOCALAPPDATA%\Programs\gitleaks\gitleaks.exe dir <dossier>`).
+- **Widgets** : ils s'exécutent avec l'accès complet au document. Voir les règles de la section « Widgets Grist » (Markdown en liste blanche, pas d'`innerHTML` sans échappement, dépendances uniquement par CDN, avec un numéro de version précis).
+- Les outils et le banc d'essai n'écrivent jamais dans le vrai Grist sans accord.
+
 ## Organisation
 
 | Dossier | Contenu |
