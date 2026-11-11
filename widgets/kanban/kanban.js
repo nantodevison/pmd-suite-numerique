@@ -73,7 +73,7 @@ const STATE = {
   colDrag: { statut: null },
 
   editPanel: { recordId: null, dirty: false, fields: {} },
-  addModal:  { statut: null },
+  addModal:  { statut: null, refs: {} },
 
   // ✅ Projet du Kanban : numéro de la ligne du projet choisi dans ⚙
   // (un Kanban = un projet). null tant qu'aucun projet n'est choisi.
@@ -208,6 +208,11 @@ const _docNamePret = (async () => {
   }
 })();
 
+// Toutes les colonnes de la table (#226), y compris celles masquées dans la
+// section du widget : par défaut (« shown »), Grist n'envoie que les colonnes
+// visibles. Or les listes du Kanban (tri, filtres, attributs « Afficher »)
+// sont construites à partir de toutes les colonnes de la table : une colonne
+// masquée y était proposée sans jamais avoir de valeur.
 grist.onRecords((records, _mappings, tableId) => {
   if (tableId) _tableName = tableId;
   STATE.records = records;
@@ -234,7 +239,7 @@ grist.onRecords((records, _mappings, tableId) => {
     const rec = STATE.records.find(r => r.id === STATE.editPanel.recordId);
     if (rec) populateEditPanel(rec);
   });
-});
+}, { includeColumns: 'normal' });
 
 grist.onRecord((record) => {
   STATE.selectedId = record ? record.id : null;
@@ -1566,7 +1571,8 @@ function libelleRapporte(i, numeroTable, tables, colonnes) {
   const idxRef = colonnes.id.findIndex((_, j) =>
     colonnes.parentId[j] === numeroTable && colonnes.colId[j] === colRef);
   if (idxRef === -1) return null;
-  const cible = /^Ref:(.+)$/.exec(String(colonnes.type[idxRef]));
+  // Référence ou Liste de références (#226) : 'Ref:EPICs', 'RefList:Contacts'
+  const cible = /^(?:Ref|RefList):(.+)$/.exec(String(colonnes.type[idxRef]));
   const idxTableCible = cible ? tables.tableId.indexOf(cible[1]) : -1;
   if (idxTableCible === -1) return null;
 
@@ -1642,9 +1648,11 @@ function valeursProposees(colId, dejaCochees) {
   return proposees;
 }
 
-/* ── Attributs d'une référence dans le panneau d'un filtre (#223) ──
-   Quand on filtre sur une référence (ex. EPIC), on peut afficher, en gris à
-   côté de chaque valeur, des attributs de l'objet visé (ex. sa priorité).
+/* ── Attributs d'une référence (#223, #226) ──
+   Dans le panneau d'un filtre sur une référence (ex. EPIC), et dans les
+   menus de choix d'une référence (fiche, « Nouvelle carte »), on peut
+   afficher, en gris à côté de chaque valeur, des attributs de l'objet visé
+   (ex. sa priorité). Valable pour une Référence ou une Liste de références.
    Sont proposées les colonnes « rapportées » de la table, c'est-à-dire dont
    la formule est exactement $EPIC.X (menu de Grist « ajouter une colonne
    depuis la référence ») : aucun réglage, il suffit d'ajouter la colonne.
@@ -1681,8 +1689,11 @@ function definirAttributs(colId, choisis) {
     if (!STATE.attributsCle) throw new Error('document inconnu');
     localStorage.setItem(STATE.attributsCle, JSON.stringify(STATE.attributsAffiches));
   } catch (err) { /* le choix vaut pour la séance seulement */ }
-  calculerDetails();
-  remplirPanneauFiltre();
+  // Le panneau du filtre, s'il montre cette colonne, suit le nouveau choix
+  if (STATE.filtreEdite && STATE.filtreEdite.col === colId) {
+    calculerDetails();
+    remplirPanneauFiltre();
+  }
 }
 
 /**
@@ -1712,58 +1723,91 @@ function styleChoix(colId, texte) {
 }
 
 /**
- * Pour chaque valeur du panneau, ses attributs affichés (ex. « Then · Cerema ») :
- *   p.detail  : le texte entier, pour la recherche et la bulle ;
- *   p.morceaux: [[{ texte, style }…] par attribut], pour l'affichage.
- * Lus dans les cartes du projet qui portent cette valeur ; si elles ne sont
- * pas d'accord (cas d'une liste de références), toutes les valeurs sont données.
+ * Attributs affichés pour chaque valeur de la référence `colId` (#223, #226) :
+ * Map « nom de la valeur » → morceaux [[{ texte, style }…] par attribut].
+ * Lus dans les cartes `records` qui portent cette valeur ; si elles ne sont
+ * pas d'accord, toutes les valeurs rencontrées sont données.
+ * Liste de références (ex. qui_) : la colonne rapportée ($qui_.Equipe) donne
+ * une liste dans le même ordre que les personnes ; on les apparie une à une.
+ * Commun au panneau des filtres et aux menus de la fiche et de la création.
  */
-function calculerDetails() {
-  const f = STATE.filtreEdite;
-  const attributs = attributsAffiches(f.col)
+function morceauxParValeur(colId, records) {
+  const attributs = attributsAffiches(colId)
     .map(a => STATE.colonnesTriables.find(c => c.colId === a))
     .filter(Boolean);
-  // Valeur filtrée → pour chaque attribut, l'ensemble des textes rencontrés
-  const textes = new Map();
+  const textes = new Map(); // valeur → [Set de textes, par attribut]
   if (attributs.length) {
-    recordsDuProjet().forEach(r => {
-      valeursCellule(r[f.col]).forEach(v => {
+    // Une liste peut arriver « encodée » par Grist : ['L', a, b…] → [a, b…]
+    const decoder = (v) => (Array.isArray(v) && v[0] === 'L') ? v.slice(1) : v;
+    records.forEach(r => {
+      const brute = decoder(r[colId]);
+      const liste = Array.isArray(brute);
+      const noms = liste ? brute : [brute];
+      noms.forEach((nom, k) => {
+        const v = valeursCellule(nom)[0];
+        if (v === undefined) return;
         if (!textes.has(v)) textes.set(v, attributs.map(() => new Set()));
         attributs.forEach((a, i) => {
-          const t = texteAttribut(r[a.colId], a.type);
+          const cellule = decoder(r[a.colId]);
+          // Même longueur que la liste des références : la k-ième va avec la k-ième
+          const propre = liste && Array.isArray(cellule) && cellule.length === brute.length ? cellule[k] : cellule;
+          const t = texteAttribut(propre, a.type);
           if (t) textes.get(v)[i].add(t);
         });
       });
     });
   }
+  const resultat = new Map();
+  textes.forEach((ensembles, v) => {
+    resultat.set(v, ensembles
+      .map((e, i) => [...e].map(t => ({ texte: t, style: styleChoix(attributs[i].colId, t) })))
+      .filter(m => m.length));
+  });
+  return resultat;
+}
+
+/** Texte entier des morceaux (« Then · Cerema »), pour la recherche et la bulle. */
+function texteMorceaux(morceaux) {
+  return morceaux.map(m => m.map(x => x.texte).join(', ')).join(' · ');
+}
+
+/**
+ * Pour chaque valeur du panneau du filtre, ses attributs affichés :
+ *   p.morceaux pour l'affichage, p.detail (texte entier) pour la recherche.
+ * Lus dans les cartes du projet.
+ */
+function calculerDetails() {
+  const f = STATE.filtreEdite;
+  const parValeur = morceauxParValeur(f.col, recordsDuProjet());
   STATE.ordreValeurs.forEach(p => {
-    const ensembles = textes.get(p.valeur);
-    p.morceaux = ensembles
-      ? ensembles.map((e, i) => [...e].map(t => ({ texte: t, style: styleChoix(attributs[i].colId, t) })))
-                 .filter(m => m.length)
-      : [];
-    p.detail = p.morceaux.map(m => m.map(x => x.texte).join(', ')).join(' · ');
+    p.morceaux = parValeur.get(p.valeur) || [];
+    p.detail = texteMorceaux(p.morceaux);
   });
 }
 
 /**
- * Dessine les attributs d'une valeur dans `zone` : texte gris, ou pastille
- * aux couleurs de Grist si le choix en a ; « · » entre deux attributs.
+ * Réglage des attributs pour un menu de choix d'une référence (#226), à
+ * passer à Fiche.menuChoix ; null si la colonne n'a pas d'attribut. Le choix
+ * est le même que dans le panneau du filtre de cette colonne.
+ * Les valeurs sont lues dans toutes les cartes de la table : un EPIC qui
+ * n'a encore aucune carte n'a donc pas d'attribut (voir #228).
+ * @param {string} colId - colonne de référence (ex. 'EPIC', 'qui_')
+ * @param {(valeur) => string} nomDe - nom affiché d'une option du menu
  */
-function dessinerMorceaux(zone, morceaux) {
-  morceaux.forEach((attribut, i) => {
-    if (i) zone.append(' · ');
-    attribut.forEach((m, j) => {
-      if (j) zone.append(', ');
-      if (!m.style) { zone.append(m.texte); return; }
-      const pastille = document.createElement('span');
-      pastille.className = 'filtre-valeur-pastille';
-      pastille.textContent = m.texte;
-      if (m.style.fond)  pastille.style.background = m.style.fond;
-      if (m.style.texte) pastille.style.color = m.style.texte;
-      zone.appendChild(pastille);
-    });
-  });
+function attributsPourMenu(colId, nomDe) {
+  const possibles = attributsDe(colId);
+  if (!colId || !possibles.length) return null;
+  let parValeur = morceauxParValeur(colId, STATE.records);
+  return {
+    possibles: possibles.map(c => ({ valeur: c.colId, libelle: c.attribut })),
+    choisis: attributsAffiches(colId),
+    surChoix: (choisis) => {
+      definirAttributs(colId, choisis);
+      parValeur = morceauxParValeur(colId, STATE.records);
+    },
+    // Nom nettoyé comme dans les cartes (espaces en trop retirés)
+    detail: (valeur) => parValeur.get(valeursCellule(nomDe(valeur))[0]) || [],
+  };
 }
 
 /**
@@ -1990,7 +2034,7 @@ function remplirPanneauFiltre() {
     // Attributs affichés (#223), en gris ou aux couleurs de Grist ; le texte entier au survol
     const attributs = document.createElement('span');
     attributs.className = 'filtre-valeur-detail';
-    dessinerMorceaux(attributs, morceaux || []);
+    Fiche.dessinerAttributs(attributs, morceaux || []);
     attributs.title = detail || '';
     const compte = document.createElement('span');
     compte.className = 'filtre-valeur-nb';
@@ -2351,7 +2395,7 @@ function remplirAide() {
         <li><strong>⚙ Configurer</strong> : quatre étapes, une par onglet : ① le projet du Kanban, ② les colonnes de la table, ③ la couleur et la classe des statuts, ④ l'équipe projet (personnes proposées dans « Assigné à »). Un ⚠️ signale une étape à faire. Cliquez sur <strong>Appliquer</strong>, puis sur <strong>Enregistrer</strong>, en haut à droite de Grist.</li>
         <li><strong>＋ Vue</strong> : crée une vue à partir de l'affichage actuel, <strong>🔒 pour vous</strong> (par défaut : gardée aussitôt dans votre navigateur) ou <strong>👥 pour tous</strong> (puis cliquez sur <strong>Enregistrer</strong> de Grist pour la garder). Le menu <strong>⋯</strong> de l'onglet actif permet de la renommer, de la supprimer, ou de copier une vue partagée en vue perso pour l'adapter sans gêner les autres.</li>
         <li><strong>👤 Qui suis-je ?</strong> (en haut à droite) : indiquez votre nom, une fois (rien à enregistrer). Le filtre sur la colonne « Assigné à » propose alors <strong>👤 Moi</strong>, qui montre vos propres cartes ; dans une vue partagée, il montre à chacun les siennes.</li>
-        <li><strong>🔽 Filtres</strong>, <strong>⇅ Trier</strong> et <strong>▦ Colonnes</strong> : ces boutons résument la vue et ouvrent <strong>Gérer la vue</strong>, qui règle son nom, ses filtres (« EPIC est … », « Assigné n'est pas … »), son tri et ses colonnes. <strong>💾 Enregistrer</strong> garde tout, <strong>Annuler</strong> ne change rien. Sur <strong>Toutes les cartes</strong>, 💾 crée une nouvelle vue. Dans le filtre d'une référence, le bouton <strong>Afficher ▾</strong> montre des attributs de chaque valeur (la priorité d'un EPIC…), si la table a une colonne ajoutée « depuis la référence ».</li>
+        <li><strong>🔽 Filtres</strong>, <strong>⇅ Trier</strong> et <strong>▦ Colonnes</strong> : ces boutons résument la vue et ouvrent <strong>Gérer la vue</strong>, qui règle son nom, ses filtres (« EPIC est … », « Assigné n'est pas … »), son tri et ses colonnes. <strong>💾 Enregistrer</strong> garde tout, <strong>Annuler</strong> ne change rien. Sur <strong>Toutes les cartes</strong>, 💾 crée une nouvelle vue. Dans le filtre d'une référence, et dans les menus EPIC ou Assigné à de la fiche et de la création, le bouton <strong>Afficher ▾</strong> montre des attributs de chaque valeur (la priorité d'un EPIC…), si la table a une colonne ajoutée « depuis la référence ».</li>
         <li><strong>Tri</strong> : range les cartes de chaque colonne selon n'importe quelle colonne (échéance, priorité, titre, # numéro…), puis selon une deuxième à égalité. Les cartes sans valeur restent en bas.</li>
         <li><strong>🔍 Rechercher</strong> (en haut) : garde les cartes qui contiennent tous les mots tapés, dans n'importe quelle colonne, sans tenir compte des accents ni des majuscules ; <strong>#203</strong> retrouve une carte par son numéro. La recherche s'ajoute aux filtres et ne s'enregistre nulle part : Échap l'efface.</li>
         <li><strong>Cartes</strong> : glissez une carte dans une autre colonne pour changer son statut ; cliquez dessus pour ouvrir sa fiche. Dans la fiche, la bande <strong>⛔ Bloquée par / ➡️ Bloque</strong> relie la carte à celles qu'elle attend ou qu'elle retient.</li>
@@ -2616,30 +2660,28 @@ function buildModalForm(statut) {
   if (row1.children.length) body.appendChild(row1);
 
   // Ligne 2 : EPIC + Assigné
+  STATE.addModal.refs = {};
   const row2 = document.createElement('div'); row2.className = 'modal-row';
 
   //EPIC avec gestion référence/texte
   if (STATE.mapping.epic) {
     const f = makeModalField('epic', 'EPIC', '🏷️', false);
     const epicOptions = getReferenceOptions('epic');
+    const epicFiltre = epicDuFiltre(); // pré-remplir si un filtre « EPIC est X » est actif
 
-    if (epicOptions.length > 0) {
-      const values = ['', ...epicOptions.map(e => e.id)];
-      const labels = ['— aucun —', ...epicOptions.map(e => e.nom)];
-      const sel = makeSelect(values, labels, 'modal-epic');
-
-      // Pré-remplir si un filtre « EPIC est X » est actif
-      const epicFiltre = epicDuFiltre();
-      if (epicFiltre) {
-        const matchedOption = epicOptions.find(e => e.nom === epicFiltre || e.id === epicFiltre);
-        if (matchedOption) sel.value = matchedOption.id;
-      }
-
+    if (REFS.epic) {
+      // Référence : pastille qui ouvre le menu de la fiche, avec les attributs (#226)
+      const trouve = epicOptions.find(e => e.nom === epicFiltre || e.id === epicFiltre);
+      f.appendChild(champReferenceModal('epic', trouve ? [trouve.id] : [], '— aucun —'));
+    } else if (epicOptions.length > 0) {
+      // Colonne texte : liste des valeurs déjà utilisées
+      const sel = makeSelect(['', ...epicOptions.map(e => e.id)], ['— aucun —', ...epicOptions.map(e => e.nom)], 'modal-epic');
+      if (epicOptions.some(e => e.id === epicFiltre)) sel.value = epicFiltre;
       f.appendChild(sel);
     } else {
       // Fallback : champ texte
       const inp = makeInput('text', 'modal-epic', 'EPIC…');
-      inp.value = epicDuFiltre();
+      inp.value = epicFiltre;
       f.appendChild(inp);
     }
     row2.appendChild(f);
@@ -2648,17 +2690,12 @@ function buildModalForm(statut) {
   //Assigné avec référence Contacts
   if (STATE.mapping.assigne) {
     const f = makeModalField('assigne', 'Assigné à', '👤', false);
-    const contactOptions = getReferenceOptions('assigne');
-
-    if (contactOptions.length > 0) {
-      const values = ['', ...contactOptions.map(c => c.id)];
-      // ✅ Correctif : libellé tel que Grist l'affiche (ex. « Prénom Nom »), à défaut Contacts.Nom
-      const labels = ['— aucun —', ...contactOptions.map(c => nomAffiche('assigne', c.id) || c.nom)];
-      const sel = makeSelect(values, labels, 'modal-assigne');
-      // Pré-remplir avec la personne déclarée si un filtre « Assigné à est 👤 Moi » est actif
+    if (REFS.assigne) {
+      // Référence : pastille qui ouvre le menu de la fiche, avec les attributs (#226).
+      // Pré-remplie avec la personne déclarée si un filtre « Assigné à est 👤 Moi » est actif
       const moi = moiDuFiltre();
-      if (moi && contactOptions.some(c => c.id === moi)) sel.value = moi;
-      f.appendChild(sel);
+      const equipe = getReferenceOptions('assigne');
+      f.appendChild(champReferenceModal('assigne', moi && equipe.some(c => c.id === moi) ? [moi] : [], '— personne —'));
     } else {
       // Fallback : champ texte
       f.appendChild(makeInput('text', 'modal-assigne', 'Nom…'));
@@ -2686,6 +2723,42 @@ function buildModalForm(statut) {
   if (row3.children.length) body.appendChild(row3);
 
   setTimeout(() => { const t = document.getElementById('modal-titre'); if (t) t.focus(); }, 80);
+}
+
+/**
+ * Champ de référence de « Nouvelle carte » (#226) : une pastille qui ouvre le
+ * même menu que la fiche (attributs et « Afficher ▾ » compris), à la place
+ * d'une liste déroulante, qui ne peut montrer que du texte. Choix multiple
+ * pour une Liste de références. Les numéros choisis sont gardés dans
+ * STATE.addModal.refs[key], lus par submitAddCardModal.
+ */
+function champReferenceModal(key, idsInitiaux, texteVide) {
+  STATE.addModal.refs[key] = idsInitiaux;
+  const bouton = document.createElement('button');
+  bouton.type = 'button';
+  bouton.id = 'modal-' + key;
+  bouton.className = 'modal-input modal-ref';
+  const majTexte = () => {
+    const noms = STATE.addModal.refs[key].map(id => nomAffiche(key, id) || `(ligne ${id})`);
+    bouton.textContent = noms.join(', ') || texteVide;
+    bouton.title = bouton.textContent;
+    bouton.classList.toggle('vide', noms.length === 0);
+  };
+  bouton.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const ids = STATE.addModal.refs[key];
+    menuChamp(bouton, key, ids, {
+      selection: ids,
+      multiple: REFS[key].estListe,
+      vide: texteVide, valeurVide: 0,
+      surChoix: (v) => {
+        STATE.addModal.refs[key] = (Array.isArray(v) ? v : [v]).filter(id => id > 0);
+        majTexte();
+      },
+    });
+  });
+  majTexte();
+  return bouton;
 }
 
 function makeModalField(key, label, icon, required) {
@@ -2750,6 +2823,12 @@ async function submitAddCardModal() {
   const referenceFields = ['assigne', 'epic'];
   referenceFields.forEach(key => {
     if (!STATE.mapping[key]) return;
+    // Pastille de référence (#226) : numéros choisis dans le menu
+    const ids = STATE.addModal.refs[key];
+    if (ids) {
+      if (ids.length) newRecord[STATE.mapping[key]] = REFS[key].estListe ? ['L', ...ids] : ids[0];
+      return;
+    }
     const el = document.getElementById(`modal-${key}`);
     if (el && el.value !== '') {
       // Si c'est un nombre, c'est une référence, sinon c'est du texte
@@ -2969,6 +3048,23 @@ function optionsMenu(key, idsActuels) {
   return getUniqueFieldValues(key).map(v => ({ valeur: v, libelle: v }));
 }
 
+/**
+ * Menu de choix d'un champ de référence du Kanban (EPIC, Assigné à…) : les
+ * options de optionsMenu, et les attributs de la référence s'il y en a (#226),
+ * avec le bouton « Afficher ▾ » en tête du menu. Générique : vaut pour toute
+ * colonne Référence ou Liste de références associée au champ `key`.
+ *   reglages : selection, multiple, vide, valeurVide, surChoix (voir Fiche.menuChoix)
+ */
+function menuChamp(ancre, key, idsActuels, reglages) {
+  const options = optionsMenu(key, idsActuels);
+  const libelles = new Map(options.map(o => [o.valeur, o.libelle]));
+  return Fiche.menuChoix(ancre, {
+    ...reglages,
+    options,
+    attributs: REFS[key] ? attributsPourMenu(STATE.mapping[key], (v) => libelles.get(v)) : null,
+  });
+}
+
 function pastilleStatut() {
   const statut = String(valeurFiche('statut') || '');
   const b = boutonPastille(statut || '+ Statut', {
@@ -3020,8 +3116,7 @@ function pastillePriorite() {
 function pastillesAssigne() {
   const ref = REFS.assigne;
   const ids = ref ? idsFiche('assigne') : [];
-  const ouvrir = (ancre) => Fiche.menuChoix(ancre, {
-    options: optionsMenu('assigne', ids),
+  const ouvrir = (ancre) => menuChamp(ancre, 'assigne', ids, {
     selection: ref ? ids : [valeurFiche('assigne')],
     multiple: Boolean(ref && ref.estListe),
     vide: '— personne —', valeurVide: ref ? 0 : '',
@@ -3076,8 +3171,7 @@ function rappelEpic() {
   }
   return boutonPastille(nom ? '🏷️ ' + nom : '🏷️ + Choisir un EPIC', {
     vide: !nom, classe: 'fiche-rappel', titre: 'EPIC — cliquer pour choisir',
-    surClic: (ancre) => Fiche.menuChoix(ancre, {
-      options: optionsMenu('epic', ids),
+    surClic: (ancre) => menuChamp(ancre, 'epic', ids, {
       selection: ref ? ids : [valeurFiche('epic')],
       vide: '— aucun —', valeurVide: ref ? 0 : '',
       surChoix: (v) => changerDepuisMenu('epic', v),

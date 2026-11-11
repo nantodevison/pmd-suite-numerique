@@ -240,7 +240,6 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
   font-size: 11px; color: var(--text-muted);
 }
 .filtre-valeur-detail:empty { display: none; }
-.filtre-valeur-pastille { padding: 0 6px; border-radius: 8px; background: var(--col-bg); color: var(--text); }
 .filtre-aucune { padding: 8px 4px; font-size: 12px; color: var(--text-muted); font-style: italic; }
 .filtre-pied { border-top: 1px solid var(--border); padding-top: 6px; }
 
@@ -564,10 +563,13 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 .modal-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(102,126,234,.12); }
 .modal-input.error { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(229,62,62,.1); }
 textarea.modal-input { resize: vertical; min-height: 70px; line-height: 1.5; }
-select.modal-input {
+select.modal-input, .modal-ref {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23718096' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 10px center; padding-right: 32px; cursor: pointer;
 }
+/* Champ de référence de « Nouvelle carte » (#226) : une pastille qui ouvre le menu de la fiche */
+.modal-ref { text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modal-ref.vide { color: var(--text-muted); font-style: italic; }
 .modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .modal-footer { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; flex-shrink: 0; }
 

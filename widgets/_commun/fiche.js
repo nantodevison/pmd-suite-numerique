@@ -457,17 +457,48 @@
    *   vide      : libellé d'une option « aucune valeur » (choix simple), ou absent
    *   valeurVide: valeur renvoyée pour cette option ('' par défaut)
    *   surChoix  : appelée avec la valeur (simple) ou la liste (multiple)
+   *   attributs : facultatif (#226), pour afficher à côté de chaque option
+   *               des attributs de l'objet (ex. la priorité d'un EPIC) :
+   *     { possibles: [{ valeur, libelle }],  attributs proposés
+   *       choisis:   [valeur…],              attributs affichés à l'ouverture
+   *       surChoix:  (choisis) => …,         appelée quand on coche / décoche
+   *       detail:    (valeurOption) => morceaux }  voir dessinerAttributs
+   *     Le menu porte alors en tête un bouton « Afficher (n) ▾ » qui déplie
+   *     la liste des attributs à cocher, sans fermer le menu.
    */
-  function menuChoix(ancre, { options, selection = [], multiple = false, vide, valeurVide = '', surChoix }) {
+  function menuChoix(ancre, { options, selection = [], multiple = false, vide, valeurVide = '', surChoix, attributs = null }) {
     const menu = ouvrirMenu(ancre);
     const choisis = new Set(selection);
     const lignes = (vide && !multiple) ? [{ valeur: valeurVide, libelle: vide, estVide: true }, ...options] : options;
+
+    // Zones « détail » de chaque option, redessinées quand les attributs changent
+    const details = [];
+    const redessinerDetails = () => details.forEach(({ zone, valeur }) => {
+      zone.textContent = '';
+      dessinerAttributs(zone, attributs.detail(valeur) || []);
+      zone.title = zone.textContent;
+    });
+    if (attributs && attributs.possibles.length) {
+      // Menu plus large quand il montre des attributs (voir fiche.css)
+      menu.classList.add('fiche-menu-avec-attributs');
+      menu.appendChild(enteteAttributs(attributs, () => {
+        redessinerDetails();
+        // Sa largeur a pu changer : on le replace pour qu'il ne sorte pas de l'écran
+        requestAnimationFrame(() => placerMenu(menu, ancre));
+      }));
+    }
+
     if (!lignes.length) {
       menu.appendChild(Object.assign(document.createElement('div'), { className: 'fiche-menu-vide', textContent: 'Aucun choix possible' }));
     }
     lignes.forEach(o => {
       const item = document.createElement(multiple ? 'label' : 'button');
       item.className = 'fiche-menu-item' + (o.estVide ? ' fiche-menu-item-vide' : '');
+      // Libellé (coupé par « … » s'il est trop long), puis attributs en gris
+      const libelle = document.createElement('span');
+      libelle.className = 'fiche-menu-libelle';
+      libelle.textContent = o.libelle;
+      libelle.title = o.libelle;
       if (multiple) {
         const caseACocher = document.createElement('input');
         caseACocher.type = 'checkbox';
@@ -477,16 +508,94 @@
           // On garde l'ordre des options, plus lisible que l'ordre des clics.
           surChoix(options.map(x => x.valeur).filter(v => choisis.has(v)));
         });
-        item.append(caseACocher, document.createTextNode(' ' + o.libelle));
+        item.append(caseACocher, libelle);
       } else {
         item.type = 'button';
-        item.textContent = o.libelle;
+        item.appendChild(libelle);
         if (choisis.has(o.valeur)) item.classList.add('choisi');
         item.addEventListener('click', () => { fermerMenu(); surChoix(o.valeur); });
       }
+      if (attributs && !o.estVide) {
+        const zone = document.createElement('span');
+        zone.className = 'fiche-menu-detail fiche-menu-attributs-valeur';
+        item.appendChild(zone);
+        details.push({ zone, valeur: o.valeur });
+      }
       menu.appendChild(item);
     });
+    if (attributs) redessinerDetails();
     return menu;
+  }
+
+  /**
+   * En-tête du menu (#226) : bouton « Afficher (n) ▾ » à droite, qui déplie
+   * dessous la liste des attributs à cocher. Cocher ne ferme pas le menu
+   * (le clic reste à l'intérieur) ; les détails des options sont redessinés.
+   */
+  function enteteAttributs(attributs, redessinerDetails) {
+    const choisis = new Set(attributs.choisis);
+    const entete = document.createElement('div');
+    entete.className = 'fiche-menu-entete';
+    const bouton = document.createElement('button');
+    bouton.type = 'button';
+    bouton.className = 'fiche-menu-afficher';
+    const liste = document.createElement('div');
+    liste.className = 'fiche-menu-attributs';
+    liste.hidden = true;
+
+    const majBouton = () => {
+      const n = choisis.size;
+      bouton.textContent = n ? `Afficher (${n}) ▾` : 'Afficher ▾';
+      bouton.classList.toggle('actif', n > 0);
+      bouton.title = 'Attributs affichés à côté de chaque valeur (retenu par ce navigateur)';
+    };
+    attributs.possibles.forEach(a => {
+      const ligne = document.createElement('label');
+      ligne.className = 'fiche-menu-item';
+      const caseACocher = document.createElement('input');
+      caseACocher.type = 'checkbox';
+      caseACocher.checked = choisis.has(a.valeur);
+      caseACocher.addEventListener('change', () => {
+        if (caseACocher.checked) choisis.add(a.valeur); else choisis.delete(a.valeur);
+        attributs.surChoix(attributs.possibles.map(x => x.valeur).filter(v => choisis.has(v)));
+        majBouton();
+        redessinerDetails();
+      });
+      ligne.append(caseACocher, document.createTextNode(' ' + a.libelle));
+      liste.appendChild(ligne);
+    });
+    bouton.addEventListener('click', () => { liste.hidden = !liste.hidden; });
+    majBouton();
+    entete.append(bouton, liste);
+    return entete;
+  }
+
+  /**
+   * Dessine des attributs dans `zone` (#223, #226) : morceaux =
+   * [[{ texte, style }…] par attribut]. Texte gris, ou pastille aux couleurs
+   * de Grist si le choix en a (style = { fond, texte }) ; « · » entre deux
+   * attributs, « , » entre deux valeurs d'un même attribut.
+   * Chaque attribut est coupé séparément (classe fiche-attribut) : un texte
+   * long ne cache pas les attributs suivants ; il se lit en entier au survol.
+   */
+  function dessinerAttributs(zone, morceaux) {
+    morceaux.forEach((attribut, i) => {
+      if (i) zone.append(' · ');
+      const bloc = document.createElement('span');
+      bloc.className = 'fiche-attribut';
+      bloc.title = attribut.map(m => m.texte).join(', ');
+      attribut.forEach((m, j) => {
+        if (j) bloc.append(', ');
+        if (!m.style) { bloc.append(m.texte); return; }
+        const pastille = document.createElement('span');
+        pastille.className = 'fiche-attribut-pastille';
+        pastille.textContent = m.texte;
+        if (m.style.fond)  pastille.style.background = m.style.fond;
+        if (m.style.texte) pastille.style.color = m.style.texte;
+        bloc.appendChild(pastille);
+      });
+      zone.appendChild(bloc);
+    });
   }
 
   /**
@@ -675,7 +784,7 @@
   window.Fiche = {
     markdownVersHtml, markdownVersTexte, champMarkdown,
     estNotepad, notepadVersMarkdown,
-    menuChoix, menuDate, menuRecherche, fermerMenu, champTitre,
+    menuChoix, menuDate, menuRecherche, fermerMenu, champTitre, dessinerAttributs,
     installer, ouvrir, fermer, disposition,
   };
 })();
