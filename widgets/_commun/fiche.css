@@ -128,6 +128,31 @@ button.fiche-pastille:hover { border-color: var(--accent, #667eea); }
 .fiche-menu-recherche { width: 340px; max-width: calc(100vw - 16px); max-height: 320px; }
 .fiche-menu-libelle { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fiche-menu-detail { flex-shrink: 0; font-size: 11px; color: var(--text-muted, #718096); }
+/* Attributs d'une option (#226) : à droite ; le menu s'élargit pour les montrer */
+.fiche-menu.fiche-menu-avec-attributs { max-width: min(600px, calc(100vw - 16px)); }
+.fiche-menu-avec-attributs .fiche-menu-libelle { min-width: 8em; }
+.fiche-menu-attributs-valeur { flex-shrink: 1; max-width: 65%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; }
+/* Chaque attribut est coupé séparément : un texte long ne cache pas les suivants */
+.fiche-attribut {
+  display: inline-block; max-width: 12em; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; vertical-align: bottom;
+}
+.fiche-menu-attributs-valeur:empty { display: none; }
+/* Pastille d'un attribut aux couleurs du choix Grist (#223), dans un menu ou un filtre */
+.fiche-attribut-pastille { padding: 0 6px; border-radius: 8px; background: var(--col-bg, #eef0f5); color: var(--text, #2d3748); }
+/* En-tête du menu (#226) : bouton « Afficher ▾ » à droite, liste dépliée dessous */
+.fiche-menu-entete {
+  display: flex; flex-direction: column; align-items: flex-end;
+  padding: 2px 4px 4px; margin-bottom: 2px; border-bottom: 1px solid var(--border, #e2e8f0);
+}
+.fiche-menu-afficher {
+  padding: 1px 8px; border: 1.5px dashed var(--border, #e2e8f0); border-radius: 10px;
+  background: none; color: var(--text-muted, #718096); font-size: 11px; font-family: inherit; cursor: pointer;
+}
+.fiche-menu-afficher:hover { border-color: var(--accent, #667eea); }
+.fiche-menu-afficher.actif { border-style: solid; border-color: var(--accent, #667eea); background: rgba(102,126,234,.12); color: var(--text, #2d3748); }
+.fiche-menu-attributs { align-self: stretch; margin-top: 4px; }
+.fiche-menu-attributs[hidden] { display: none; }
 
 /* En-tête de contexte : paires « libellé : valeur » */
 .fiche-contexte {

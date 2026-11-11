@@ -187,8 +187,12 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
   display: flex; flex-direction: column; gap: 8px;
 }
 .filtre-popover.hidden { display: none; }
-.filtre-entete { display: flex; gap: 6px; align-items: center; }
-.filtre-entete .filter-select { flex: 1; min-width: 0; max-width: none; }
+/* Ligne 1 du panneau (#226) : la liste des colonnes garde sa largeur
+   habituelle (110 à 200 px), la recherche prend le reste ; si elle a moins
+   de 160 px, elle passe à la ligne et occupe toute la largeur */
+.filtre-entete { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.filtre-entete .filter-select { flex: 0 1 auto; max-width: 200px; }
+.filtre-entete .filtre-recherche { flex: 1 1 160px; width: auto; min-width: 0; }
 .filtre-ops { display: flex; border: 1.5px solid var(--border); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
 .filtre-op {
   padding: 5px 8px; font-size: 12px; font-family: var(--font); border: none;
@@ -217,22 +221,25 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 .filtre-valeur.vide .filtre-valeur-nom { font-style: italic; color: var(--text-muted); }
 .filtre-valeur-nom { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .filtre-valeur-nb { font-size: 11px; color: var(--text-muted); }
-/* Attributs d'une référence (#223) : pastilles à cocher, puis texte gris sur chaque ligne */
-.filtre-attributs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 12px; }
-.filtre-attributs.hidden { display: none; }
-.filtre-attributs-titre { color: var(--text-muted); margin-right: 2px; }
-.filtre-attribut {
-  padding: 1px 8px; border: 1.5px dashed var(--border); border-radius: 10px;
-  background: none; color: var(--text-muted); font-size: 11px; font-family: var(--font); cursor: pointer;
+/* Ligne 2 du panneau (#226) : le compteur suit « Aucun », le bouton
+   « Afficher » est poussé à droite ; il passe à la ligne si la place manque */
+#filtre-popover .filtre-outils { flex-wrap: wrap; row-gap: 4px; }
+#filtre-popover .filtre-compte { margin-left: 4px; }
+/* Attributs d'une référence (#223) : bouton « Afficher » qui ouvre la liste
+   à cocher, puis texte gris ou pastilles sur chaque ligne */
+.filtre-afficher {
+  margin-left: auto; padding: 1px 8px; border: 1.5px dashed var(--border); border-radius: 10px;
+  background: none; color: var(--text-muted); font-size: 11px; font-family: var(--font);
+  cursor: pointer; white-space: nowrap;
 }
-.filtre-attribut:hover { border-color: var(--accent); }
-.filtre-attribut.actif { border-style: solid; border-color: var(--accent); background: rgba(102,126,234,.12); color: var(--text); }
+.filtre-afficher:hover { border-color: var(--accent); }
+.filtre-afficher.actif { border-style: solid; border-color: var(--accent); background: rgba(102,126,234,.12); color: var(--text); }
+.filtre-afficher.hidden { display: none; }
 .filtre-valeur-detail {
   flex: 0 1 auto; max-width: 45%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   font-size: 11px; color: var(--text-muted);
 }
 .filtre-valeur-detail:empty { display: none; }
-.filtre-valeur-pastille { padding: 0 6px; border-radius: 8px; background: var(--col-bg); color: var(--text); }
 .filtre-aucune { padding: 8px 4px; font-size: 12px; color: var(--text-muted); font-style: italic; }
 .filtre-pied { border-top: 1px solid var(--border); padding-top: 6px; }
 
@@ -556,10 +563,13 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 .modal-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(102,126,234,.12); }
 .modal-input.error { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(229,62,62,.1); }
 textarea.modal-input { resize: vertical; min-height: 70px; line-height: 1.5; }
-select.modal-input {
+select.modal-input, .modal-ref {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23718096' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 10px center; padding-right: 32px; cursor: pointer;
 }
+/* Champ de référence de « Nouvelle carte » (#226) : une pastille qui ouvre le menu de la fiche */
+.modal-ref { text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modal-ref.vide { color: var(--text-muted); font-style: italic; }
 .modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .modal-footer { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; flex-shrink: 0; }
 
@@ -771,20 +781,23 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
       </div>
       <!-- Panneau de modification d'un filtre (affiché par ouvrirFiltre()) -->
       <div id="filtre-popover" class="filtre-popover hidden">
+        <!-- Ligne 1 (#226) : colonne, opérateur, recherche ; la recherche passe
+             à la ligne si le widget est trop étroit -->
         <div class="filtre-entete">
           <select id="filtre-colonne" class="filter-select" title="Colonne"></select>
           <div class="filtre-ops">
             <button class="filtre-op" data-op="est">est</button>
             <button class="filtre-op" data-op="nestpas">n'est pas</button>
           </div>
+          <input id="filtre-recherche" class="filtre-recherche" type="search" placeholder="Rechercher…" autocomplete="off" />
         </div>
-        <input id="filtre-recherche" class="filtre-recherche" type="search" placeholder="Rechercher…" autocomplete="off" />
-        <!-- Attributs de la référence à afficher (#223), dessinés par remplirAttributs() -->
-        <div id="filtre-attributs" class="filtre-attributs hidden"></div>
+        <!-- Ligne 2 (#226) : outils et compteur à gauche ; à droite, le bouton
+             « Afficher » des attributs d'une référence (#223), mis à jour par majBoutonAfficher() -->
         <div class="filtre-outils">
           <button id="filtre-tout" class="filtre-lien">Tout cocher</button>
           <button id="filtre-aucun" class="filtre-lien">Aucun</button>
           <span id="filtre-compte" class="filtre-compte"></span>
+          <button id="filtre-afficher" class="filtre-afficher hidden" type="button"></button>
         </div>
         <div id="filtre-valeurs" class="filtre-valeurs"></div>
         <div class="filtre-pied">

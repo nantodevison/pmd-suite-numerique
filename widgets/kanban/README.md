@@ -142,7 +142,7 @@ de la fiche ; deux statuts peuvent partager la même.
 | Les **vues 👥 partagées** : création, suppression, glisser-déposer des colonnes | le document, pour tous | aussitôt dans le widget, puis **Enregistrer** de Grist |
 | Les réglages d'une vue partagée dans **Gérer la vue** : nom, filtres, tri, colonnes | le document, pour tous | **💾 Enregistrer**, puis **Enregistrer** de Grist |
 | Les **vues 🔒 personnelles** et leurs réglages | votre navigateur, pour vous seul | aussitôt (dans Gérer la vue : **💾 Enregistrer**) |
-| L'**onglet actif**, **votre nom** (👤), la disposition de la fiche (côté / centre) et les **attributs affichés** dans les filtres (🏷) | votre navigateur, pour vous seul | automatiquement |
+| L'**onglet actif**, **votre nom** (👤), la disposition de la fiche (côté / centre) et les **attributs affichés** dans les filtres (Afficher ▾) | votre navigateur, pour vous seul | automatiquement |
 | La **recherche** 🔍 | nulle part | jamais : perdue au rechargement de la page |
 
 **Le bouton « Enregistrer » de Grist**, en haut à droite, apparaît dès qu'un
@@ -231,29 +231,42 @@ panneau propose une recherche (même règle que 🔍, ci-dessous) et « Tout coc
 « Aucun ». Une nouvelle carte reprend l'EPIC d'un filtre « EPIC est X » à une
 seule valeur.
 
-### Attributs d'une référence (🏷 Afficher)
+### Attributs d'une référence (Afficher ▾)
 
-Quand on filtre sur une référence (EPIC, Assigné à…), le panneau peut afficher,
+Quand on choisit une référence (EPIC, Assigné à…), le Kanban peut afficher,
 en gris à côté de chaque valeur, des **attributs** de l'objet visé : la priorité
 ou la phase d'un EPIC, par exemple. Cela aide à se repérer quand la liste
-grandit : la recherche du panneau porte aussi sur ces attributs (taper « done »
-retrouve les EPICs terminés).
+grandit. C'est possible à trois endroits, avec le même réglage :
+
+- le panneau d'un **filtre** sur cette colonne, dont la recherche porte aussi
+  sur les attributs (taper « done » retrouve les EPICs terminés) ;
+- les menus de la **fiche** (« 🏷️ + Choisir un EPIC », « 👤 + Assigner ») ;
+- la fenêtre **Nouvelle carte**, où EPIC et Assigné à sont des pastilles qui
+  ouvrent ce même menu (une liste déroulante ne peut montrer que du texte).
+
 
 - **Proposer un attribut** : dans la table du Kanban, ajoutez la colonne avec le
   menu de Grist « ajouter une colonne depuis la référence » (sa formule est
   alors `$EPIC.Priorite`). Le panneau du filtre EPIC propose aussitôt
-  **🏷 Afficher : Priorite**, sans réglage dans ⚙. Seules les formules de cette
-  forme exacte sont reconnues, et seulement pour une colonne Référence (pas une
-  Liste de références).
-- **Afficher ou masquer** : cliquez sur la pastille de l'attribut. Plusieurs
-  attributs s'affichent séparés par « · ». Une valeur de colonne Choix garde
-  les couleurs de fond et de texte réglées dans Grist.
+  « Priorite » dans le bouton **Afficher ▾**, sans réglage dans ⚙. Seules les
+  formules de cette forme exacte sont reconnues. Cela vaut pour une colonne
+  Référence comme pour une Liste de références (ex. `$qui_.Equipe` : l'équipe
+  de chaque personne).
+  Inutile de rendre la colonne visible dans la section du widget : le Kanban
+  reçoit toutes les colonnes de la table (de même pour le tri et les filtres).
+- **Afficher ou masquer** : le bouton **Afficher ▾** (à droite sous la
+  recherche du filtre, ou en tête du menu) ouvre la liste des attributs à
+  cocher ; il indique entre parenthèses combien sont affichés. Plusieurs attributs s'affichent séparés
+  par « · ». Une valeur de colonne Choix garde les couleurs de fond et de texte
+  réglées dans Grist.
 - Partout ailleurs (choix de la colonne d'un filtre, tri), une colonne
   rapportée est nommée avec sa référence, **EPIC › Priorite**, pour ne pas la
   confondre avec une colonne « Priorité » de la table.
-- Le choix est **retenu par votre navigateur**, pour chaque colonne filtrée :
-  chacun le sien, rien n'est écrit dans le document ni dans la vue.
-- La valeur de l'attribut est lue dans les cartes qui portent cette valeur.
+- Le choix est **retenu par votre navigateur**, pour chaque colonne de
+  référence, et il est commun au filtre et aux menus : chacun le sien, rien
+  n'est écrit dans le document ni dans la vue.
+- La valeur de l'attribut est lue dans les cartes qui portent cette valeur :
+  un EPIC qui n'a encore aucune carte n'affiche donc pas d'attribut.
 
 ## Recherche
 
@@ -262,8 +275,8 @@ que les cartes qui contiennent **tous les mots tapés**, dans n'importe quel
 ordre, sans tenir compte des accents ni des majuscules : « securite widgets »
 trouve « Sécurité des widgets ».
 
-- **Où ?** Dans toutes les colonnes que Grist envoie au widget, quels que
-  soient leurs noms : titre, description, statut, EPIC, personnes… Une
+- **Où ?** Dans toutes les colonnes de la table, y compris celles masquées
+  dans la section du widget, quels que soient leurs noms : titre, description, statut, EPIC, personnes… Une
   référence est cherchée sous le nom affiché dans Grist. Les nombres, dates
   et cases à cocher sont ignorés (« 2 » trouverait sinon presque tout).
 - **#numéro** : un mot comme `#203` est cherché dans le numéro affiché en bas
