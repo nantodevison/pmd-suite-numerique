@@ -17,6 +17,7 @@ Le code, les commentaires et les messages sont en français. Le dépôt est **pu
 | `espaces/<document>/` | Schéma de chaque document Grist (`grist_schema.py`, export du code Grist, sans données) : référence pour les noms de tables et de colonnes |
 | `projets/<projet>/` | Ce qui est propre à un projet, hors widgets : README (besoin, widgets utilisés), modèles Docs, archives |
 | `images/` | Images publiées par la synchronisation (URL déjà utilisées dans Grist : ne pas déplacer) |
+| `tests/<widget>/` | Banc d'essai d'un widget : faux Grist, scénarios, lanceur (`py tests/kanban/jouer.py`) ; données inventées uniquement |
 
 Le document Grist principal est `espaces/gestion-projets/` : un espace unique (gestion de projet, CRM, retours utilisateurs, valorisation, écoute client) organisé autour de la table `Projets2`. Les projets (Valorisation, Écoute client, Observatoire des trafics…) sont des **lignes** de `Projets2`, pas des documents séparés.
 
@@ -29,7 +30,7 @@ Le document Grist principal est `espaces/gestion-projets/` : un espace unique (g
   - **par URL (GitHub Pages, branche `master`)** : `https://nantodevison.github.io/pmd-suite-numerique/widgets/<widget>/`. Grist affiche un avertissement « source inconnue » à confirmer, puis il faut régler le niveau d'accès du widget sur « Accès complet » ;
   - **par copier-coller** dans l'éditeur de Custom Widget (onglet HTML : `index.html`, onglet JavaScript : le fichier JS).
 - `index.html` charge le fichier JS par `<script src="…">` : indispensable en mode URL, sans effet en copier-coller.
-- **Widget en service par URL** (statut `en service` dans le catalogue, ex. `kanban` pour l'Observatoire) : une fusion sur `master` vaut **mise en production**. Tester d'abord dans le Custom Widget Builder, sur une copie du document, **avant** de fusionner ; Claude le rappelle à chaque PR qui touche un tel widget. Après publication, recharger la page Grist avec Ctrl + F5 : GitHub Pages laisse le navigateur garder l'ancienne version environ 10 minutes.
+- **Widget en service par URL** (statut `en service` dans le catalogue, ex. `kanban` pour l'Observatoire) : une fusion sur `master` vaut **mise en production**. Jouer d'abord son banc d'essai s'il en a un (`tests/<widget>/`, voir son README) et le compléter pour la nouvelle fonction, puis tester dans le Custom Widget Builder, sur une copie du document, **avant** de fusionner ; Claude le rappelle à chaque PR qui touche un tel widget. Après publication, recharger la page Grist avec Ctrl + F5 : GitHub Pages laisse le navigateur garder l'ancienne version environ 10 minutes.
 - **Ne jamais déplacer ni renommer le dossier d'un widget publié** : le chemin fait partie de l'URL, et les documents Grist qui l'utilisent casseraient. Un widget ne se range pas par projet ni par généricité : ce classement va dans le catalogue.
 - Les dossiers `widgets/_…` (gabarit, code JS partagé) ne sont pas des widgets ; ils sont publiés grâce à `.nojekyll` à la racine.
 - Pour rendre un widget réutilisable, privilégier l'association de colonnes (configurée par l'utilisateur) et le filtrage natif de Grist (« Sélectionner par ») plutôt que des noms de tables ou de colonnes codés en dur.
