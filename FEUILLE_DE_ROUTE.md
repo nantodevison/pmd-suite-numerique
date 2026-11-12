@@ -8,23 +8,21 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-12 00:38_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-12 22:26_
 
 ### 🖐️ À faire
-- [ ] #188 Extraire le rendu des cartes et des pastilles dans _commun (carte.js, carte.css), utilisé par la Galerie (Haute, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
-- [ ] #189 Ajouter à la Galerie un mode tableau : cartes groupées en colonnes selon une colonne Choix associée (Haute, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
-- [ ] #190 Permettre le glisser-déposer des cartes entre colonnes dans le mode tableau (change la valeur de la colonne de regroupement) (Haute, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
-- [ ] #191 Reprendre dans le moteur commun les réglages du Kanban : ordre des colonnes, filtres EPIC et personne, projet du widget (Haute, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
-- [ ] #192 Remplacer le Kanban par le moteur commun : d'abord sur une copie, puis pour l'Observatoire (Haute, EPIC « Unifier Galerie et Kanban dans un moteur de cartes commun »)
-- [ ] #204 Réutiliser les filtres kanban (Moyenne, EPIC « Filtrer la galerie »)
+- [ ] #204 Galerie : filtres et vues enregistrées du Kanban, par le moteur commun (Haute, EPIC « Filtrer la galerie »)
 - [ ] #205 Modifier des pastilles sans ouvrir la carte (Moyenne, EPIC « Rendre les cartes de galerie modifiable »)
 - [ ] #206 Modifier des pastilles dans la carte (Moyenne, EPIC « Rendre les cartes de galerie modifiable »)
+- [ ] #232 Galerie : trier les cartes sur n'importe quelle colonne (_commun/tri.js), tri enregistré dans la vue (Moyenne, EPIC « Filtrer la galerie »)
+- [ ] #233 Galerie : regrouper les cartes selon un attribut, en zones repliables (façon Notion), réglage enregistré dans la vue (Moyenne, EPIC « Améliorer l'Ux/Ui de la galerie »)
+- [ ] #235 Créer une page d'accueil vierge (Moyenne, échéance 2026-11-20, EPIC « Créer la page d'accueil de Marion »)
 - [ ] #184 Ouvrir un objet lié (tâche, EPIC…) d'un clic depuis la fiche de la Galerie (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
-- [ ] #186 Préremplir une nouvelle carte de la Galerie avec le filtre de la vue (Sélectionner par) (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
+- [ ] #186 Préremplir une nouvelle carte avec les valeurs des filtres de la vue active (Kanban et Galerie) (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
 - [ ] #200 Kanban : filtrer sur n'importe quelle colonne (texte, nombre, date…) (Basse, EPIC « Améliorer l'interface du kanban »)
-- [ ] #207 Galerie : relations « Bloque » / « Bloquée par » entre les cartes, à reprendre après le moteur de cartes commun (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
 - [ ] #227 Rechercher dans les menus de choix d'une référence quand la liste est longue (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #228 Proposer les colonnes natives de la table visée comme attributs d'une référence (façon Notion) (Basse, EPIC « Améliorer l'interface du kanban »)
+- [ ] #234 Relire la structure des colonnes (libellés, couleurs des choix, noms des références) quand le document change, au même moment dans le Kanban et la Galerie (_commun/colonnes.js) (Basse, EPIC « Mutualiser les fonctions communes du Kanban et de la Galerie »)
 
 <!-- fin kanban -->
 
