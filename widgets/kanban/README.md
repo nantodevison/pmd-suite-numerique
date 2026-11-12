@@ -23,7 +23,7 @@ combinables, recherche, tri sur n'importe quelle colonne, vues enregistrées
 | [`../_commun/fiche.js`](../_commun/fiche.js), [`fiche.css`](../_commun/fiche.css) | Fiche partagée avec la Galerie : disposition côté / centre, Markdown, menus |
 | [`../_commun/liens.js`](../_commun/liens.js), [`liens.css`](../_commun/liens.css) | Liens « Bloque / Bloquée par » entre cartes (bande « enchaînement », recherche, boucles) |
 | [`../_commun/recherche.js`](../_commun/recherche.js) | Règle de recherche commune avec la Galerie : 🔍, menus et panneaux de recherche |
-| [`../_commun/filtres.js`](../_commun/filtres.js) | Règle des filtres (« ou » entre les valeurs, « et » entre les filtres, `(vide)`), valeurs proposées, attributs d'une référence et leur mémoire ; « 👤 Moi » reste propre au Kanban |
+| [`../_commun/filtres.js`](../_commun/filtres.js), [`filtres.css`](../_commun/filtres.css) | Filtres : règle (« ou » entre les valeurs, « et » entre les filtres, `(vide)`), valeurs proposées (choix dans l'ordre de Grist et à leur couleur, #236), attributs d'une référence et leur mémoire, panneau (étiquettes, « ＋ Filtre », éditeur) ; « 👤 Moi » reste propre au Kanban |
 | [`../_commun/colonnes.js`](../_commun/colonnes.js) | Structure du document (libellés, types, choix et couleurs, colonnes rapportées, noms des lignes visées), commune avec la Galerie |
 | [`../_commun/tri.js`](../_commun/tri.js) | Comparaison de deux valeurs selon le type de leur colonne, pour le tri ⇅ |
 | [`../_commun/fenetre.js`](../_commun/fenetre.js), [`fenetre.css`](../_commun/fenetre.css) | Fenêtre à onglets de ⚙ (étapes, états ✓ / ⚠️ / ℹ️, barre « Appliquer » toujours visible) |
@@ -228,8 +228,10 @@ sans effet sur les vues des autres. Elle se manipule comme une vue partagée
 **＋ Filtre** ajoute une condition « colonne **est** / **n'est pas** valeurs » sur
 une colonne Choix, Choix multiple, Référence ou Liste de références. Entre les
 valeurs d'un même filtre, c'est un « ou » ; entre filtres, c'est un « et ». Les
-valeurs vides (cellule vide, liste vide…) sont regroupées sous « (vide) ». Le
-panneau propose une recherche (même règle que 🔍, ci-dessous) et « Tout cocher » /
+valeurs vides (cellule vide, liste vide…) sont regroupées sous « (vide) ». Les
+valeurs d'une colonne Choix suivent l'ordre des choix de Grist, et un choix
+coloré dans Grist s'affiche à sa couleur (#236) ; les autres valeurs sont
+rangées de A à Z. Le panneau propose une recherche (même règle que 🔍, ci-dessous) et « Tout cocher » /
 « Aucun ». Une nouvelle carte reprend l'EPIC d'un filtre « EPIC est X » à une
 seule valeur.
 

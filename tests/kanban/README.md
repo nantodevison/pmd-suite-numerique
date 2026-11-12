@@ -21,7 +21,7 @@ py tests/kanban/jouer.py --largeurs 1200 -v   # une largeur, toutes les lignes
 Le bilan s'affiche par scénario et par largeur (`BILAN 42 OK, 0 KO`), suivi des
 lignes en échec. Le code de sortie vaut 0 si tout est OK.
 
-## Ce qui est vérifié (202 vérifications par largeur)
+## Ce qui est vérifié (212 vérifications par largeur)
 
 | Scénario | Fonctions |
 |---|---|
@@ -31,7 +31,7 @@ lignes en échec. Le code de sortie vaut 0 si tout est OK.
 | `fiche` | Numéro #id (#203), couleur de statut choisie dans ⚙ (#212), cases à cocher de l'aperçu (#208), sauvegarde et fermeture de la fiche |
 | `attributs-filtre` | Panneau des filtres compacté et bouton « Afficher ▾ » (#226, étape 1) |
 | `attributs-menus` | Attributs dans les menus de la fiche et de « Nouvelle carte », colonnes masquées reçues (#226, étape 2) |
-| `filtres` | Règle des filtres de `_commun/filtres.js` (#191), vérifiée directement sur le module : est / n'est pas, `(vide)`, listes, valeurs proposées et leur ordre, copie et signature des vues, attributs (listes de références, désaccords, couleurs), mémoire des attributs ; dans le Kanban, « 👤 Moi » (#202) |
+| `filtres` | Règle des filtres de `_commun/filtres.js` (#191), vérifiée directement sur le module : est / n'est pas, `(vide)`, listes, valeurs proposées et leur ordre, copie et signature des vues, attributs (listes de références, désaccords, couleurs), mémoire des attributs ; dans le Kanban, « 👤 Moi » (#202) ; panneau commun dans « Gérer la vue » : choix dans l'ordre de Grist et à leur couleur (#236), cocher, est / n'est pas, étiquette, supprimer |
 | `structure` | Structure du document lue par `_commun/colonnes.js` (#188) : une lecture par rafraîchissement, table des EPICs lue une fois, EPIC créé entre-temps connu à l'ouverture d'une fiche, libellés, colonnes rapportées, ordre et couleurs des choix, listes de ⚙, recherche sans lecture dans Grist, structure illisible sans plantage |
 
 Pour obtenir la page à coller dans le Custom Widget Builder :
