@@ -33,6 +33,9 @@ Banc.lancer(async () => {
   ok('nombre de lignes par valeur', proposees.find(p => p.valeur === 'Haute').nb === 2 && proposees.find(p => p.valeur === '').nb === 1);
   ok('valeur cochée absente des lignes : proposée avec 0', proposees.find(p => p.valeur === 'Ancienne')?.nb === 0);
   ok('valeur spéciale : laissée au widget', !proposees.some(p => p.valeur === '@moi'));
+  const selonChoix = F.valeursProposees(lignes, 'P', ['Ancienne'], [], ['Haute', 'basse']);
+  ok('#236 : (vide), puis les choix dans l\'ordre de Grist, puis les autres de A à Z',
+    selonChoix.map(p => p.valeur || '(vide)').join('|') === '(vide)|Haute|basse|Ancienne|Élevée', selonChoix.map(p => p.valeur).join('|'));
 
   // ── Copie et signature (vues) ──
   const originaux = [filtre('P', 'est', ['b', 'a']), filtre('Q', 'est', [])];
@@ -83,4 +86,36 @@ Banc.lancer(async () => {
   ok('personne déclarée : aucune carte', STATE.records.filter(r => carteRespecte(r, filtreMoi)).length === 0);
   ok('valeur « 👤 Moi » cochée : jamais comptée comme une valeur des cartes',
     !valeursProposees(assigne, [MOI]).some((v, i) => i > 0 && v.valeur === MOI));
+
+  // ── Panneau commun (Filtres.creerPanneau), dans « Gérer la vue » ──
+  const $ = Banc.$;
+  ouvrirFenetreVue('filtres');
+  await Banc.attendre(200);
+  ok('panneau construit par filtres.js dans l\'onglet Filtres', $('#fv-filtres #filtre-popover') && $('#fv-filtres #filtre-ajouter'));
+  ajouterFiltre();
+  const sel = $('#filtre-colonne');
+  sel.value = 'Priorite'; sel.dispatchEvent(new Event('change'));
+  await Banc.attendre(100);
+  const noms = () => [...document.querySelectorAll('#filtre-valeurs .filtre-valeur-nom')].map(n => n.textContent);
+  ok('#236 : valeurs d\'une colonne Choix dans l\'ordre de Grist', noms().join('|') === 'Haute|Moyenne|Basse', noms().join('|'));
+  const pastille = $('#filtre-valeurs .filtre-valeur-pastille');
+  ok('#236 : choix coloré dans Grist en pastille, à sa couleur',
+    pastille && pastille.textContent === 'Haute' && getComputedStyle(pastille).backgroundColor === 'rgb(254, 202, 202)',
+    pastille ? getComputedStyle(pastille).backgroundColor : 'aucune pastille');
+  ok('#236 : choix sans couleur : texte simple', document.querySelectorAll('#filtre-valeurs .filtre-valeur-pastille').length === 1);
+  // Cocher une valeur filtre les cartes ; l'étiquette résume le filtre
+  const caseHaute = $('#filtre-valeurs .filtre-valeur input');
+  caseHaute.checked = true; caseHaute.dispatchEvent(new Event('change'));
+  await Banc.attendre(100);
+  ok('cocher « Haute » : seule la carte #1 reste', Banc.cartes().join() === '1', Banc.cartes().join());
+  ok('étiquette du filtre', ($('#filtres-actifs .filtre-chip')?.textContent || '').startsWith('Priorite est : Haute'),
+    $('#filtres-actifs .filtre-chip')?.textContent);
+  ok('bouton de la barre : « 🔽 1 filtre »', $('#filtres-bouton').textContent === '🔽 1 filtre', $('#filtres-bouton').textContent);
+  $('#filtre-popover .filtre-op[data-op="nestpas"]').click();
+  await Banc.attendre(100);
+  ok('« n\'est pas » : les trois autres cartes', Banc.cartes().length === 3 && !Banc.cartes().includes(1), Banc.cartes().join());
+  $('#filtre-supprimer').click();
+  await Banc.attendre(100);
+  ok('« Supprimer le filtre » : plus de filtre, quatre cartes', STATE.filters.length === 0 && Banc.cartes().length === 4);
+  fenetreVue.fermer({ forcer: true });
 });

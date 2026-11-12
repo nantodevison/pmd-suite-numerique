@@ -49,9 +49,6 @@ const STATE = {
   colonnesTriables: [],
   // Type et choix déclarés de chaque colonne, pour comparer : { colId: { type, choix } }
   infosColonnes: {},
-  // Filtre en cours de modification dans le panneau, et ordre de ses valeurs
-  filtreEdite: null,
-  ordreValeurs: [],
   // Choix déclarés des colonnes Choix / Choix multiple : { colId: [choix…] }
   choix: {},
 
@@ -1112,7 +1109,7 @@ function creerFenetreVue() {
   });
 
   section('fv-nom').addEventListener('input', majFenetreVue);
-  section('fv-filtre-ajouter').addEventListener('click', ajouterFiltre);
+  creerPanneauFiltres(section('fv-filtres'));
   section('fv-supprimer').addEventListener('click', supprimerDepuisFenetreVue);
 }
 
@@ -1532,11 +1529,6 @@ async function chargerColonnesFiltrables() {
   STATE.colonnesFiltrables = toutes.filter(c => /^(Choice|ChoiceList|Ref:.+|RefList:.+)$/.test(c.type));
 }
 
-function libelleColonne(colId) {
-  const c = STATE.colonnesFiltrables.find(c => c.colId === colId);
-  return c ? c.label : colId;
-}
-
 /** Valeurs d'une cellule, nettoyées, sous forme de liste (voir ../_commun/filtres.js). */
 function valeursCellule(valeur) {
   return Filtres.valeursCellule(valeur);
@@ -1555,10 +1547,11 @@ function carteRespecte(record, filtre) {
 /**
  * Valeurs proposées pour une colonne : celles des cartes du projet, avec
  * leur nombre de cartes, plus les valeurs déjà cochées.
- * @returns {Array<{valeur:string, nb:number}>} « 👤 Moi » puis « (vide) » en tête, puis ordre alphabétique
+ * @returns {Array<{valeur:string, nb:number}>} « 👤 Moi » puis « (vide) » en tête, puis
+ *   les choix dans l'ordre de Grist (#236), puis les autres valeurs de A à Z
  */
 function valeursProposees(colId, dejaCochees) {
-  const proposees = Filtres.valeursProposees(recordsDuProjet(), colId, dejaCochees, [MOI]);
+  const proposees = Filtres.valeursProposees(recordsDuProjet(), colId, dejaCochees, [MOI], STATE.choix[colId]);
   // « 👤 Moi » tout en tête pour la colonne « Assigné à » (#202), avec le
   // nombre de cartes de la personne déclarée
   if ((colId === STATE.mapping.assigne && REFS.assigne) || dejaCochees.includes(MOI)) {
@@ -1596,12 +1589,8 @@ function attributsAffiches(colId) {
 
 /** Retient dans ce navigateur les attributs affichés pour la colonne `colId`. */
 function definirAttributs(colId, choisis) {
-  MEMOIRE_ATTRIBUTS.definir(colId, choisis, attributsDe(colId).map(c => c.colId));
   // Le panneau du filtre, s'il montre cette colonne, suit le nouveau choix
-  if (STATE.filtreEdite && STATE.filtreEdite.col === colId) {
-    calculerDetails();
-    remplirPanneauFiltre();
-  }
+  PANNEAU_FILTRES.definirAttributs(colId, choisis);
 }
 
 /**
@@ -1630,20 +1619,6 @@ function texteMorceaux(morceaux) {
 }
 
 /**
- * Pour chaque valeur du panneau du filtre, ses attributs affichés :
- *   p.morceaux pour l'affichage, p.detail (texte entier) pour la recherche.
- * Lus dans les cartes du projet.
- */
-function calculerDetails() {
-  const f = STATE.filtreEdite;
-  const parValeur = morceauxParValeur(f.col, recordsDuProjet());
-  STATE.ordreValeurs.forEach(p => {
-    p.morceaux = parValeur.get(p.valeur) || [];
-    p.detail = texteMorceaux(p.morceaux);
-  });
-}
-
-/**
  * Réglage des attributs pour un menu de choix d'une référence (#226), à
  * passer à Fiche.menuChoix ; null si la colonne n'a pas d'attribut. Le choix
  * est le même que dans le panneau du filtre de cette colonne.
@@ -1666,43 +1641,6 @@ function attributsPourMenu(colId, nomDe) {
     // Nom nettoyé comme dans les cartes (espaces en trop retirés)
     detail: (valeur) => parValeur.get(valeursCellule(nomDe(valeur))[0]) || [],
   };
-}
-
-/**
- * Bouton « Afficher (n) ▾ » du panneau (#226) : caché si la colonne n'a pas
- * d'attribut ; (n) = nombre d'attributs affichés, pour que le réglage se voie.
- */
-function majBoutonAfficher() {
-  const bouton = document.getElementById('filtre-afficher');
-  if (!bouton) return;
-  const f = STATE.filtreEdite;
-  const possibles = attributsDe(f.col);
-  bouton.classList.toggle('hidden', possibles.length === 0);
-  const choisis = attributsAffiches(f.col);
-  bouton.classList.toggle('actif', choisis.length > 0);
-  bouton.textContent = choisis.length ? `Afficher (${choisis.length}) ▾` : 'Afficher ▾';
-  bouton.title = choisis.length
-    ? 'Attributs affichés à côté de chaque valeur : '
-      + possibles.filter(c => choisis.includes(c.colId)).map(c => c.attribut).join(', ')
-      + ' (retenu par ce navigateur)'
-    : 'Afficher des attributs à côté de chaque valeur (retenu par ce navigateur)';
-}
-
-/**
- * Liste à cocher des attributs, ouverte sous le bouton « Afficher ». Elle
- * reste ouverte tant qu'on coche (menu « multiple » de fiche.js) et se ferme
- * par un clic ailleurs ou par Échap.
- */
-function ouvrirMenuAfficher() {
-  const f = STATE.filtreEdite;
-  if (!f) return;
-  const col = f.col;
-  Fiche.menuChoix(document.getElementById('filtre-afficher'), {
-    options: attributsDe(col).map(c => ({ valeur: c.colId, libelle: c.attribut })),
-    selection: attributsAffiches(col),
-    multiple: true,
-    surChoix: (choisis) => definirAttributs(col, choisis),
-  });
 }
 
 /** Texte comparable pour la recherche : sans accents ni majuscules. */
@@ -1733,41 +1671,45 @@ function moiDuFiltre() {
   return f ? STATE.moi : null;
 }
 
-/* ── Étiquettes des filtres dans la barre ── */
+/* ── Panneau des filtres (../_commun/filtres.js) ──
+   Étiquettes, « ＋ Filtre » et éditeur d'un filtre sont construits par
+   Filtres.creerPanneau, dans l'onglet Filtres de « Gérer la vue »
+   (creerPanneauFiltres, appelée par creerFenetreVue). Le Kanban lui fournit
+   ses cartes (celles du projet), sa liste de filtres et « 👤 Moi ». */
 
-/** Redessine les étiquettes de la fenêtre (« EPIC n'est pas : A, B ✕ ») et les résumés de la barre. */
-function renderFilterChips() {
-  const zone = document.getElementById('filtres-actifs');
-  if (!zone) return;
-  zone.innerHTML = '';
-  STATE.filters.forEach(filtre => {
-    const noms = filtre.valeurs.map(v => libelleValeur(v));
-    const resume = noms.join(', ') || '…';
-    const chip = document.createElement('button');
-    chip.className = 'filtre-chip' + (filtre === STATE.filtreEdite ? ' actif' : '');
-    chip.title = `${libelleColonne(filtre.col)} ${filtre.op === 'est' ? 'est' : "n'est pas"} : ${noms.join(', ') || '—'}`;
-    chip.textContent = `${libelleColonne(filtre.col)} ${filtre.op === 'est' ? 'est' : "n'est pas"} : ${resume}`;
-    chip.addEventListener('click', () => ouvrirFiltre(filtre));
+let PANNEAU_FILTRES = null;
 
-    const croix = document.createElement('span');
-    croix.className = 'filtre-chip-x';
-    croix.textContent = '✕';
-    croix.title = 'Retirer ce filtre';
-    croix.addEventListener('click', (e) => { e.stopPropagation(); supprimerFiltre(filtre); });
-    chip.appendChild(croix);
-    zone.appendChild(chip);
+// Filtre en cours de modification dans le panneau (null : fermé), lu par les scénarios du banc
+Object.defineProperty(STATE, 'filtreEdite', { get: () => PANNEAU_FILTRES ? PANNEAU_FILTRES.edite() : null });
+
+function creerPanneauFiltres(zone) {
+  PANNEAU_FILTRES = Filtres.creerPanneau({
+    zone,
+    colonnes:         () => STATE.colonnesFiltrables,
+    filtres:          () => STATE.filters,
+    remplacerFiltres: (liste) => { STATE.filters = liste; },
+    lignes:           recordsDuProjet,
+    valeursProposees,                       // avec « 👤 Moi » en tête pour Assigné à
+    choixDe:          (colId) => STATE.choix[colId],
+    styleChoix,
+    libelleValeur,
+    classeValeur:     (v) => v === MOI ? 'speciale moi' : '',
+    attributsDe,
+    memoire:          MEMOIRE_ATTRIBUTS,
+    surChangement:    renderBoard,          // qui redessine aussi les étiquettes
+    surEtiquettes:    () => { majBoutonFiltres(); majBoutonTri(); majBoutonColonnes(); },
   });
-
-  majBoutonFiltres();
-  majBoutonTri();
-  majBoutonColonnes();
-
-  const ajouter = document.getElementById('fv-filtre-ajouter');
-  if (ajouter) {
-    ajouter.disabled = STATE.colonnesFiltrables.length === 0;
-    ajouter.title = ajouter.disabled ? 'Aucune colonne Choix ou Référence dans la table' : 'Ajouter un filtre';
-  }
 }
+
+/** Redessine les étiquettes des filtres et les résumés de la barre. */
+function renderFilterChips() {
+  if (PANNEAU_FILTRES) PANNEAU_FILTRES.dessinerEtiquettes();
+}
+
+function ajouterFiltre()         { PANNEAU_FILTRES.ajouter(); }
+function supprimerFiltre(filtre) { PANNEAU_FILTRES.supprimer(filtre); }
+function ouvrirFiltre(filtre)    { PANNEAU_FILTRES.ouvrir(filtre); }
+function fermerFiltre()          { if (PANNEAU_FILTRES) PANNEAU_FILTRES.fermer(); }
 
 /** Bouton « 🔽 Filtres » de la barre : leur nombre, et le détail au survol. */
 function majBoutonFiltres() {
@@ -1778,7 +1720,7 @@ function majBoutonFiltres() {
   bouton.classList.toggle('actif', nb > 0);
   bouton.textContent = nb ? `🔽 ${nb} filtre${nb > 1 ? 's' : ''}` : '🔽 Filtres';
   bouton.title = nb
-    ? filtres.map(f => `${libelleColonne(f.col)} ${f.op === 'est' ? 'est' : "n'est pas"} : ${f.valeurs.map(v => libelleValeur(v)).join(', ')}`).join('\n')
+    ? filtres.map(f => PANNEAU_FILTRES.resume(f)).join('\n')
     : 'Filtrer les cartes de la vue';
 }
 
@@ -1791,144 +1733,6 @@ function majBoutonColonnes() {
   bouton.classList.toggle('actif', nb > 0);
   bouton.textContent = nb ? `▦ ${nb} colonne${nb > 1 ? 's' : ''}` : '▦ Colonnes';
   bouton.title = nb ? colonnes.join(', ') : 'Tous les statuts présents';
-}
-
-/* ── Panneau de modification d'un filtre ── */
-
-/** Crée un filtre sur la première colonne pas encore filtrée, puis ouvre le panneau. */
-function ajouterFiltre() {
-  if (STATE.colonnesFiltrables.length === 0) return;
-  fermerFiltre();
-  const dejaFiltrees = STATE.filters.map(f => f.col);
-  const colonne = STATE.colonnesFiltrables.find(c => !dejaFiltrees.includes(c.colId)) || STATE.colonnesFiltrables[0];
-  const filtre = { col: colonne.colId, op: 'est', valeurs: [] };
-  STATE.filters.push(filtre);
-  ouvrirFiltre(filtre);
-}
-
-function supprimerFiltre(filtre) {
-  if (STATE.filtreEdite === filtre) fermerFiltre();
-  STATE.filters = STATE.filters.filter(f => f !== filtre);
-  renderBoard();
-}
-
-/** Affiche le panneau d'un filtre, sous les étiquettes de la fenêtre. */
-function ouvrirFiltre(filtre) {
-  if (STATE.filtreEdite && STATE.filtreEdite !== filtre) fermerFiltre();
-  STATE.filtreEdite = filtre;
-
-  // Liste des colonnes
-  const sel = document.getElementById('filtre-colonne');
-  sel.innerHTML = '';
-  STATE.colonnesFiltrables.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.colId; opt.textContent = c.label;
-    sel.appendChild(opt);
-  });
-  sel.value = filtre.col;
-
-  document.getElementById('filtre-recherche').value = '';
-  calculerOrdreValeurs();
-  remplirPanneauFiltre();
-
-  document.getElementById('filtre-popover').classList.remove('hidden');
-  document.getElementById('filtre-recherche').focus();
-  renderFilterChips();
-}
-
-/** Ferme le panneau ; un filtre laissé sans valeur cochée est retiré. */
-function fermerFiltre() {
-  const pop = document.getElementById('filtre-popover');
-  if (pop) pop.classList.add('hidden');
-  if (!STATE.filtreEdite) return;
-  Fiche.fermerMenu(); // la liste « Afficher » (#226), si elle est ouverte
-  STATE.filtreEdite = null;
-  STATE.filters = STATE.filters.filter(f => f.valeurs.length > 0);
-  renderFilterChips();
-}
-
-/**
- * Fige l'ordre d'affichage des valeurs : les valeurs cochées d'abord, puis
- * les autres. Calculé à l'ouverture seulement, pour que la liste ne saute
- * pas sous la souris à chaque case cochée.
- */
-function calculerOrdreValeurs() {
-  const f = STATE.filtreEdite;
-  const proposees = valeursProposees(f.col, f.valeurs);
-  STATE.ordreValeurs = [
-    ...proposees.filter(p => f.valeurs.includes(p.valeur)),
-    ...proposees.filter(p => !f.valeurs.includes(p.valeur)),
-  ];
-  calculerDetails();
-}
-
-/** Valeurs affichées compte tenu du texte de recherche (qui porte aussi sur les attributs affichés, #223). */
-function valeursVisibles() {
-  const saisie = document.getElementById('filtre-recherche').value;
-  return STATE.ordreValeurs.filter(p =>
-    Recherche.correspond(saisie, pourRecherche(`${libelleValeur(p.valeur, true)} ${p.detail || ''}`)));
-}
-
-/** (Re)dessine opérateur, cases à cocher et compteur du panneau. */
-function remplirPanneauFiltre() {
-  const f = STATE.filtreEdite;
-  document.querySelectorAll('#filtre-popover .filtre-op').forEach(b => b.classList.toggle('actif', b.dataset.op === f.op));
-  majBoutonAfficher();
-
-  const liste = document.getElementById('filtre-valeurs');
-  liste.innerHTML = '';
-  const visibles = valeursVisibles();
-  visibles.forEach(({ valeur, nb, detail, morceaux }) => {
-    const ligne = document.createElement('label');
-    ligne.className = 'filtre-valeur' + (valeur === VIDE ? ' vide' : valeur === MOI ? ' moi' : '');
-    const caseACocher = document.createElement('input');
-    caseACocher.type = 'checkbox';
-    caseACocher.checked = f.valeurs.includes(valeur);
-    caseACocher.addEventListener('change', () => basculerValeur(valeur, caseACocher.checked));
-    const nom = document.createElement('span');
-    nom.className = 'filtre-valeur-nom';
-    nom.textContent = libelleValeur(valeur, true);
-    nom.title = nom.textContent;
-    // Attributs affichés (#223), en gris ou aux couleurs de Grist ; le texte entier au survol
-    const attributs = document.createElement('span');
-    attributs.className = 'filtre-valeur-detail';
-    Fiche.dessinerAttributs(attributs, morceaux || []);
-    attributs.title = detail || '';
-    const compte = document.createElement('span');
-    compte.className = 'filtre-valeur-nb';
-    compte.textContent = nb;
-    ligne.append(caseACocher, nom, attributs, compte);
-    liste.appendChild(ligne);
-  });
-  if (visibles.length === 0) {
-    liste.innerHTML = '<div class="filtre-aucune">Aucune valeur ne correspond.</div>';
-  }
-  majCompteFiltre();
-}
-
-/** Compteur « n cochées sur m » du panneau. */
-function majCompteFiltre() {
-  const n = STATE.filtreEdite.valeurs.length;
-  document.getElementById('filtre-compte').textContent =
-    `${n} cochée${n > 1 ? 's' : ''} sur ${STATE.ordreValeurs.length}`;
-}
-
-function basculerValeur(valeur, cochee) {
-  const f = STATE.filtreEdite;
-  f.valeurs = f.valeurs.filter(v => v !== valeur);
-  if (cochee) f.valeurs.push(valeur);
-  majCompteFiltre();
-  renderBoard();
-}
-
-/** « Tout cocher » / « Aucun » : n'agit que sur les valeurs visibles (après recherche). */
-function cocherVisibles(cochee) {
-  const f = STATE.filtreEdite;
-  const visibles = valeursVisibles().map(p => p.valeur);
-  f.valeurs = f.valeurs.filter(v => !visibles.includes(v));
-  if (cochee) f.valeurs.push(...visibles);
-  remplirPanneauFiltre();
-  renderBoard();
 }
 
 /* ── 3 bis. Tri des cartes (#211) ──────────────────────────────
@@ -3626,25 +3430,6 @@ document.addEventListener('DOMContentLoaded', () => {
     e.stopPropagation();
     changerRecherche('');
   });
-  document.getElementById('filtre-colonne')  ?.addEventListener('change', (e) => {
-    // Nouvelle colonne : les valeurs cochées n'ont plus de sens, on repart de zéro
-    STATE.filtreEdite.col = e.target.value;
-    STATE.filtreEdite.valeurs = [];
-    document.getElementById('filtre-recherche').value = '';
-    calculerOrdreValeurs();
-    remplirPanneauFiltre();
-    renderBoard();
-  });
-  document.querySelectorAll('#filtre-popover .filtre-op').forEach(b => b.addEventListener('click', () => {
-    STATE.filtreEdite.op = b.dataset.op;
-    remplirPanneauFiltre();
-    renderBoard();
-  }));
-  document.getElementById('filtre-recherche')?.addEventListener('input', remplirPanneauFiltre);
-  document.getElementById('filtre-tout')     ?.addEventListener('click', () => cocherVisibles(true));
-  document.getElementById('filtre-aucun')    ?.addEventListener('click', () => cocherVisibles(false));
-  document.getElementById('filtre-supprimer')?.addEventListener('click', () => supprimerFiltre(STATE.filtreEdite));
-  document.getElementById('filtre-afficher') ?.addEventListener('click', ouvrirMenuAfficher);
   // Vues enregistrées (#196)
   document.getElementById('vue-ajouter')     ?.addEventListener('click', (e) => ouvrirNomVue('creer', e.currentTarget));
   document.getElementById('vue-nom-valider') ?.addEventListener('click', validerNomVue);

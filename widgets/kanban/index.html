@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="../_commun/fiche.css" />
   <link rel="stylesheet" href="../_commun/liens.css" />
   <link rel="stylesheet" href="../_commun/fenetre.css" />
+  <link rel="stylesheet" href="../_commun/filtres.css" />
   <style>
 /* ══════════════════════════════════════════════════════════════
    KANBAN GRIST — styles v3
@@ -135,32 +136,6 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 }
 .filter-select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(102,126,234,.15); }
 
-/* ── Filtres combinables (#195) ── */
-.filtres-actifs {
-  display: flex; align-items: center; gap: 6px;
-  flex-wrap: wrap; padding: 2px 0;
-}
-.filtre-chip {
-  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
-  max-width: 180px; padding: 4px 6px 4px 10px; border-radius: 999px;
-  border: 1.5px solid var(--accent); background: rgba(102,126,234,.08);
-  color: var(--text); font-size: 12px; font-family: var(--font); cursor: pointer;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.filtre-chip:hover, .filtre-chip.actif { background: rgba(102,126,234,.18); }
-.filtre-chip-x {
-  flex-shrink: 0; width: 16px; height: 16px; line-height: 16px; text-align: center;
-  border-radius: 50%; font-size: 10px; color: var(--text-muted);
-}
-.filtre-chip-x:hover { background: var(--accent); color: #fff; }
-.filtre-ajouter {
-  flex-shrink: 0; padding: 5px 10px; font-size: 12px; font-family: var(--font);
-  border: 1.5px dashed var(--border); border-radius: 8px; background: none;
-  color: var(--text-muted); cursor: pointer; white-space: nowrap;
-}
-.filtre-ajouter:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-.filtre-ajouter:disabled { opacity: .5; cursor: not-allowed; }
-
 /* ── Tri des cartes (#211) ── */
 /* Résumé de la vue (#214) : pointillés si rien n'est réglé, plein sinon */
 .resume-vue { max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
@@ -178,70 +153,6 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 .tri-retirer { border: none; background: none; cursor: pointer; padding: 0; }
 .tri-ajouter { align-self: flex-start; }
 .filtre-lien:disabled { opacity: .5; cursor: default; text-decoration: none; }
-
-/* Panneau en position fixe : la barre des filtres le couperait sinon */
-.filtre-popover {
-  position: fixed; z-index: 900; width: 290px;
-  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(9,30,66,.18); padding: 10px;
-  display: flex; flex-direction: column; gap: 8px;
-}
-.filtre-popover.hidden { display: none; }
-/* Ligne 1 du panneau (#226) : la liste des colonnes garde sa largeur
-   habituelle (110 à 200 px), la recherche prend le reste ; si elle a moins
-   de 160 px, elle passe à la ligne et occupe toute la largeur */
-.filtre-entete { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.filtre-entete .filter-select { flex: 0 1 auto; max-width: 200px; }
-.filtre-entete .filtre-recherche { flex: 1 1 160px; width: auto; min-width: 0; }
-.filtre-ops { display: flex; border: 1.5px solid var(--border); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
-.filtre-op {
-  padding: 5px 8px; font-size: 12px; font-family: var(--font); border: none;
-  background: none; color: var(--text-muted); cursor: pointer; white-space: nowrap;
-}
-.filtre-op.actif { background: var(--accent); color: #fff; }
-.filtre-recherche {
-  width: 100%; padding: 6px 10px; font-size: 12px; font-family: var(--font);
-  border: 1.5px solid var(--border); border-radius: 8px;
-}
-.filtre-recherche:focus { outline: none; border-color: var(--accent); }
-.filtre-outils { display: flex; align-items: center; gap: 10px; }
-.filtre-lien {
-  background: none; border: none; padding: 0; font-size: 12px; font-family: var(--font);
-  color: var(--accent); cursor: pointer;
-}
-.filtre-lien:hover { text-decoration: underline; }
-.filtre-lien.danger { color: var(--danger); }
-.filtre-compte { margin-left: auto; font-size: 11px; color: var(--text-muted); }
-.filtre-valeurs { max-height: min(260px, 50vh); overflow-y: auto; border-top: 1px solid var(--border); padding-top: 4px; }
-.filtre-valeur {
-  display: flex; align-items: center; gap: 8px; padding: 4px 4px;
-  border-radius: 6px; cursor: pointer; font-size: 12px;
-}
-.filtre-valeur:hover { background: var(--col-bg); }
-.filtre-valeur.vide .filtre-valeur-nom { font-style: italic; color: var(--text-muted); }
-.filtre-valeur-nom { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.filtre-valeur-nb { font-size: 11px; color: var(--text-muted); }
-/* Ligne 2 du panneau (#226) : le compteur suit « Aucun », le bouton
-   « Afficher » est poussé à droite ; il passe à la ligne si la place manque */
-#filtre-popover .filtre-outils { flex-wrap: wrap; row-gap: 4px; }
-#filtre-popover .filtre-compte { margin-left: 4px; }
-/* Attributs d'une référence (#223) : bouton « Afficher » qui ouvre la liste
-   à cocher, puis texte gris ou pastilles sur chaque ligne */
-.filtre-afficher {
-  margin-left: auto; padding: 1px 8px; border: 1.5px dashed var(--border); border-radius: 10px;
-  background: none; color: var(--text-muted); font-size: 11px; font-family: var(--font);
-  cursor: pointer; white-space: nowrap;
-}
-.filtre-afficher:hover { border-color: var(--accent); }
-.filtre-afficher.actif { border-style: solid; border-color: var(--accent); background: rgba(102,126,234,.12); color: var(--text); }
-.filtre-afficher.hidden { display: none; }
-.filtre-valeur-detail {
-  flex: 0 1 auto; max-width: 45%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-size: 11px; color: var(--text-muted);
-}
-.filtre-valeur-detail:empty { display: none; }
-.filtre-aucune { padding: 8px 4px; font-size: 12px; color: var(--text-muted); font-style: italic; }
-.filtre-pied { border-top: 1px solid var(--border); padding-top: 6px; }
 
 /* ── Vues enregistrées (#196) ── */
 .vues-enregistrees { display: flex; align-items: center; gap: 2px; }
@@ -290,7 +201,6 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 .btn-moi.hidden { display: none; }
 /* Filtre « Moi » actif sans personne déclarée */
 .btn-moi.a-declarer { border-color: var(--danger); color: var(--danger); }
-.filtre-valeur.moi .filtre-valeur-nom { font-weight: 600; }
 .filtre-lien:disabled { opacity: .4; cursor: default; text-decoration: none; }
 
 /* ── Boutons ── */
@@ -656,18 +566,12 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
 .config-aide { font-size: 12px; color: var(--text-muted); margin: 0; }
 .config-equipe .filtre-valeurs { max-height: 340px; }
 
-/* ── Fenêtre « Gérer la vue » (#214) : la fenêtre elle-même est dans ../_commun/fenetre.css ── */
-/* Dans la fenêtre, les panneaux ne flottent pas : ils prennent place dans l'onglet */
-.fenetre .filtre-popover { position: static; width: auto; border: none; box-shadow: none; padding: 0; }
-.fenetre .tri-popover { max-width: none; }
-/* Une étiquette se lit en entier, quitte à prendre deux lignes */
-.fenetre .filtre-chip { max-width: 100%; flex-shrink: 1; white-space: normal; text-align: left; }
+/* ── Fenêtre « Gérer la vue » (#214) : la fenêtre elle-même est dans ../_commun/fenetre.css,
+   le panneau des filtres dans ../_commun/filtres.css ── */
+/* Dans la fenêtre, le panneau du tri ne flotte pas : il prend place dans l'onglet */
+.fenetre .tri-popover { width: auto; max-width: none; }
 /* Les sections ont quitté #vue-sections : elles sont maintenant dans la fenêtre */
 .fenetre-panneau[id^="fv-"] .config-aide { margin-bottom: 12px; }
-.fv-filtres-tete { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px; }
-.fv-filtres-tete .filtres-actifs { flex: 1; min-width: 0; }
-#fv-filtre-ajouter { flex-shrink: 0; }
-#filtre-popover { border-top: 1px solid var(--border); }
 .fv-champ { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; font-size: 12px; font-weight: 600; }
 .fv-supprimer[hidden] { display: none; }
 #fv-nouvelle-portee { margin-bottom: 16px; }
@@ -774,36 +678,8 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
     <section id="fv-filtres" data-neutre>
       <h3 class="config-etape">Filtres</h3>
       <p class="config-aide">Une carte doit respecter tous les filtres. Cliquez sur une étiquette pour la modifier.</p>
-      <div class="fv-filtres-tete">
-        <!-- Une étiquette par filtre, dessinée par renderFilterChips() -->
-        <div id="filtres-actifs" class="filtres-actifs"></div>
-        <button id="fv-filtre-ajouter" class="filtre-ajouter">＋ Filtre</button>
-      </div>
-      <!-- Panneau de modification d'un filtre (affiché par ouvrirFiltre()) -->
-      <div id="filtre-popover" class="filtre-popover hidden">
-        <!-- Ligne 1 (#226) : colonne, opérateur, recherche ; la recherche passe
-             à la ligne si le widget est trop étroit -->
-        <div class="filtre-entete">
-          <select id="filtre-colonne" class="filter-select" title="Colonne"></select>
-          <div class="filtre-ops">
-            <button class="filtre-op" data-op="est">est</button>
-            <button class="filtre-op" data-op="nestpas">n'est pas</button>
-          </div>
-          <input id="filtre-recherche" class="filtre-recherche" type="search" placeholder="Rechercher…" autocomplete="off" />
-        </div>
-        <!-- Ligne 2 (#226) : outils et compteur à gauche ; à droite, le bouton
-             « Afficher » des attributs d'une référence (#223), mis à jour par majBoutonAfficher() -->
-        <div class="filtre-outils">
-          <button id="filtre-tout" class="filtre-lien">Tout cocher</button>
-          <button id="filtre-aucun" class="filtre-lien">Aucun</button>
-          <span id="filtre-compte" class="filtre-compte"></span>
-          <button id="filtre-afficher" class="filtre-afficher hidden" type="button"></button>
-        </div>
-        <div id="filtre-valeurs" class="filtre-valeurs"></div>
-        <div class="filtre-pied">
-          <button id="filtre-supprimer" class="filtre-lien danger">Supprimer le filtre</button>
-        </div>
-      </div>
+      <!-- Étiquettes, « ＋ Filtre » et éditeur d'un filtre : construits par
+           Filtres.creerPanneau (../_commun/filtres.js), appelé par creerFenetreVue() -->
     </section>
     <section id="fv-tri" data-neutre>
       <h3 class="config-etape">Tri</h3>
