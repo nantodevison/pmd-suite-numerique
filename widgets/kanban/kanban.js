@@ -179,6 +179,13 @@ let _tableName = null;
    Il vaut null si le champ n'est pas associé ou n'est pas une référence. */
 const REFS = { epic: null, assigne: null, projet: null };
 
+/* Structure du document Grist (libellés, types, choix et couleurs des
+   colonnes…), lue par ../_commun/colonnes.js. Relue à chaque appel de
+   assurerReferences (ouverture, ⚙ Appliquer, ouverture d'une fiche ou de
+   « Nouvelle carte ») : un EPIC ou une colonne ajoutés dans Grist entre-temps
+   y apparaissent. null si la lecture a échoué. */
+let DOC = null;
+
 /* ══════════════════════════════════════════════════════════════
    1. INITIALISATION GRIST
    ══════════════════════════════════════════════════════════════ */
@@ -225,9 +232,6 @@ grist.onRecords((records, _mappings, tableId) => {
   }
 
   renderBoard();
-
-  // Recherche (#209) : un nom de référence (EPIC, personne…) a pu changer
-  marquerStructureRecherchePerimee();
 
   // Les liens (#183) sont relus à chaque changement : ceux des cartes liées,
   // et leurs statuts, ont pu changer. Puis on redessine les badges ⛔ / ➡️ du
@@ -1489,102 +1493,53 @@ function libelleValeur(valeur, detaille = false) {
 }
 
 /**
- * Lit dans les métadonnées Grist les colonnes de la table : toutes servent
- * au tri (#211) ; les colonnes Choix et Référence servent aussi aux filtres.
+ * Colonnes de la table, d'après la structure du document (DOC, lue par
+ * assurerReferences avec ../_commun/colonnes.js) : toutes servent au tri
+ * (#211) ; les colonnes Choix et Référence servent aussi aux filtres.
  */
 async function chargerColonnesFiltrables() {
   STATE.colonnesFiltrables = [];
   STATE.colonnesTriables = [];
   STATE.infosColonnes = {};
   STATE.choix = {};
-  try {
-    await _tableNamePret;
-    const tables   = await grist.docApi.fetchTable('_grist_Tables');
-    const colonnes = await grist.docApi.fetchTable('_grist_Tables_column');
-    const idxTable = tables.tableId.indexOf(getTableName());
-    if (idxTable === -1) return;
-    const numeroTable = tables.id[idxTable];
-    const toutes = [];
-    colonnes.id.forEach((_, i) => {
-      const colId = colonnes.colId[i];
-      const type  = String(colonnes.type[i]);
-      if (colonnes.parentId[i] !== numeroTable) return;
-      if (colId.startsWith('gristHelper_') || colId === 'manualSort') return; // colonnes internes
-      // Choix déclarés (pour proposer des colonnes de statut encore vides, #196,
-      // et pour trier dans l'ordre des choix, #211)
-      // Styles des choix dans Grist (couleur de fond et de texte), repris par
-      // les attributs affichés dans le panneau d'un filtre (#223)
-      let styles = {};
-      if (type === 'Choice' || type === 'ChoiceList') {
-        try {
-          const options = JSON.parse(colonnes.widgetOptions[i] || '{}');
-          STATE.choix[colId] = options.choices || [];
-          styles = options.choiceOptions || {};
-        } catch (_) { STATE.choix[colId] = []; }
-      }
-      STATE.infosColonnes[colId] = { type, choix: STATE.choix[colId], styles };
-      const rapporte = libelleRapporte(i, numeroTable, tables, colonnes);
-      toutes.push({
-        colId, type,
-        // Colonne rapportée : toujours précédée de sa référence, « EPIC › Priorite »,
-        // pour ne pas la confondre avec une colonne de même nom de la table (#223)
-        label: rapporte ? `${rapporte.via} › ${rapporte.label}` : (colonnes.label[i] || colId),
-        via:   rapporte ? rapporte.via : null,
-        // Colonne rapportée (#223) : référence dont elle est un attribut
-        // (ex. 'EPIC' pour $EPIC.Priorite) et libellé court de l'attribut
-        ref:      rapporte ? rapporte.colRef : null,
-        attribut: rapporte ? rapporte.label  : null,
-      });
-    });
-    // Colonne associée dans ⚙ à un champ du Kanban qui porte un autre nom :
-    // on rappelle ce champ, « qui ? (Assigné à) », pour faire le lien avec ⚙
-    // et le mode d'emploi (#202)
-    toutes.forEach(c => {
-      const champ = Object.keys(PROP_LABELS).find(k => STATE.mapping[k] === c.colId);
-      if (champ && pourRecherche(c.label) !== pourRecherche(PROP_LABELS[champ])) {
-        c.label += ` (${PROP_LABELS[champ]})`;
-      }
-    });
-    toutes.sort((a, b) => a.label.localeCompare(b.label, 'fr'));
-    STATE.colonnesTriables   = toutes;
-    STATE.colonnesFiltrables = toutes.filter(c => /^(Choice|ChoiceList|Ref:.+|RefList:.+)$/.test(c.type));
-  } catch (err) {
-    console.error('Kanban – lecture des colonnes filtrables impossible:', err);
-  }
-}
-
-/**
- * Colonne « rapportée » d'une autre table, c'est-à-dire dont la formule est
- * exactement « $EPIC.objectif_resultat_cle » : Grist la nomme
- * « EPIC_objectifs résultats clé », on préfère le libellé de la colonne d'origine.
- * @param {number} i - position de la colonne dans `colonnes` (_grist_Tables_column)
- * @returns {{label:string, via:string, colRef:string}|null} libellé d'origine,
- *          libellé de la colonne de référence (ex. 'EPIC') et son identifiant
- *          Grist ; null si ce n'est pas une colonne rapportée.
- */
-function libelleRapporte(i, numeroTable, tables, colonnes) {
-  const m = /^\$(\w+)\.(\w+)$/.exec(String(colonnes.formula[i] || '').trim());
-  if (!colonnes.isFormula[i] || !m) return null;
-  const [, colRef, colSource] = m;
-
-  // La colonne de référence (EPIC) et la table qu'elle vise (EPICs)
-  const idxRef = colonnes.id.findIndex((_, j) =>
-    colonnes.parentId[j] === numeroTable && colonnes.colId[j] === colRef);
-  if (idxRef === -1) return null;
-  // Référence ou Liste de références (#226) : 'Ref:EPICs', 'RefList:Contacts'
-  const cible = /^(?:Ref|RefList):(.+)$/.exec(String(colonnes.type[idxRef]));
-  const idxTableCible = cible ? tables.tableId.indexOf(cible[1]) : -1;
-  if (idxTableCible === -1) return null;
-
-  // La colonne d'origine dans la table visée, et son libellé
-  const idxSource = colonnes.id.findIndex((_, j) =>
-    colonnes.parentId[j] === tables.id[idxTableCible] && colonnes.colId[j] === colSource);
-  if (idxSource === -1) return null;
-  return {
-    label: colonnes.label[idxSource] || colSource,
-    via:   colonnes.label[idxRef] || colRef,
-    colRef,
-  };
+  await _tableNamePret;
+  if (!DOC) return;   // structure illisible : ni tri ni filtres par colonne
+  const toutes = DOC.colonnes(getTableName()).map(c => {
+    const estChoix = c.type === 'Choice' || c.type === 'ChoiceList';
+    // Choix déclarés (pour proposer des colonnes de statut encore vides, #196,
+    // et pour trier dans l'ordre des choix, #211) ; couleurs des choix,
+    // reprises par les attributs affichés dans le panneau d'un filtre (#223)
+    if (estChoix) STATE.choix[c.colId] = c.choix;
+    STATE.infosColonnes[c.colId] = {
+      type:     c.type,
+      choix:    STATE.choix[c.colId],
+      couleurs: estChoix ? c.couleurs : {},
+    };
+    const r = c.rapportee;   // colonne rapportée d'une autre table (#223), ex. $EPIC.Priorite
+    return {
+      colId: c.colId,
+      type:  c.type,
+      // Colonne rapportée : toujours précédée de sa référence, « EPIC › Priorite »,
+      // pour ne pas la confondre avec une colonne de même nom de la table (#223)
+      label: r ? `${r.via} › ${r.attribut}` : c.libelle,
+      via:   r ? r.via : null,
+      // Référence dont elle est un attribut (ex. 'EPIC') et libellé court de l'attribut
+      ref:      r ? r.colRef : null,
+      attribut: r ? r.attribut : null,
+    };
+  });
+  // Colonne associée dans ⚙ à un champ du Kanban qui porte un autre nom :
+  // on rappelle ce champ, « qui ? (Assigné à) », pour faire le lien avec ⚙
+  // et le mode d'emploi (#202)
+  toutes.forEach(c => {
+    const champ = Object.keys(PROP_LABELS).find(k => STATE.mapping[k] === c.colId);
+    if (champ && pourRecherche(c.label) !== pourRecherche(PROP_LABELS[champ])) {
+      c.label += ` (${PROP_LABELS[champ]})`;
+    }
+  });
+  toutes.sort((a, b) => a.label.localeCompare(b.label, 'fr'));
+  STATE.colonnesTriables   = toutes;
+  STATE.colonnesFiltrables = toutes.filter(c => /^(Choice|ChoiceList|Ref:.+|RefList:.+)$/.test(c.type));
 }
 
 function libelleColonne(colId) {
@@ -1596,7 +1551,7 @@ function libelleColonne(colId) {
  * Valeurs d'une cellule, nettoyées, sous forme de liste ([] = cellule vide).
  * Rend équivalentes les valeurs dont le sens est le même :
  *   null, '', '   ', [] et 0 (référence vide) → [] ;
- *   ' Martin  Schoreisz ' → 'Martin Schoreisz' (espaces en trop retirés).
+ *   ' Alice  Durand ' → 'Alice Durand' (espaces en trop retirés).
  * Les majuscules sont conservées : deux choix « Fait » et « fait » restent distincts.
  */
 function valeursCellule(valeur) {
@@ -1716,10 +1671,7 @@ function texteAttribut(valeur, type) {
  * colonne), ou null s'il n'en a pas. Seules les colonnes Choix en ont.
  */
 function styleChoix(colId, texte) {
-  const style = STATE.infosColonnes[colId]?.styles?.[texte];
-  return style && (style.fillColor || style.textColor)
-    ? { fond: style.fillColor || '', texte: style.textColor || '' }
-    : null;
+  return STATE.infosColonnes[colId]?.couleurs?.[texte] || null;
 }
 
 /**
@@ -2217,46 +2169,18 @@ function getFilteredRecords() {
     if (!STATE.filters.every(f => carteRespecte(r, f))) return false;
 
     // Recherche (#209) : dans toutes les colonnes de la carte, et #numéro
-    return Recherche.ligneCorrespond(r, STATE.recherche, STRUCTURE_RECHERCHE);
+    return Recherche.ligneCorrespond(r, STATE.recherche);
   });
 }
 
 /* ── Recherche (#209) ──
    La règle (accents ignorés, chaque mot, #numéro) et la lecture des
    colonnes sont dans ../_commun/recherche.js, communes avec la Galerie.
-   Ici : le champ 🔍 et la « structure » de la table (types des colonnes,
-   noms affichés des références), lue à la première recherche puis relue
-   quand les données changent pendant une recherche. */
-
-let STRUCTURE_RECHERCHE = null;    // dernière structure lue (null : pas encore)
-let _structureAJour = false;       // false : à relire avant la prochaine recherche
-let _structureEnCours = null;      // lecture en cours (une seule à la fois)
+   Ici : le champ 🔍. Rien à lire dans Grist : les références arrivent déjà
+   sous leur nom affiché. */
 
 function rechercheActive() {
   return STATE.recherche.trim() !== '';
-}
-
-/** Lit la structure si elle manque ou a vieilli, puis redessine le tableau. */
-function assurerStructureRecherche() {
-  if (_structureAJour || _structureEnCours) return;
-  _structureEnCours = (async () => {
-    try {
-      await _tableNamePret;
-      STRUCTURE_RECHERCHE = await Recherche.lireStructure(getTableName());
-    } catch (err) {
-      // Sans structure, la recherche parcourt quand même les textes
-      console.error('Kanban – structure de la table illisible pour la recherche :', err);
-    }
-    _structureAJour = true;   // même en cas d'échec : pas de nouvel essai à chaque touche
-    _structureEnCours = null;
-    if (rechercheActive()) renderBoard();
-  })();
-}
-
-/** Les données ont changé : la structure sera relue (tout de suite si une recherche est en cours). */
-function marquerStructureRecherchePerimee() {
-  _structureAJour = false;
-  if (rechercheActive()) assurerStructureRecherche();
 }
 
 /** Change le texte recherché (champ 🔍, Échap), puis redessine. */
@@ -2264,7 +2188,6 @@ function changerRecherche(texte) {
   STATE.recherche = texte;
   const champ = document.getElementById('recherche');
   if (champ && champ.value !== texte) champ.value = texte;
-  if (rechercheActive()) assurerStructureRecherche();
   renderBoard();
 }
 
@@ -3399,93 +3322,41 @@ function onColumnDrop(e) {
    8 bis. RÉFÉRENCES (correctif)
    ══════════════════════════════════════════════════════════════
    Pourquoi : Grist envoie au widget le NOM affiché d'une référence
-   (ex. « Martin Schoreisz »), mais une écriture doit fournir le NUMÉRO
-   de la ligne visée (ex. 20). On lit donc la description des colonnes
-   dans les tables internes de Grist (_grist_Tables, _grist_Tables_column)
-   pour savoir, pour chaque colonne de référence :
-     - quelle table elle vise (ex. Contacts),
-     - quelle colonne sert à l'afficher (ex. Nom_complet),
-   puis on construit la liste {id, nom} de toutes les lignes visées. */
+   (ex. « Alice Durand »), mais une écriture doit fournir le NUMÉRO
+   de la ligne visée (ex. 20). ../_commun/colonnes.js lit la structure du
+   document (table visée, colonne affichée) puis la liste {id, nom} de
+   toutes les lignes visées (Colonnes.lireReference). */
 
-/**
- * Décrit une colonne de référence de la table du widget.
- * @param {string} tableId - table du widget (ex. 'Taches')
- * @param {string} colId   - colonne à décrire (ex. 'qui_')
- * @returns {Promise<{estListe:boolean, tableVisee:string, options:Array<{id:number, nom:string}>}|null>}
- *          null si la colonne n'existe pas ou n'est pas une référence.
- */
-async function chargerReference(tableId, colId) {
-  const tables   = await grist.docApi.fetchTable('_grist_Tables');
-  const colonnes = await grist.docApi.fetchTable('_grist_Tables_column');
-
-  // 1. Retrouver la ligne qui décrit la colonne (table + nom de colonne)
-  const idxTable = tables.tableId.indexOf(tableId);
-  if (idxTable === -1) return null;
-  const numeroTable = tables.id[idxTable];
-  const idxCol = colonnes.id.findIndex((_, i) =>
-    colonnes.parentId[i] === numeroTable && colonnes.colId[i] === colId);
-  if (idxCol === -1) return null;
-
-  // 2. Son type dit si c'est une référence : 'Ref:EPICs' ou 'RefList:Contacts'
-  const type = String(colonnes.type[idxCol]);
-  const correspondance = /^(Ref|RefList):(.+)$/.exec(type);
-  if (!correspondance) return null; // colonne ordinaire (texte, choix…)
-  const estListe   = correspondance[1] === 'RefList';
-  const tableVisee = correspondance[2];
-
-  // 3. La colonne affichée (visibleCol) est désignée par son numéro de ligne
-  //    dans _grist_Tables_column ; 0 = aucune, Grist affiche alors le numéro
-  const idxAffichee  = colonnes.id.indexOf(colonnes.visibleCol[idxCol]);
-  const colAffichee  = idxAffichee !== -1 ? colonnes.colId[idxAffichee] : null;
-
-  // 4. Liste de toutes les lignes visées, avec leur nom tel qu'affiché
-  const lignes = await grist.docApi.fetchTable(tableVisee);
-  const options = lignes.id.map((id, i) => ({
-    id,
-    nom: colAffichee ? String(lignes[colAffichee][i] ?? '') : String(id),
-  }));
-
-  return { estListe, tableVisee, options };
-}
-
-/**
- * ✅ Projet du Kanban : nom de la première colonne de `tableId` qui est une
- * référence vers `tableCible` (ex. dans EPICs, la colonne qui vise Projets2).
- * null s'il n'y en a pas.
- */
-async function colonneQuiVise(tableId, tableCible) {
-  const tables   = await grist.docApi.fetchTable('_grist_Tables');
-  const colonnes = await grist.docApi.fetchTable('_grist_Tables_column');
-  const idxTable = tables.tableId.indexOf(tableId);
-  if (idxTable === -1) return null;
-  const numeroTable = tables.id[idxTable];
-  const idx = colonnes.id.findIndex((_, i) =>
-    colonnes.parentId[i] === numeroTable && colonnes.type[i] === `Ref:${tableCible}`);
-  return idx === -1 ? null : colonnes.colId[idx];
-}
-
-/** (Re)charge REFS pour les champs EPIC, Assigné à et Projet, selon l'association courante. */
+/** (Re)lit la structure du document, puis REFS pour les champs EPIC, Assigné à et Projet. */
 async function assurerReferences() {
   await _tableNamePret; // le nom réel de la table doit être connu
+  REFS.epic = REFS.assigne = REFS.projet = null;
+  try {
+    DOC = await Colonnes.lireDocument();
+  } catch (err) {
+    // En cas d'échec, le widget garde le comportement de la version d'origine
+    DOC = null;
+    console.error('Kanban – lecture de la structure du document impossible:', err);
+    return;
+  }
   for (const key of ['epic', 'assigne', 'projet']) {
-    REFS[key] = null;
     const col = STATE.mapping[key];
     if (!col) continue;
     try {
-      REFS[key] = await chargerReference(getTableName(), col);
+      REFS[key] = await Colonnes.lireReference(DOC, getTableName(), col);
     } catch (err) {
-      // En cas d'échec, le widget garde le comportement de la version d'origine
       console.error(`Kanban – lecture de la référence « ${col} » impossible:`, err);
     }
   }
 
   // ✅ Projet du Kanban : pour chaque EPIC, retenir le numéro de son projet,
   // en cherchant dans la table des EPICs la colonne qui vise la table des projets.
+  // La table des EPICs, déjà lue pour REFS.epic, n'est pas relue (lireLignes).
   if (REFS.epic && REFS.projet) {
     try {
-      const colProjet = await colonneQuiVise(REFS.epic.tableVisee, REFS.projet.tableVisee);
+      const colProjet = DOC.colonneQuiVise(REFS.epic.tableVisee, REFS.projet.tableVisee);
       if (colProjet) {
-        const lignes = await grist.docApi.fetchTable(REFS.epic.tableVisee);
+        const lignes = await Colonnes.lireLignes(DOC, REFS.epic.tableVisee);
         REFS.epic.options.forEach(o => {
           const i = lignes.id.indexOf(o.id);
           o.projetId = i !== -1 ? lignes[colProjet][i] : 0;
@@ -3495,6 +3366,15 @@ async function assurerReferences() {
       console.error('Kanban – lien EPIC → projet introuvable:', err);
     }
   }
+}
+
+/**
+ * Référence d'une colonne de la table, lue dans une structure du document
+ * relue pour l'occasion (listes de ⚙ : projets, personnes).
+ * null si la colonne n'est pas une référence.
+ */
+async function lireReferenceFraiche(colId) {
+  return Colonnes.lireReference(await Colonnes.lireDocument(), getTableName(), colId);
 }
 
 /** Nom affiché d'une ligne visée par un champ de référence ('' si inconnu). */
@@ -3783,7 +3663,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const col = e.target.value;
     let ref = null;
     if (col) {
-      try { ref = await chargerReference(getTableName(), col); }
+      try { ref = await lireReferenceFraiche(col); }
       catch (err) { console.error('Kanban – lecture des projets impossible:', err); }
     }
     // Une réponse arrivée après un autre changement de colonne est périmée
@@ -3809,7 +3689,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const col = e.target.value;
     let ref = null;
     if (col) {
-      try { ref = await chargerReference(getTableName(), col); }
+      try { ref = await lireReferenceFraiche(col); }
       catch (err) { console.error('Kanban – lecture des personnes impossible:', err); }
     }
     if (e.target.value !== col) return;   // réponse périmée (voir col-projet)

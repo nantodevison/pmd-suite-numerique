@@ -21,7 +21,7 @@ py tests/kanban/jouer.py --largeurs 1200 -v   # une largeur, toutes les lignes
 Le bilan s'affiche par scénario et par largeur (`BILAN 42 OK, 0 KO`), suivi des
 lignes en échec. Le code de sortie vaut 0 si tout est OK.
 
-## Ce qui est vérifié (143 vérifications par largeur)
+## Ce qui est vérifié (170 vérifications par largeur)
 
 | Scénario | Fonctions |
 |---|---|
@@ -31,6 +31,7 @@ lignes en échec. Le code de sortie vaut 0 si tout est OK.
 | `fiche` | Numéro #id (#203), couleur de statut choisie dans ⚙ (#212), cases à cocher de l'aperçu (#208), sauvegarde et fermeture de la fiche |
 | `attributs-filtre` | Panneau des filtres compacté et bouton « Afficher ▾ » (#226, étape 1) |
 | `attributs-menus` | Attributs dans les menus de la fiche et de « Nouvelle carte », colonnes masquées reçues (#226, étape 2) |
+| `structure` | Structure du document lue par `_commun/colonnes.js` (#188) : une lecture par rafraîchissement, table des EPICs lue une fois, EPIC créé entre-temps connu à l'ouverture d'une fiche, libellés, colonnes rapportées, ordre et couleurs des choix, listes de ⚙, recherche sans lecture dans Grist, structure illisible sans plantage |
 
 Pour obtenir la page à coller dans le Custom Widget Builder :
 
@@ -47,7 +48,7 @@ Le moteur est commun à tous les bancs d'essai, dans [`../_commun/`](../_commun/
 | `../_commun/banc.py` | Recopie dans `index.html` les styles et scripts locaux (`_commun`, `kanban.js`) : une seule page, comme pour le builder ; construit une page par scénario, l'ouvre dans le navigateur sans affichage (profil neuf à chaque fois) et lit le bilan. |
 | `../_commun/outils-scenario.js` | Outils communs des scénarios : `Banc.ok`, `Banc.demarrer`, `Banc.cartes`… ; remplace `window.confirm` (aucune fenêtre, réponse choisie par le scénario). Une erreur JavaScript du widget compte comme un KO. |
 | `assembler.py`, `jouer.py` | Relais vers `banc.py`, pour le Kanban. |
-| `faux-grist.js` | Imite l'API Grist (`onRecords`, `fetchTable`…) avec des tables inventées ; note ce que le widget écrit (`FAUX_GRIST.actions`, `FAUX_GRIST.options`). |
+| `faux-grist.js` | Imite l'API Grist (`onRecords`, `fetchTable`…) avec des tables inventées ; note ce que le widget écrit (`FAUX_GRIST.actions`, `FAUX_GRIST.options`) et les tables qu'il lit (`FAUX_GRIST.lectures`) ; `FAUX_GRIST.donnees` permet d'ajouter une ligne en cours de scénario, `FAUX_GRIST.structureIllisible` de simuler un refus de lecture. |
 | `scenarios/*.js` | Un scénario par fonction : il manipule le widget comme un utilisateur et écrit un bilan OK / KO. |
 
 Les pages générées vont dans `genere/`, ignoré par Git.
