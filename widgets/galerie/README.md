@@ -16,6 +16,7 @@ EPICs, objectifs et résultats clés, projets… Les tâches restent gérées pa
 | `galerie.js` | Logique Grist : réception des données, grille, fiche, écriture |
 | [`../_commun/fiche.js`](../_commun/fiche.js), [`fiche.css`](../_commun/fiche.css) | Fiche partagée avec le Kanban : disposition côté / centre, Markdown |
 | [`../_commun/recherche.js`](../_commun/recherche.js) | Règle de recherche commune avec le Kanban |
+| [`../_commun/colonnes.js`](../_commun/colonnes.js) | Structure du document (libellés, types, formules, couleurs des choix), commune aux widgets |
 
 La Galerie dépend du dossier `_commun/` : elle ne fonctionne qu'**en mode URL**.
 
@@ -30,7 +31,10 @@ https://nantodevison.github.io/pmd-suite-numerique/widgets/galerie/
 Voir [../README.md](../README.md#brancher-un-widget-par-url-github-pages) pour
 l'avertissement et le niveau d'accès (**accès complet** requis : le widget
 écrit le titre et le texte principal, et lit la structure du document pour
-afficher les libellés et les références).
+afficher les libellés et les couleurs des choix).
+
+Banc d'essai (à jouer avant toute PR qui touche la Galerie ou `_commun/`) :
+[`tests/galerie/`](../../tests/galerie/).
 
 ## Configuration
 
@@ -101,8 +105,10 @@ l'EPIC ouvert).
 
 ## Limites connues (v1)
 
-- Les noms affichés des références sont lus au premier affichage : un
-  renommage dans la table visée n'apparaît qu'après rechargement du widget.
+- La structure du document (libellés des colonnes, couleurs des choix) est
+  lue au premier affichage : un changement dans Grist n'apparaît qu'après
+  rechargement du widget (#234). Les noms des références, eux, arrivent avec
+  les données et sont toujours à jour.
 - Le contexte n'est pas modifiable depuis la fiche (prévu en amélioration).
 - La recherche (règle commune avec le Kanban : tous les mots, accents
   ignorés, `#12` pour la ligne n° 12) porte sur toutes les colonnes que

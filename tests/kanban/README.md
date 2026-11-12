@@ -40,13 +40,15 @@ py tests/kanban/assembler.py    # → tests/kanban/genere/kanban-builder.html
 
 ## Comment ça marche
 
+Le moteur est commun à tous les bancs d'essai, dans [`../_commun/`](../_commun/) :
+
 | Fichier | Rôle |
 |---|---|
-| `assembler.py` | Recopie dans `index.html` les styles et scripts locaux (`_commun`, `kanban.js`) : une seule page, comme pour le builder. |
+| `../_commun/banc.py` | Recopie dans `index.html` les styles et scripts locaux (`_commun`, `kanban.js`) : une seule page, comme pour le builder ; construit une page par scénario, l'ouvre dans le navigateur sans affichage (profil neuf à chaque fois) et lit le bilan. |
+| `../_commun/outils-scenario.js` | Outils communs des scénarios : `Banc.ok`, `Banc.demarrer`, `Banc.cartes`… ; remplace `window.confirm` (aucune fenêtre, réponse choisie par le scénario). Une erreur JavaScript du widget compte comme un KO. |
+| `assembler.py`, `jouer.py` | Relais vers `banc.py`, pour le Kanban. |
 | `faux-grist.js` | Imite l'API Grist (`onRecords`, `fetchTable`…) avec des tables inventées ; note ce que le widget écrit (`FAUX_GRIST.actions`, `FAUX_GRIST.options`). |
-| `outils-scenario.js` | Outils communs des scénarios : `Banc.ok`, `Banc.demarrer`, `Banc.cartes`… ; remplace `window.confirm` (aucune fenêtre, réponse choisie par le scénario). |
 | `scenarios/*.js` | Un scénario par fonction : il manipule le widget comme un utilisateur et écrit un bilan OK / KO. |
-| `jouer.py` | Construit une page par scénario, l'ouvre dans le navigateur sans affichage (profil neuf à chaque fois) et lit le bilan. |
 
 Les pages générées vont dans `genere/`, ignoré par Git.
 

@@ -34,12 +34,10 @@ const ETAT = {
   lignes:     [],     // lignes reçues de Grist
   colonnes:   null,   // association : { Titre: 'colId', Description: 'colId', Pastilles: [...], Contexte: [...] }
   table:      null,   // identifiant de la table affichée
-  infos:      {},     // colId → { libelle, type, formule, colAffichee, couleursChoix }
-  references: {},     // 'table|colonne affichée' → { numéro de ligne: nom affiché }
+  // Structure du document (libellés, types, couleurs des choix…), lue une
+  // fois par table affichée : voir ../_commun/colonnes.js
+  doc:        null,
   recherche:  '',     // texte saisi dans la recherche (règle : ../_commun/recherche.js)
-  structureRecherche: null,   // types des colonnes et noms des références, pour la recherche
-  structureAJour:     false,  // false : à relire avant la prochaine recherche
-  structureEnCours:   null,   // lecture en cours (une seule à la fois)
   selection:  null,   // numéro de la ligne sélectionnée dans Grist
   // Carte affichée dans la fiche : numéro de ligne (null pour une nouvelle
   // carte, pas encore créée dans Grist) et colonnes modifiées.
@@ -76,13 +74,10 @@ grist.onRecords(async (lignes, colonnes) => {
     await chargerInfosColonnes();
   } catch (err) {
     // Sans ces informations, le widget fonctionne quand même : libellés =
-    // identifiants des colonnes, références affichées par leur numéro.
+    // identifiants des colonnes, pastilles sans les couleurs de Grist.
     console.error('Galerie – lecture de la structure impossible :', err);
   }
   afficherGrille();
-  // Recherche : un nom de référence a pu changer, la structure sera relue
-  ETAT.structureAJour = false;
-  if (ETAT.recherche.trim()) assurerStructureRecherche();
   // Fiche ouverte sans modification en cours : on la rafraîchit avec les
   // nouvelles valeurs (par exemple juste après une sauvegarde).
   if (ETAT.fiche.id !== null && !ficheModifiee()) remplirFiche(ETAT.fiche.id);
@@ -101,47 +96,14 @@ grist.onRecord((ligne) => {
 });
 
 /**
- * Lit dans les tables internes de Grist la description des colonnes de la
- * table affichée (libellé, type, formule ou non), puis, pour les colonnes de
- * contexte qui sont des références, le nom affiché de chaque ligne visée.
+ * Lit la structure du document (libellés, types, formules, couleurs des
+ * choix : ../_commun/colonnes.js), une fois par table affichée.
+ * Les noms des références n'ont pas à être lus : Grist les envoie déjà.
  */
 async function chargerInfosColonnes() {
   const table = await grist.getTable().getTableId();
-  if (table !== ETAT.table) { ETAT.table = table; ETAT.infos = {}; }
-
-  if (Object.keys(ETAT.infos).length === 0) {
-    const tables = await grist.docApi.fetchTable('_grist_Tables');
-    const cols   = await grist.docApi.fetchTable('_grist_Tables_column');
-    const numeroTable = tables.id[tables.tableId.indexOf(table)];
-    cols.id.forEach((_, i) => {
-      if (cols.parentId[i] !== numeroTable) return;
-      // visibleCol : numéro (dans cette même table interne) de la colonne
-      // qu'une référence affiche, par exemple « Titre » pour une réf. vers EPICs.
-      const iAffichee = cols.id.indexOf(cols.visibleCol[i]);
-      ETAT.infos[cols.colId[i]] = {
-        libelle:     cols.label[i] || cols.colId[i],
-        type:        String(cols.type[i]),
-        // isFormula avec une formule vide = colonne vide, encore modifiable
-        formule:     Boolean(cols.isFormula[i]) && Boolean(cols.formula[i]),
-        colAffichee: iAffichee !== -1 ? cols.colId[iAffichee] : null,
-        ...lireOptions(cols.widgetOptions[i]),
-      };
-    });
-  }
-
-  for (const colId of [...colonnesPastilles(), ...colonnesObjetsLies(), ...colonnesContexte()]) {
-    const info = ETAT.infos[colId];
-    const ref  = info && /^(Ref|RefList):(.+)$/.exec(info.type);
-    if (!ref) continue;
-    const cle = ref[2] + '|' + info.colAffichee;
-    if (ETAT.references[cle]) continue;   // déjà chargée
-    const lignes = await grist.docApi.fetchTable(ref[2]);
-    const noms = {};
-    lignes.id.forEach((id, i) => {
-      noms[id] = info.colAffichee ? String(lignes[info.colAffichee][i] ?? '') : String(id);
-    });
-    ETAT.references[cle] = noms;
-  }
+  if (table !== ETAT.table) { ETAT.table = table; ETAT.doc = null; }
+  if (!ETAT.doc) ETAT.doc = await Colonnes.lireDocument();
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -149,20 +111,12 @@ async function chargerInfosColonnes() {
    ══════════════════════════════════════════════════════════════ */
 
 /**
- * Réglages d'affichage d'une colonne, rangés par Grist dans ses
- * « widgetOptions » (texte JSON) :
- *   couleursChoix : { choix: { fond, texte } } (colonnes Choix) ;
- *   pourcentage   : true pour un nombre affiché en % dans Grist.
+ * Description d'une colonne de la table affichée (voir ../_commun/colonnes.js),
+ * ou une description minimale si la structure n'a pas pu être lue.
  */
-function lireOptions(widgetOptions) {
-  try {
-    const options = JSON.parse(widgetOptions || '{}');
-    const couleursChoix = {};
-    Object.entries(options.choiceOptions || {}).forEach(([choix, o]) => {
-      if (o.fillColor) couleursChoix[choix] = { fond: o.fillColor, texte: o.textColor || '#000000' };
-    });
-    return { couleursChoix, pourcentage: options.numMode === 'percent' };
-  } catch (_) { return { couleursChoix: {}, pourcentage: false }; }
+function info(colId) {
+  return (ETAT.doc && ETAT.doc.colonne(ETAT.table, colId))
+    || { libelle: colId, type: '', formule: false, couleurs: {}, pourcentage: false };
 }
 
 /**
@@ -183,13 +137,9 @@ function colonnesContexte() {
   return colonnesAssociees('Contexte').filter(colId => !dejaAffichees.includes(colId));
 }
 
-function libelle(colId) {
-  return (ETAT.infos[colId] && ETAT.infos[colId].libelle) || colId;
-}
+function libelle(colId) { return info(colId).libelle; }
 
-function estFormule(colId) {
-  return Boolean(ETAT.infos[colId] && ETAT.infos[colId].formule);
-}
+function estFormule(colId) { return info(colId).formule; }
 
 /**
  * Valeur d'une cellule sous forme d'une liste de textes : un seul élément
@@ -197,14 +147,14 @@ function estFormule(colId) {
  * multiples). Les éléments vides sont retirés.
  */
 function elementsAffiches(colId, valeur) {
-  const info = ETAT.infos[colId] || { type: '', colAffichee: null };
+  const colonne = info(colId);
   if (estErreur(valeur)) return ['⚠️ invalide'];
   if (Array.isArray(valeur)) {
     // Une liste peut arriver « encodée » : ['L', a, b…]
     const liste = valeur[0] === 'L' ? valeur.slice(1) : valeur;
-    return liste.map(v => valeurSimple(info, v)).filter(Boolean);
+    return liste.map(v => valeurSimple(colonne, v)).filter(Boolean);
   }
-  const texte = valeurSimple(info, valeur);
+  const texte = valeurSimple(colonne, valeur);
   return texte ? [texte] : [];
 }
 
@@ -219,29 +169,32 @@ function estErreur(v) {
     && typeof v.name === 'string' && 'message' in v;
 }
 
-function valeurSimple(info, v) {
+/**
+ * Texte affiché d'une valeur simple, selon la description de sa colonne
+ * (`colonne`, donnée par info()).
+ */
+function valeurSimple(colonne, v) {
   if (estErreur(v)) return '⚠️ invalide';
   if (v === null || v === undefined || v === '') return '';
-  const ref = /^(Ref|RefList):(.+)$/.exec(info.type);
-  if (ref && typeof v === 'number') {
-    if (v === 0) return '';   // référence vide
-    const noms = ETAT.references[ref[2] + '|' + info.colAffichee];
-    return noms && noms[v] !== undefined ? noms[v] : String(v);
+  // Grist envoie une référence sous son nom affiché ; un numéro n'arrive que
+  // si la référence n'affiche aucune colonne : on montre alors ce numéro.
+  if (/^(Ref|RefList):/.test(colonne.type) && typeof v === 'number') {
+    return v === 0 ? '' : String(v);   // 0 = référence vide
   }
   if (v instanceof Date) return v.toLocaleDateString('fr-FR');
   // Grist stocke les dates en secondes depuis le 1er janvier 1970
-  if (info.type === 'Date' && typeof v === 'number') {
+  if (colonne.type === 'Date' && typeof v === 'number') {
     return new Date(v * 1000).toLocaleDateString('fr-FR', { timeZone: 'UTC' });
   }
-  if (info.type.startsWith('DateTime') && typeof v === 'number') {
+  if (colonne.type.startsWith('DateTime') && typeof v === 'number') {
     return new Date(v * 1000).toLocaleString('fr-FR');
   }
   if (typeof v === 'boolean') return v ? '✓ oui' : '✗ non';
   // Nombre affiché en pourcentage dans Grist : 0.67 → « 67 % »
-  if (info.pourcentage && typeof v === 'number') return `${Math.round(v * 100)} %`;
+  if (colonne.pourcentage && typeof v === 'number') return `${Math.round(v * 100)} %`;
   if (typeof v === 'object') return JSON.stringify(v);   // cas rares (pièces jointes…)
   // Un texte peut contenir du Markdown : on en retire les symboles.
-  return info.type === 'Text' ? Fiche.markdownVersTexte(String(v)) : String(v);
+  return colonne.type === 'Text' ? Fiche.markdownVersTexte(String(v)) : String(v);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -263,8 +216,10 @@ const COULEURS_POURCENTAGE = [
  *   - choix sans couleur, ou référence → pastel fixe propre à la valeur.
  */
 function couleurPastille(colId, texte) {
-  const info = ETAT.infos[colId] || { type: '', couleursChoix: {} };
-  if (info.couleursChoix && info.couleursChoix[texte]) return info.couleursChoix[texte];
+  const colonne = info(colId);
+  // Couleur de fond réglée dans Grist (texte noir si Grist n'en précise pas)
+  const choix = colonne.couleurs[texte];
+  if (choix && choix.fond) return { fond: choix.fond, texte: choix.texte || '#000000' };
 
   const pourcent = /^\s*(-?\d+(?:[.,]\d+)?)\s*%\s*$/.exec(texte);
   if (pourcent) {
@@ -272,7 +227,7 @@ function couleurPastille(colId, texte) {
     return COULEURS_POURCENTAGE.find(c => n <= c.jusqua) || COULEURS_POURCENTAGE[COULEURS_POURCENTAGE.length - 1];
   }
 
-  if (/^(Choice|ChoiceList|Ref|RefList)\b/.test(info.type)) return couleurPastel(texte);
+  if (/^(Choice|ChoiceList|Ref|RefList)\b/.test(colonne.type)) return couleurPastel(texte);
   return null;
 }
 
@@ -341,27 +296,7 @@ function afficherGrille() {
  * la ligne n° 12.
  */
 function correspondRecherche(ligne) {
-  return Recherche.ligneCorrespond(ligne, ETAT.recherche, ETAT.structureRecherche);
-}
-
-/**
- * Structure de la table pour la recherche (types, noms des références) :
- * lue à la première recherche, relue quand les données ont changé.
- */
-function assurerStructureRecherche() {
-  if (ETAT.structureAJour || ETAT.structureEnCours) return;
-  ETAT.structureEnCours = (async () => {
-    try {
-      const table = ETAT.table || await grist.getTable().getTableId();
-      ETAT.structureRecherche = await Recherche.lireStructure(table);
-    } catch (err) {
-      // Sans structure, la recherche parcourt quand même les textes
-      console.error('Galerie – structure de la table illisible pour la recherche :', err);
-    }
-    ETAT.structureAJour = true;   // même en cas d'échec : pas de nouvel essai à chaque touche
-    ETAT.structureEnCours = null;
-    if (ETAT.recherche.trim()) afficherGrille();
-  })();
+  return Recherche.ligneCorrespond(ligne, ETAT.recherche);
 }
 
 function construireCarte(ligne) {
@@ -801,7 +736,6 @@ document.addEventListener('DOMContentLoaded', () => {
     convertirNotepad().catch(err => afficherToast(`⚠️ Erreur : ${err.message || err}`, 4000)));
   document.getElementById('recherche').addEventListener('input', (e) => {
     ETAT.recherche = e.target.value;
-    if (ETAT.recherche.trim()) assurerStructureRecherche();
     afficherGrille();
   });
   document.addEventListener('keydown', (e) => {

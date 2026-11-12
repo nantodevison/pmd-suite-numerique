@@ -1,5 +1,6 @@
 /* ══════════════════════════════════════════════════════════════
-   OUTILS DES SCÉNARIOS — chargés par jouer.py avant chaque scénario
+   OUTILS DES SCÉNARIOS — communs à tous les bancs d'essai (tests/<widget>/),
+   chargés par banc.py avant chaque scénario
    ══════════════════════════════════════════════════════════════
 
    Un scénario s'écrit ainsi :
@@ -23,7 +24,13 @@ window.Banc = (function () {
   const confirmations = [];
 
   window.confirm = (message) => { confirmations.push(String(message)); return reponse; };
-  window.addEventListener('error', e => lignes.push('ERREUR JS ' + e.message));
+  // Une erreur JavaScript du widget compte comme un échec : sinon le bilan
+  // pourrait afficher « 0 KO » alors que le widget a planté.
+  window.addEventListener('error', e => { nbKo++; lignes.push('KO  ERREUR JS ' + e.message); });
+  window.addEventListener('unhandledrejection', e => {
+    nbKo++;
+    lignes.push('KO  PROMESSE REJETÉE ' + (e.reason && e.reason.message || e.reason));
+  });
 
   const attendre = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -50,10 +57,14 @@ window.Banc = (function () {
       document.querySelectorAll('dialog[open]').forEach(d => d.close());
     },
 
-    /** Numéros des cartes affichées, dans l'ordre (de gauche à droite, de haut en bas). */
+    /**
+     * Numéros des cartes affichées, dans l'ordre (de gauche à droite, de haut
+     * en bas). Cartes du Kanban (.card) ou de la Galerie (.carte) ; `statut`
+     * limite à une colonne du Kanban.
+     */
     cartes(statut) {
       const zone = statut ? document.querySelector(`.cards-list[data-statut="${statut}"]`) : document;
-      return zone ? [...zone.querySelectorAll('.card')].map(c => Number(c.dataset.id)) : [];
+      return zone ? [...zone.querySelectorAll('.card, .carte')].map(c => Number(c.dataset.id)) : [];
     },
 
     /** Actions écrites dans le faux Grist depuis le rang `depuis` (voir FAUX_GRIST.actions.length). */
