@@ -26,7 +26,7 @@ La sécurité passe **avant tout le reste** (fonctionnalité, délai, confort), 
 | `espaces/<document>/` | Schéma de chaque document Grist (`grist_schema.py`, export du code Grist, sans données) : référence pour les noms de tables et de colonnes |
 | `projets/<projet>/` | Ce qui est propre à un projet, hors widgets : README (besoin, widgets utilisés), modèles Docs, archives |
 | `images/` | Images publiées par la synchronisation (URL déjà utilisées dans Grist : ne pas déplacer) |
-| `tests/<widget>/` | Banc d'essai d'un widget : faux Grist, scénarios, lanceur (`py tests/kanban/jouer.py`) ; données inventées uniquement |
+| `tests/<widget>/` | Banc d'essai d'un widget : faux Grist, scénarios, lanceur (`py tests/kanban/jouer.py`, `py tests/galerie/jouer.py`) ; moteur commun dans `tests/_commun/` ; données inventées uniquement. Un changement de `widgets/_commun/` se vérifie avec le banc de **chaque** widget |
 
 Le document Grist principal est `espaces/gestion-projets/` : un espace unique (gestion de projet, CRM, retours utilisateurs, valorisation, écoute client) organisé autour de la table `Projets2`. Les projets (Valorisation, Écoute client, Observatoire des trafics…) sont des **lignes** de `Projets2`, pas des documents séparés.
 
