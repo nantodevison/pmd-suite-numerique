@@ -34,7 +34,7 @@ const STATE = {
   },
 
   columnOrder: [],
-  activeView: 'defaut',   // voir VUE_DEFAUT
+  // activeView et vues : lus dans le registre des vues (VUES), voir plus bas
 
   // Filtres combinables (#195) : liste de conditions { col, op, valeurs },
   // voir la section 3. Non mémorisés : ce sera le rôle des vues (#196).
@@ -57,9 +57,7 @@ const STATE = {
   // navigateur). Règle commune dans ../_commun/recherche.js.
   recherche: '',
 
-  // Vues enregistrées (#196), mémorisées dans les options du widget :
-  // [{ id, nom, filtres: [{col, op, valeurs}], colonnes: [statuts…] | null }]
-  vues: [],
+  // Vrai une fois les vues lues à l'ouverture (voir grist.onOptions)
   optionsChargees: false,
 
   drag: { cardId: null, fromStatut: null, placeholder: null },
@@ -148,11 +146,26 @@ function getPrioRank(val) {
   return 9;
 }
 
-/* Vue « Toutes les cartes » (#214) : sans filtre ni tri, toujours là, et vue de
-   repli quand aucune autre n'est active. Elle est fabriquée ici et n'est jamais
-   enregistrée : elle n'est donc pas dans STATE.vues, et ne se modifie pas. */
-const DEFAUT = 'defaut';
-const VUE_DEFAUT = { id: DEFAUT, nom: 'Toutes les cartes', filtres: [], colonnes: null, tri: [], defaut: true };
+/* Registre des vues enregistrées (#196, #202, #214), commun aux widgets :
+   voir ../_commun/vues.js. Le Kanban lui fournit ses clés de mémoire (les
+   mêmes qu'avant #231 : personne ne perd ses vues perso), son contexte (le
+   projet du Kanban) et le champ propre à ses vues : `colonnes`, la liste
+   ordonnée des statuts affichés, ou null pour tous les statuts présents.
+   « Toutes les cartes » (VUE_DEFAUT) est fabriquée par le registre : sans
+   filtre ni tri, toujours là, jamais enregistrée, elle ne se modifie pas. */
+const VUES = Vues.creer({
+  cle: (nom) => cleMemoire(nom),
+  contexte: () => STATE.projetKanban,
+  prevenir: (message, duree) => showToast(message, duree),
+  defaut: { colonnes: null },
+});
+const DEFAUT = Vues.DEFAUT;
+const VUE_DEFAUT = VUES.VUE_DEFAUT;
+// Lecture seule, pour le reste du code et les bancs d'essai :
+//   STATE.vues : toutes les vues (partagées, même d'un autre projet, puis perso) ;
+//   STATE.activeView : identifiant de la vue active.
+Object.defineProperty(STATE, 'vues', { get: () => VUES.toutes() });
+Object.defineProperty(STATE, 'activeView', { get: () => VUES.activeId() });
 
 /* Adresse du mode d'emploi complet (README du widget sur GitHub) */
 const URL_AIDE = 'https://github.com/nantodevison/pmd-suite-numerique/blob/master/widgets/kanban/README.md';
@@ -198,7 +211,7 @@ const _tableNamePret = (async () => {
 })();
 
 // Identifiant du document Grist : sert à distinguer, dans la mémoire du
-// navigateur, les Kanban de documents différents (voir memoireVueActive).
+// navigateur, les Kanban de documents différents (voir cleMemoire).
 let _docName = null;
 const _docNamePret = (async () => {
   try {
@@ -270,7 +283,6 @@ grist.onOptions(async (options) => {
   if (!STATE.optionsChargees) {
     // Marqué tout de suite : onOptions peut être rappelé pendant l'attente ci-dessous
     STATE.optionsChargees = true;
-    STATE.vues = (options && Array.isArray(options.vues)) ? options.vues : [];
     // Onglet d'ouverture (#202) : celui mémorisé par ce navigateur, sinon
     // l'ancien réglage commun du document (options.activeView, qui n'est plus
     // écrit), sinon « Toutes les cartes ». Une vue supprimée entre-temps, ou un ancien
@@ -278,10 +290,8 @@ grist.onOptions(async (options) => {
     // est ignorée. La clé de mémoire dépend du document et de la table : on
     // attend de les connaître.
     await Promise.all([_docNamePret, _tableNamePret]);
-    // Vues personnelles (#202), retenues par ce navigateur : après les vues partagées
-    STATE.vues.push(...lireVuesPerso());
-    const candidats = [lireVueMemorisee(), options && options.activeView];
-    STATE.activeView = candidats.find(id => vueEnregistree(id)) || DEFAUT;
+    // Vues partagées (options du widget), puis vues perso de ce navigateur
+    VUES.charger(options && options.vues, options && options.activeView);
     chargerFiltresDeLaVue();
   }
   renderBoard();
@@ -446,11 +456,7 @@ async function saveConfig() {
   await chargerMoi();        // … et avec elle la table des personnes
   await chargerLiens();      // … et les colonnes de liens (badges ⛔ / ➡️)
   // Les vues personnelles sont propres au projet : on relit celles du projet choisi
-  STATE.vues = STATE.vues.filter(v => !v.perso).concat(lireVuesPerso());
-  if (!vueEnregistree(STATE.activeView)) {
-    STATE.activeView = DEFAUT;
-    chargerFiltresDeLaVue();
-  }
+  if (VUES.relirePerso()) chargerFiltresDeLaVue();   // vue active disparue : « Toutes les cartes »
   renderBoard();
   showToast('✓ Configuration sauvegardée');
 }
@@ -641,33 +647,26 @@ function majCompteEquipe() {
    ══════════════════════════════════════════════════════════════ */
 
 /* ── Vues enregistrées (#196) ───────────────────────────────────
-   Une vue enregistrée = un nom, des filtres (même format qu'en #195) et
-   des colonnes : liste ordonnée des statuts affichés (même vides), ou null
-   pour afficher tous les statuts présents. Elles sont gardées dans les
-   options du widget (document Grist), jamais dans le code.
-   Seule vue fixe : « Toutes les cartes » (VUE_DEFAUT).
-   Règles :
-   - changer de vue recharge ses filtres :
+   Une vue enregistrée = un nom, des filtres (même format qu'en #195), un tri
+   (#211) et des colonnes : liste ordonnée des statuts affichés (même vides),
+   ou null pour afficher tous les statuts présents. Le registre commun
+   (VUES, ../_commun/vues.js) les garde : vues partagées dans les options du
+   widget, vues perso (#202) dans le navigateur, vue active retenue par le
+   navigateur, et rangement par projet du Kanban (#214).
+   Règles propres au Kanban :
+   - changer de vue recharge ses filtres et son tri ;
    - les colonnes et leur ordre sont enregistrés immédiatement ;
-   - nom, filtres et tri (#211) se règlent dans « Gérer la vue » (#214) : dans
-     la fenêtre, les colonnes aussi attendent 💾.
-   Vues personnelles (#202) : même format, plus `perso: true`. Elles sont
-   gardées dans le navigateur (voir lireVuesPerso), pas dans le document :
-   chacun a les siennes, enregistrées aussitôt. Toutes les vues sont dans
-   STATE.vues ; enregistrerVues(vue) range chaque genre à sa place.
-   Projet (#214) : une vue partagée retient le projet du Kanban (`projet`) et
-   n'apparaît qu'avec lui. Celles créées avant n'en ont pas : elles restent
-   visibles partout. STATE.vues garde toujours toutes les vues : les masquer
-   ne doit pas les effacer du document à la prochaine écriture. */
+   - nom, filtres et tri se règlent dans « Gérer la vue » (#214) : dans la
+     fenêtre, les colonnes aussi attendent 💾. */
 
 /** Cette vue s'affiche-t-elle avec le projet du Kanban ? */
 function vueDuProjet(vue) {
-  return !vue.projet || !STATE.projetKanban || vue.projet === STATE.projetKanban;
+  return VUES.visible(vue);
 }
 
 /** La vue visible d'identifiant `id` (« Toutes les cartes » comprise), ou undefined. */
 function vueEnregistree(id) {
-  return id === DEFAUT ? VUE_DEFAUT : STATE.vues.find(v => v.id === id && vueDuProjet(v));
+  return VUES.trouver(id);
 }
 
 /** Copie indépendante d'une liste de filtres (pour ne pas modifier la vue par mégarde). */
@@ -677,7 +676,7 @@ function copieFiltres(filtres) {
 
 /** Filtres et tri (#211) de la vue active. */
 function chargerFiltresDeLaVue() {
-  const vue = vueEnregistree(STATE.activeView);
+  const vue = VUES.active();
   STATE.filters = vue ? copieFiltres(vue.filtres) : [];
   // Tri.nettoyer renvoie une copie bien formée (la vue vient du document ou du navigateur)
   STATE.tri = vue ? Tri.nettoyer(vue.tri) : [];
@@ -689,7 +688,7 @@ function chargerFiltresDeLaVue() {
  * présents » (vue sans liste de colonnes).
  */
 function vueCourante() {
-  const vue = vueEnregistree(STATE.activeView);
+  const vue = VUES.active();
   return {
     label: vue ? vue.nom : VUE_DEFAUT.nom,
     preferredOrder: (vue && vue.colonnes) || [],
@@ -701,35 +700,25 @@ function signatureFiltres(filtres) {
   return Filtres.signature(filtres);
 }
 
-/**
- * Mémorise les vues du même genre que `vue`, qui vient d'être créée, modifiée
- * ou supprimée : les vues personnelles dans le navigateur, les vues
- * partagées dans les options du widget. Ainsi, toucher à une vue perso
- * n'allume pas le bouton « Enregistrer » de Grist.
- */
+/** Mémorise les vues du même genre que `vue` : perso dans le navigateur, partagées dans le document. */
 function enregistrerVues(vue) {
-  if (vue.perso) { memoriserVuesPerso(); return; }
-  grist.setOption('vues', STATE.vues.filter(v => !v.perso)).catch(() =>
-    showToast('⚠️ Vue non enregistrée : droits de modification du document nécessaires ?', 3500));
+  VUES.enregistrer(vue);
 }
 
 function switchView(viewId) {
   fermerPopovers();
-  STATE.activeView = viewId;
+  VUES.activer(viewId);
   chargerFiltresDeLaVue();
-  memoriserVueActive(viewId);
   renderBoard();
 }
 
-/* ── Onglet actif mémorisé par le navigateur (#202) ─────────────
-   Chacun retrouve l'onglet qu'il regardait en dernier, sans toucher au
-   document : rien n'est écrit dans les options du widget, donc le bouton
-   « Enregistrer » de Grist ne se rallume plus à chaque changement d'onglet.
-   La mémoire (localStorage) est propre au navigateur et au poste. Tous les
-   widgets publiés sur nantodevison.github.io la partagent : la clé contient
-   donc le document, la table et le projet du Kanban.
-   localStorage peut être refusé (navigation privée, Custom Widget Builder…) :
-   chaque accès est protégé, et le widget retombe alors sur « Toutes les cartes ». */
+/* ── Mémoire du navigateur (#202) ───────────────────────────────
+   L'onglet actif, les vues perso et les attributs des filtres sont retenus
+   par le navigateur (localStorage), sans toucher au document. Tous les
+   widgets publiés sur nantodevison.github.io partagent cette mémoire : la
+   clé contient donc le document, la table et le projet du Kanban. Un
+   Kanban d'un autre projet a ainsi ses propres vues perso.
+   NE PAS CHANGER le format de ces clés : chacun perdrait ses vues perso. */
 
 /**
  * Clé de mémoire de ce Kanban pour la donnée `nom` (ex. 'vueActive'), ou
@@ -738,51 +727,6 @@ function switchView(viewId) {
 function cleMemoire(nom) {
   if (!_docName) return null;
   return `kanban.${nom}.${_docName}.${getTableName()}.${STATE.projetKanban || 'sans-projet'}`;
-}
-
-function memoireVueActive() { return cleMemoire('vueActive'); }
-
-/** Identifiant de l'onglet mémorisé par ce navigateur, ou null. */
-function lireVueMemorisee() {
-  const cle = memoireVueActive();
-  if (!cle) return null;
-  try { return localStorage.getItem(cle); }
-  catch (err) { return null; }
-}
-
-/** Mémorise l'onglet actif dans ce navigateur (sans effet si refusé). */
-function memoriserVueActive(viewId) {
-  const cle = memoireVueActive();
-  if (!cle) return;
-  try { localStorage.setItem(cle, viewId); }
-  catch (err) { /* mémoire indisponible : l'onglet ne sera pas retenu */ }
-}
-
-/* ── Vues personnelles retenues par le navigateur (#202, étape 2) ──
-   Même clé que l'onglet actif (document, table, projet) : un Kanban d'un
-   autre projet a ses propres vues perso. */
-
-/** Vues personnelles de ce Kanban retenues par ce navigateur ([] si aucune ou mémoire indisponible). */
-function lireVuesPerso() {
-  const cle = cleMemoire('vuesPerso');
-  if (!cle) return [];
-  try {
-    const vues = JSON.parse(localStorage.getItem(cle) || '[]');
-    return Array.isArray(vues) ? vues.map(v => ({ ...v, perso: true })) : [];
-  } catch (err) {
-    return [];
-  }
-}
-
-/** Mémorise toutes les vues personnelles dans ce navigateur. */
-function memoriserVuesPerso() {
-  const cle = cleMemoire('vuesPerso');
-  try {
-    if (!cle) throw new Error('document inconnu');
-    localStorage.setItem(cle, JSON.stringify(STATE.vues.filter(v => v.perso)));
-  } catch (err) {
-    showToast('⚠️ Ce navigateur ne peut pas retenir vos vues personnelles : elles seront perdues au rechargement.', 3500);
-  }
 }
 
 /* ── « Qui suis-je ? » (#202, étape 1) ──────────────────────────
@@ -896,10 +840,7 @@ function remplirMoi() {
 
 /** « Toutes les cartes », puis les vues partagées et les personnelles, par ordre alphabétique dans chaque groupe. */
 function vuesRangees() {
-  const parNom = (a, b) => a.nom.localeCompare(b.nom, 'fr');
-  return [VUE_DEFAUT,
-          ...STATE.vues.filter(v => !v.perso && vueDuProjet(v)).sort(parNom),
-          ...STATE.vues.filter(v => v.perso).sort(parNom)];
+  return VUES.rangees();
 }
 
 /** Petit ⋯ de la vue active : ouvre son menu sous `onglet`. */
@@ -990,9 +931,8 @@ function ouvrirListeVues(ancre) {
 
 /** Ajoute une vue, la mémorise à sa place (navigateur ou document) et l'affiche. */
 function ajouterVue(vue) {
-  STATE.vues.push(vue);
-  enregistrerVues(vue);
-  switchView(vue.id);
+  VUES.ajouter(vue);
+  switchView(vue.id);   // ses filtres et son tri, puis le tableau
 }
 
 /**
@@ -1005,10 +945,8 @@ function construireVue(nom, perso) {
   const source = vueCourante();
   const filtres = copieFiltres(STATE.filters.filter(f => f.valeurs.length > 0));
   const colonnes = source.preferredOrder.length ? [...source.preferredOrder] : null;
-  const vue = { id: 'vue-' + Date.now().toString(36), nom, filtres, colonnes, tri: Tri.nettoyer(STATE.tri) };
-  if (perso) vue.perso = true;                                   // déjà rangée par projet
-  else if (STATE.projetKanban) vue.projet = STATE.projetKanban;
-  return vue;
+  // Une vue partagée retient le projet du Kanban ; une perso est déjà rangée par projet
+  return VUES.construire(nom, perso, { filtres, colonnes, tri: Tri.nettoyer(STATE.tri) });
 }
 
 /** Ajoute et affiche `vue`, puis dit ce qu'il reste à faire pour la garder. */
@@ -1039,13 +977,10 @@ function vueMesTaches() {
 function ouvrirMesTaches() {
   const existante = vueMesTaches();
   if (existante) { switchView(existante.id); return; }
-  ajouterVue({
-    id: 'vue-' + Date.now().toString(36),
-    nom: 'Mes tâches',
+  ajouterVue(VUES.construire('Mes tâches', true, {
     filtres: [{ col: STATE.mapping.assigne, op: 'est', valeurs: [MOI] }],
     colonnes: null,
-    perso: true,
-  });
+  }));
   if (STATE.moi) {
     showToast('✓ Vue « Mes tâches » créée. Masquez les statuts inutiles avec ▦ Colonnes', 4500);
   } else {
@@ -1057,16 +992,14 @@ function ouvrirMesTaches() {
 function renommerVue(nom) {
   const vue = vueEnregistree(STATE.activeView);
   if (!vue) return;
-  vue.nom = nom;
-  enregistrerVues(vue);
+  VUES.renommer(vue, nom);
   renderVueTabs();
 }
 
 function supprimerVue() {
   const vue = vueEnregistree(STATE.activeView);
   if (!vue) return;
-  STATE.vues = STATE.vues.filter(v => v !== vue);
-  enregistrerVues(vue);
+  VUES.supprimer(vue);
   switchView(DEFAUT);
   showToast(`✓ Vue « ${vue.nom} » supprimée`);
 }
