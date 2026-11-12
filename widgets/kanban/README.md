@@ -25,7 +25,7 @@ combinables, recherche, tri sur n'importe quelle colonne, vues enregistrées
 | [`../_commun/recherche.js`](../_commun/recherche.js) | Règle de recherche commune avec la Galerie : 🔍, menus et panneaux de recherche |
 | [`../_commun/filtres.js`](../_commun/filtres.js), [`filtres.css`](../_commun/filtres.css) | Filtres : règle (« ou » entre les valeurs, « et » entre les filtres, `(vide)`), valeurs proposées (choix dans l'ordre de Grist et à leur couleur, #236), attributs d'une référence et leur mémoire, panneau (étiquettes, « ＋ Filtre », éditeur) ; « 👤 Moi » reste propre au Kanban |
 | [`../_commun/colonnes.js`](../_commun/colonnes.js) | Structure du document (libellés, types, choix et couleurs, colonnes rapportées, noms des lignes visées), commune avec la Galerie |
-| [`../_commun/vues.js`](../_commun/vues.js) | Registre des vues (#231) : « Toutes les cartes », vues partagées et perso, vue active, rangement par projet ; les colonnes d'une vue, « Mes tâches » et l'interface restent propres au Kanban |
+| [`../_commun/vues.js`](../_commun/vues.js), [`vues.css`](../_commun/vues.css) | Vues (#231) : registre (« Toutes les cartes », vues partagées et perso, vue active, rangement par projet) et interface (onglets ou sélecteur, menu ⋯, « ＋ Vue », fenêtre « Gérer la vue » : onglets Vue et Filtres) ; les onglets Tri et Colonnes, leurs boutons-résumés et « Mes tâches » restent propres au Kanban |
 | [`../_commun/tri.js`](../_commun/tri.js) | Comparaison de deux valeurs selon le type de leur colonne, pour le tri ⇅ |
 | [`../_commun/fenetre.js`](../_commun/fenetre.js), [`fenetre.css`](../_commun/fenetre.css) | Fenêtre à onglets de ⚙ (étapes, états ✓ / ⚠️ / ℹ️, barre « Appliquer » toujours visible) |
 

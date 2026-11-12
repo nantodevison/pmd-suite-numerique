@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="../_commun/liens.css" />
   <link rel="stylesheet" href="../_commun/fenetre.css" />
   <link rel="stylesheet" href="../_commun/filtres.css" />
+  <link rel="stylesheet" href="../_commun/vues.css" />
   <style>
 /* ══════════════════════════════════════════════════════════════
    KANBAN GRIST — styles v3
@@ -88,31 +89,14 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 }
 .filterbar::-webkit-scrollbar { height: 0; }
 
-/* ── Vues (onglets) ── */
-.view-tabs {
+/* ── Vues : onglets et résumés de la barre ; leurs styles sont dans ../_commun/vues.css ── */
+.view-tabs, .resumes-vue {
   display: flex;
   align-items: center;
   gap: 2px;
   flex-shrink: 0;
 }
-.view-tab {
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
-  cursor: pointer;
-  border: 1.5px solid transparent;
-  background: none;
-  transition: all .15s;
-  white-space: nowrap;
-}
-.view-tab:hover { background: var(--col-bg); color: var(--text); }
-.view-tab.active {
-  background: var(--accent);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(102,126,234,.3);
-}
+.resumes-vue { gap: 6px; }
 
 .filter-sep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
 .filter-label { font-size: 12px; color: var(--text-muted); font-weight: 600; white-space: nowrap; flex-shrink: 0; }
@@ -137,12 +121,6 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 .filter-select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(102,126,234,.15); }
 
 /* ── Tri des cartes (#211) ── */
-/* Résumé de la vue (#214) : pointillés si rien n'est réglé, plein sinon */
-.resume-vue { max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
-.resume-vue.actif {
-  border-style: solid; border-color: var(--accent); background: rgba(102,126,234,.08);
-  color: var(--text);
-}
 /* (.filtre-popover, plus bas, fixe 290 px : il faut une règle plus précise) */
 .filtre-popover.tri-popover { width: 460px; max-width: calc(100vw - 16px); }
 .tri-criteres { display: flex; flex-direction: column; gap: 6px; }
@@ -154,33 +132,6 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 .tri-ajouter { align-self: flex-start; }
 .filtre-lien:disabled { opacity: .5; cursor: default; text-decoration: none; }
 
-/* ── Vues enregistrées (#196) ── */
-.vues-enregistrees { display: flex; align-items: center; gap: 2px; }
-.view-tab.vue-enregistree { display: inline-flex; align-items: center; gap: 4px; }
-/* Vue personnelle (#202) : bordure en pointillés pour la distinguer des vues partagées */
-.view-tab.vue-enregistree.perso:not(.active) { border: 1.5px dashed var(--border); }
-.vue-portee { display: flex; flex-direction: column; gap: 2px; }
-.vue-portee.hidden, .vue-aide.hidden { display: none; }
-.vue-menu-item[hidden] { display: none; }
-.vue-menu-btn { padding: 0 4px; border-radius: 4px; font-weight: 700; }
-.vue-menu-btn:hover { background: rgba(255,255,255,.25); }
-#vue-ajouter { margin-left: 4px; }
-/* Sélecteur de vue (#214) : à la place des onglets quand ils ne tiennent plus */
-.vue-selecteur { max-width: 240px; }
-.vue-selecteur-nom { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.vue-liste { max-height: min(340px, calc(100vh - 110px)); overflow-y: auto; flex-wrap: nowrap; }
-.vue-liste-titre { padding: 6px 10px 2px; font-size: 11px; font-weight: 700; color: var(--text-muted); }
-.vue-menu-item.active { font-weight: 700; color: var(--accent); }
-.vue-aide { font-size: 11px; color: var(--text-muted); }
-.vue-valider { padding: 6px 14px; font-size: 12px; align-self: flex-end; }
-.vue-menu { width: 230px; gap: 2px; padding: 6px; }
-.vue-menu-item {
-  text-align: left; padding: 7px 10px; font-size: 12px; font-family: var(--font);
-  border: none; border-radius: 6px; background: none; color: var(--text); cursor: pointer;
-}
-.vue-menu-item:hover:not(:disabled) { background: var(--col-bg); }
-.vue-menu-item:disabled { color: var(--text-muted); opacity: .5; cursor: default; }
-.vue-menu-item.danger { color: var(--danger); }
 .colonnes-toutes { font-weight: 600; }
 .filtre-valeurs.desactivee { opacity: .45; }
 .colonne-fleche {
@@ -566,17 +517,10 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
 .config-aide { font-size: 12px; color: var(--text-muted); margin: 0; }
 .config-equipe .filtre-valeurs { max-height: 340px; }
 
-/* ── Fenêtre « Gérer la vue » (#214) : la fenêtre elle-même est dans ../_commun/fenetre.css,
-   le panneau des filtres dans ../_commun/filtres.css ── */
+/* ── Fenêtre « Gérer la vue » (#214) : la fenêtre est dans ../_commun/fenetre.css, ses
+   onglets communs dans ../_commun/vues.css, le panneau des filtres dans ../_commun/filtres.css ── */
 /* Dans la fenêtre, le panneau du tri ne flotte pas : il prend place dans l'onglet */
 .fenetre .tri-popover { width: auto; max-width: none; }
-/* Les sections ont quitté #vue-sections : elles sont maintenant dans la fenêtre */
-.fenetre-panneau[id^="fv-"] .config-aide { margin-bottom: 12px; }
-.fv-champ { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; font-size: 12px; font-weight: 600; }
-.fv-supprimer[hidden] { display: none; }
-#fv-nouvelle-portee { margin-bottom: 16px; }
-#fv-info { display: flex; flex-direction: column; font-size: 12px; color: var(--text-muted); }
-#fv-compteur { font-weight: 600; color: var(--text); }
 /* Statuts (#183, #212) : nom à gauche, puis couleur et classe ; une ligne par statut */
 .classes-liste { display: grid; grid-template-columns: 1fr; gap: 6px; }
 .classe-ligne { display: flex; align-items: center; gap: 12px; font-size: 13px; }
@@ -656,31 +600,11 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
     </section>
   </div>
 
-  <!-- Gérer la vue (#214) : une section par onglet, que Fenetre.creer() range
-       dans une fenêtre (voir ouvrirFenetreVue dans kanban.js). data-neutre :
-       le widget calcule lui-même si la vue a changé. -->
+  <!-- Gérer la vue (#214) : la fenêtre et ses onglets Vue et Filtres sont
+       construits par ../_commun/vues.js (#231). Le Kanban y ajoute ces deux
+       onglets (voir creerInterfaceVues dans kanban.js). data-neutre : le
+       module calcule lui-même si la vue a changé. -->
   <div id="vue-sections" hidden>
-    <section id="fv-vue" data-neutre>
-      <h3 class="config-etape">Vue</h3>
-      <p class="config-aide" id="fv-portee"></p>
-      <label class="fv-champ"><span id="fv-nom-libelle">Nom de la vue</span>
-        <input id="fv-nom" class="filtre-recherche" type="text" autocomplete="off" required />
-      </label>
-      <!-- Depuis « Toutes les cartes » : pour qui est la nouvelle vue -->
-      <div id="fv-nouvelle-portee" class="vue-portee hidden">
-        <label class="filtre-valeur"><input type="radio" name="fv-portee-choix" value="perso" checked />
-          <span>🔒 <strong>Pour moi</strong> <span class="vue-aide">— ce navigateur seulement</span></span></label>
-        <label class="filtre-valeur"><input type="radio" name="fv-portee-choix" value="partagee" />
-          <span>👥 <strong>Pour tous</strong> <span class="vue-aide">— le document, puis « Enregistrer » de Grist</span></span></label>
-      </div>
-      <button id="fv-supprimer" class="filtre-lien danger fv-supprimer">🗑 Supprimer la vue</button>
-    </section>
-    <section id="fv-filtres" data-neutre>
-      <h3 class="config-etape">Filtres</h3>
-      <p class="config-aide">Une carte doit respecter tous les filtres. Cliquez sur une étiquette pour la modifier.</p>
-      <!-- Étiquettes, « ＋ Filtre » et éditeur d'un filtre : construits par
-           Filtres.creerPanneau (../_commun/filtres.js), appelé par creerFenetreVue() -->
-    </section>
     <section id="fv-tri" data-neutre>
       <h3 class="config-etape">Tri</h3>
       <!-- Tri des cartes (#211) : critères dessinés par remplirTri() -->
@@ -710,12 +634,6 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
   <!-- Mode d'emploi (#214) : contenu dessiné par remplirAide() -->
   <div id="aide-sections" hidden>
     <section id="aide-contenu" data-neutre></section>
-  </div>
-
-  <!-- Bas de la fenêtre « Gérer la vue » : ce qu'on ne voit pas derrière elle -->
-  <div id="fv-info" hidden>
-    <span id="fv-compteur"></span>
-    <span id="fv-partagee">👥 Partagée</span>
   </div>
 
   <!-- Modal ajout carte -->
@@ -768,50 +686,21 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
 
   <!-- Filterbar -->
   <div class="filterbar" id="filterbar">
-    <div class="view-tabs" id="view-tabs">
-      <!-- Vues enregistrées (#196) : un onglet par vue, dessiné par renderVueTabs() -->
-      <div id="vues-enregistrees" class="vues-enregistrees"></div>
-      <button id="vue-ajouter" class="filtre-ajouter" title="Créer une vue à partir de l'affichage actuel">＋ Vue</button>
-    </div>
+    <!-- Vues enregistrées (#196) : onglets (ou sélecteur ▾) et « ＋ Vue »,
+         construits par ../_commun/vues.js (#231), comme leurs petits panneaux
+         (nom, menu ⋯, liste des vues) -->
+    <div class="view-tabs" id="view-tabs"></div>
 
     <div class="filter-sep"></div>
 
     <!-- Résumé de la vue active (#214) : chaque bouton ouvre « Gérer la vue » sur
-         le bon onglet. Libellés mis à jour par renderFilterChips(). -->
-    <button id="filtres-bouton" class="filtre-ajouter resume-vue">🔽 Filtres</button>
-    <button id="tri-bouton" class="filtre-ajouter resume-vue">⇅ Trier</button>
-    <button id="colonnes-bouton" class="filtre-ajouter resume-vue">▦ Colonnes</button>
-  </div>
-
-  <!-- Vues enregistrées (#196) : saisie du nom (création, renommage ou copie) -->
-  <div id="vue-nom-popover" class="filtre-popover hidden">
-    <input id="vue-nom" class="filtre-recherche" type="text" placeholder="Nom de la vue" autocomplete="off" />
-    <p id="vue-nom-aide" class="vue-aide">Reprend les filtres, le tri et les colonnes affichés.</p>
-    <!-- À la création seulement : vue personnelle (par défaut) ou partagée (#202) -->
-    <div id="vue-portee" class="vue-portee">
-      <label class="filtre-valeur">
-        <input type="radio" name="vue-portee" value="perso" checked />
-        <span>🔒 <strong>Pour moi</strong> <span class="vue-aide">— ce navigateur, gardée aussitôt</span></span>
-      </label>
-      <label class="filtre-valeur">
-        <input type="radio" name="vue-portee" value="partagee" />
-        <span>👥 <strong>Pour tous</strong> <span class="vue-aide">— le document, puis « Enregistrer » de Grist</span></span>
-      </label>
+         le bon onglet. « 🔽 Filtres » est ajouté en tête par vues.js ; le tri et
+         les colonnes sont propres au Kanban. -->
+    <div class="resumes-vue" id="resumes-vue">
+      <button id="tri-bouton" class="filtre-ajouter resume-vue">⇅ Trier</button>
+      <button id="colonnes-bouton" class="filtre-ajouter resume-vue">▦ Colonnes</button>
     </div>
-    <button id="vue-nom-valider" class="btn-primary vue-valider">Créer la vue</button>
   </div>
-
-  <!-- Vues enregistrées : menu ⋯ de la vue active -->
-  <div id="vue-menu-popover" class="filtre-popover vue-menu hidden">
-    <button id="vue-menu-gerer" class="vue-menu-item">🎛 Gérer la vue…</button>
-    <button id="vue-menu-renommer" class="vue-menu-item">✏️ Renommer</button>
-    <button id="vue-menu-copier" class="vue-menu-item">🔒 Copier en vue perso</button>
-    <button id="vue-menu-supprimer" class="vue-menu-item danger">🗑 Supprimer la vue</button>
-  </div>
-
-  <!-- Liste des vues (#214), à la place des onglets quand ils ne tiennent plus :
-       dessinée par ouvrirListeVues() -->
-  <div id="vue-liste-popover" class="filtre-popover vue-menu vue-liste hidden"></div>
 
   <!-- « Qui suis-je ? » (#202) : choix de son nom parmi les personnes de « Assigné à » -->
   <div id="moi-popover" class="filtre-popover hidden">

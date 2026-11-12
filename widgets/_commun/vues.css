@@ -1,0 +1,70 @@
+/* ══════════════════════════════════════════════════════════════
+   VUES — styles de la barre des vues, de ses panneaux et de la fenêtre
+   « Gérer la vue » (../_commun/vues.js, #231)
+   ══════════════════════════════════════════════════════════════
+   Repris tels quels du Kanban. À charger après filtres.css et fenetre.css,
+   avant les styles du widget. Variables attendues du widget : --accent,
+   --border, --text, --text-muted, --col-bg, --danger, --font. */
+
+/* ── Onglets des vues ── */
+.view-tab {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  background: none;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.view-tab:hover { background: var(--col-bg); color: var(--text); }
+.view-tab.active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(102,126,234,.3);
+}
+
+/* Résumé de la vue (#214) : pointillés si rien n'est réglé, plein sinon */
+.resume-vue { max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
+.resume-vue.actif {
+  border-style: solid; border-color: var(--accent); background: rgba(102,126,234,.08);
+  color: var(--text);
+}
+
+/* ── Vues enregistrées (#196) ── */
+.vues-enregistrees { display: flex; align-items: center; gap: 2px; }
+.view-tab.vue-enregistree { display: inline-flex; align-items: center; gap: 4px; }
+/* Vue personnelle (#202) : bordure en pointillés pour la distinguer des vues partagées */
+.view-tab.vue-enregistree.perso:not(.active) { border: 1.5px dashed var(--border); }
+.vue-portee { display: flex; flex-direction: column; gap: 2px; }
+.vue-portee.hidden, .vue-aide.hidden { display: none; }
+.vue-menu-item[hidden] { display: none; }
+.vue-menu-btn { padding: 0 4px; border-radius: 4px; font-weight: 700; }
+.vue-menu-btn:hover { background: rgba(255,255,255,.25); }
+#vue-ajouter { margin-left: 4px; }
+/* Sélecteur de vue (#214) : à la place des onglets quand ils ne tiennent plus */
+.vue-selecteur { max-width: 240px; }
+.vue-selecteur-nom { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.vue-liste { max-height: min(340px, calc(100vh - 110px)); overflow-y: auto; flex-wrap: nowrap; }
+.vue-liste-titre { padding: 6px 10px 2px; font-size: 11px; font-weight: 700; color: var(--text-muted); }
+.vue-menu-item.active { font-weight: 700; color: var(--accent); }
+.vue-aide { font-size: 11px; color: var(--text-muted); }
+.vue-valider { padding: 6px 14px; font-size: 12px; align-self: flex-end; }
+.vue-menu { width: 230px; gap: 2px; padding: 6px; }
+.vue-menu-item {
+  text-align: left; padding: 7px 10px; font-size: 12px; font-family: var(--font);
+  border: none; border-radius: 6px; background: none; color: var(--text); cursor: pointer;
+}
+.vue-menu-item:hover:not(:disabled) { background: var(--col-bg); }
+.vue-menu-item:disabled { color: var(--text-muted); opacity: .5; cursor: default; }
+.vue-menu-item.danger { color: var(--danger); }
+
+/* ── Fenêtre « Gérer la vue » (#214) : onglets (fv-…) et bas de la fenêtre ── */
+.fenetre-panneau[id^="fv-"] .config-aide { margin-bottom: 12px; }
+.fv-champ { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; font-size: 12px; font-weight: 600; }
+.fv-supprimer[hidden] { display: none; }
+#fv-nouvelle-portee { margin-bottom: 16px; }
+#fv-info { display: flex; flex-direction: column; font-size: 12px; color: var(--text-muted); }
+#fv-compteur { font-weight: 600; color: var(--text); }
