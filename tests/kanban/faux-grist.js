@@ -16,7 +16,11 @@
    Ce qui est noté, pour que les scénarios vérifient ce que le widget aurait écrit :
      - chaque écriture (applyUserActions) dans FAUX_GRIST.actions ; une
        nouvelle carte reçoit un numéro à partir de 100 ;
-     - chaque option du widget (setOption) dans FAUX_GRIST.options.
+     - chaque option du widget (setOption) dans FAUX_GRIST.options ;
+     - chaque table lue (fetchTable) dans FAUX_GRIST.lectures.
+   Ce qu'un scénario peut changer :
+     - FAUX_GRIST.donnees : contenu des tables visées (ajouter un EPIC…) ;
+     - FAUX_GRIST.structureIllisible = true : la lecture de la structure échoue.
 
    ⚠️ Dépôt public : uniquement des données INVENTÉES (personnes, EPICs…).
    ══════════════════════════════════════════════════════════════ */
@@ -29,7 +33,8 @@
     [1, 1, 'Nom', 'Text', 'Nom', '', false, '', 0],
     [2, 1, 'statut', 'Choice', 'statut', '', false, JSON.stringify({ choices: ['🖐️ À faire', '♻️ En cours', '✅ Fait'] }), 0],
     [3, 1, 'Description', 'Text', 'Description', '', false, '', 0],
-    [4, 1, 'Priorite', 'Choice', 'Priorite', '', false, JSON.stringify({ choices: ['Haute', 'Moyenne', 'Basse'] }), 0],
+    [4, 1, 'Priorite', 'Choice', 'Priorite', '', false, JSON.stringify({ choices: ['Haute', 'Moyenne', 'Basse'],
+      choiceOptions: { Haute: { fillColor: '#FECACA', textColor: '#7F1D1D' } } }), 0],
     [5, 1, 'qui_', 'RefList:Contacts', 'qui ?', '', false, '', 30],
     [6, 1, 'date_cible', 'Date', 'Échéance', '', false, '', 0],
     [7, 1, 'EPIC', 'Ref:EPICs', 'EPIC', '', false, '', 20],
@@ -94,7 +99,7 @@
 
   const rappels = {};
   let prochainNumero = 100;
-  window.FAUX_GRIST = { records, actions: [], options: {} };
+  window.FAUX_GRIST = { records, donnees, actions: [], options: {}, lectures: [], structureIllisible: false };
   window.grist = {
     ready() {},
     onRecords(f, options = {}) {
@@ -109,7 +114,13 @@
     getTable() { return { getTableId: async () => 'Taches' }; },
     docApi: {
       getDocName: async () => 'docTest',
-      fetchTable: async (t) => meta[t] || donnees[t] || tableBrute[t] || (() => { throw new Error('table ' + t); })(),
+      fetchTable: async (t) => {
+        window.FAUX_GRIST.lectures.push(t);
+        if (t.startsWith('_grist_') && window.FAUX_GRIST.structureIllisible) throw new Error('accès refusé (simulé)');
+        const table = meta[t] || donnees[t] || tableBrute[t];
+        if (!table) throw new Error('table ' + t);
+        return table;
+      },
       applyUserActions: async (a) => {
         window.FAUX_GRIST.actions.push(a);
         // Comme Grist : un numéro par action (celui de la carte créée, pour AddRecord)

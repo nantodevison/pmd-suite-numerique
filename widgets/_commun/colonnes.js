@@ -21,6 +21,11 @@
      doc.colonneQuiVise('EPICs', 'Projets2')  → 'Projet'
      const ref = await Colonnes.lireReference(doc, 'Taches', 'qui_');
        → { estListe: true, tableVisee: 'Contacts', options: [{ id, nom }…], nom(id), id(nom) }
+     const lignes = await Colonnes.lireLignes(doc, 'EPICs');   // comme fetchTable, lu une fois
+
+   FRAÎCHEUR : un `doc` est une photo du document à l'instant de sa lecture
+   (structure, et tables lues ensuite par lireLignes / lireReference). Pour
+   voir les changements faits depuis dans Grist, relire avec lireDocument.
 
    BON À SAVOIR : Grist envoie aux widgets (onRecords) les références sous
    leur NOM affiché, mais attend leur NUMÉRO de ligne pour les écrire ;
@@ -139,6 +144,22 @@
   }
 
   /**
+   * Contenu d'une table, au format de fetchTable ({ id: [...], colonne: [...] }).
+   * Lu une seule fois par document : les appels suivants avec le même `doc`
+   * reçoivent la même lecture. Pour des données fraîches, relire le document
+   * (lireDocument) et passer le nouveau `doc`.
+   */
+  async function lireLignes(doc, tableId) {
+    if (!doc._lignes[tableId]) doc._lignes[tableId] = grist.docApi.fetchTable(tableId);
+    try {
+      return await doc._lignes[tableId];
+    } catch (err) {
+      delete doc._lignes[tableId];   // échec (droits…) : un prochain appel réessaiera
+      throw err;
+    }
+  }
+
+  /**
    * Lignes visées par une colonne de référence, avec leur nom affiché.
    * La table visée n'est lue qu'une fois par document (lectures suivantes
    * mémorisées), même si plusieurs colonnes la visent.
@@ -150,14 +171,7 @@
   async function lireReference(doc, tableId, colId) {
     const c = doc.colonne(tableId, colId);
     if (!c || !c.tableVisee) return null;
-    if (!doc._lignes[c.tableVisee]) doc._lignes[c.tableVisee] = grist.docApi.fetchTable(c.tableVisee);
-    let lignes;
-    try {
-      lignes = await doc._lignes[c.tableVisee];
-    } catch (err) {
-      delete doc._lignes[c.tableVisee];   // échec (droits…) : un prochain appel réessaiera
-      throw err;
-    }
+    const lignes = await lireLignes(doc, c.tableVisee);
     const options = lignes.id.map((id, i) => ({
       id,
       nom: c.colAffichee ? String(lignes[c.colAffichee][i] ?? '') : String(id),
@@ -172,5 +186,5 @@
   }
 
   // Seul objet rendu visible au reste de la page.
-  window.Colonnes = { lireDocument, lireReference };
+  window.Colonnes = { lireDocument, lireLignes, lireReference };
 })();

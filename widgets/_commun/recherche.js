@@ -53,14 +53,6 @@
     });
   }
 
-  /**
-   * ANCIENNE FONCTION, gardée tant que le Kanban l'appelle (à retirer avec
-   * son passage à ../_commun/colonnes.js, #188). Elle lisait les noms des
-   * références, inutiles puisque Grist les envoie déjà : elle ne lit plus
-   * rien et renvoie null (« pas de structure »).
-   */
-  async function lireStructure() { return null; }
-
   /* ── 2. Texte de recherche d'une ligne ─────────────────────── */
 
   // Colonnes internes de Grist, jamais affichées
@@ -98,15 +90,12 @@
     return cache.get(ligne);
   }
 
-  /**
-   * Une ligne de Grist correspond-elle à la saisie ?
-   * (Un 3e argument, ancienne « structure », est accepté et ignoré.)
-   */
+  /** Une ligne de Grist correspond-elle à la saisie ? */
   function ligneCorrespond(ligne, saisie) {
     if (!saisie || !saisie.trim()) return true;
     return correspond(saisie, texteLigne(ligne), ligne.id);
   }
 
   // Seul objet rendu visible au reste de la page.
-  window.Recherche = { simplifier, correspond, lireStructure, ligneCorrespond };
+  window.Recherche = { simplifier, correspond, ligneCorrespond };
 })();
