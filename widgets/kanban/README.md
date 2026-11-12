@@ -23,6 +23,7 @@ combinables, recherche, tri sur n'importe quelle colonne, vues enregistrées
 | [`../_commun/fiche.js`](../_commun/fiche.js), [`fiche.css`](../_commun/fiche.css) | Fiche partagée avec la Galerie : disposition côté / centre, Markdown, menus |
 | [`../_commun/liens.js`](../_commun/liens.js), [`liens.css`](../_commun/liens.css) | Liens « Bloque / Bloquée par » entre cartes (bande « enchaînement », recherche, boucles) |
 | [`../_commun/recherche.js`](../_commun/recherche.js) | Règle de recherche commune avec la Galerie : 🔍, menus et panneaux de recherche |
+| [`../_commun/filtres.js`](../_commun/filtres.js) | Règle des filtres (« ou » entre les valeurs, « et » entre les filtres, `(vide)`), valeurs proposées, attributs d'une référence et leur mémoire ; « 👤 Moi » reste propre au Kanban |
 | [`../_commun/colonnes.js`](../_commun/colonnes.js) | Structure du document (libellés, types, choix et couleurs, colonnes rapportées, noms des lignes visées), commune avec la Galerie |
 | [`../_commun/tri.js`](../_commun/tri.js) | Comparaison de deux valeurs selon le type de leur colonne, pour le tri ⇅ |
 | [`../_commun/fenetre.js`](../_commun/fenetre.js), [`fenetre.css`](../_commun/fenetre.css) | Fenêtre à onglets de ⚙ (étapes, états ✓ / ⚠️ / ℹ️, barre « Appliquer » toujours visible) |
