@@ -52,10 +52,6 @@ const STATE = {
   // Filtre en cours de modification dans le panneau, et ordre de ses valeurs
   filtreEdite: null,
   ordreValeurs: [],
-  // Attributs affichés dans le panneau d'un filtre (#223) : { colId: [colId d'attribut…] }.
-  // Copie en mémoire de ce que retient le navigateur ; null = pas encore relu.
-  attributsAffiches: null,
-  attributsCle: null, // clé de mémoire sous laquelle ils ont été lus
   // Choix déclarés des colonnes Choix / Choix multiple : { colId: [choix…] }
   choix: {},
 
@@ -679,7 +675,7 @@ function vueEnregistree(id) {
 
 /** Copie indépendante d'une liste de filtres (pour ne pas modifier la vue par mégarde). */
 function copieFiltres(filtres) {
-  return (filtres || []).map(f => ({ col: f.col, op: f.op, valeurs: [...f.valeurs] }));
+  return Filtres.copier(filtres);
 }
 
 /** Filtres et tri (#211) de la vue active. */
@@ -705,9 +701,7 @@ function vueCourante() {
 
 /** Résumé comparable d'une liste de filtres (ordre des valeurs ignoré). */
 function signatureFiltres(filtres) {
-  return JSON.stringify(filtres
-    .filter(f => f.valeurs.length > 0)
-    .map(f => [f.col, f.op, [...f.valeurs].sort()]));
+  return Filtres.signature(filtres);
 }
 
 /**
@@ -1460,19 +1454,15 @@ function recordsDuProjet() {
 }
 
 /* ── Filtres combinables (#195) ─────────────────────────────────
-   Un filtre est une condition { col, op, valeurs } :
-     col     : identifiant Grist de la colonne (ex. 'EPIC', 'qui_')
-     op      : 'est' ou 'nestpas'
-     valeurs : valeurs cochées ; VIDE désigne les cellules vides.
-   Une carte respecte une condition si l'UNE de ses valeurs est cochée
-   (« ou » entre les valeurs) ; elle doit respecter TOUTES les conditions
-   (« et » entre les filtres). Une condition sans valeur cochée est ignorée.
+   La règle (un filtre { col, op, valeurs }, « ou » entre les valeurs,
+   « et » entre les filtres) et les attributs d'une référence sont dans
+   ../_commun/filtres.js, communs aux widgets. Ici : la valeur « 👤 Moi »,
+   les cartes comptées (celles du projet du Kanban) et le panneau.
    Seules les colonnes Choix, Choix multiple, Référence et Liste de
    références sont proposées (les autres types viendront avec #200). */
 
-/** Valeur qui représente une cellule vide (jamais produite par une vraie valeur). */
-const VIDE = '';
-const LIBELLE_VIDE = '(vide)';
+const VIDE = Filtres.VIDE;
+const LIBELLE_VIDE = Filtres.LIBELLE_VIDE;
 
 /** Valeur « 👤 Moi » du filtre « Assigné à » (#202) : remplacée, au moment de
     filtrer, par le nom de la personne déclarée (« Qui suis-je ? »). Elle
@@ -1547,58 +1537,34 @@ function libelleColonne(colId) {
   return c ? c.label : colId;
 }
 
-/**
- * Valeurs d'une cellule, nettoyées, sous forme de liste ([] = cellule vide).
- * Rend équivalentes les valeurs dont le sens est le même :
- *   null, '', '   ', [] et 0 (référence vide) → [] ;
- *   ' Alice  Durand ' → 'Alice Durand' (espaces en trop retirés).
- * Les majuscules sont conservées : deux choix « Fait » et « fait » restent distincts.
- */
+/** Valeurs d'une cellule, nettoyées, sous forme de liste (voir ../_commun/filtres.js). */
 function valeursCellule(valeur) {
-  const brutes = Array.isArray(valeur) ? valeur : [valeur];
-  const propres = brutes
-    .filter(v => v !== null && v !== undefined && v !== 0)
-    .map(v => String(v).replace(/\s+/g, ' ').trim())
-    .filter(v => v !== '');
-  return [...new Set(propres)];
+  return Filtres.valeursCellule(valeur);
+}
+
+/** « 👤 Moi » devient le nom de la personne déclarée ; si personne n'est déclaré, il ne correspond à aucune carte. */
+function remplacerMoi(valeurs) {
+  return valeurs.includes(MOI) ? valeurs.filter(v => v !== MOI).concat(nomMoi() || []) : valeurs;
 }
 
 /** Une carte respecte-t-elle un filtre ? */
 function carteRespecte(record, filtre) {
-  if (filtre.valeurs.length === 0) return true; // condition incomplète : ignorée
-  // « Moi » devient le nom de la personne déclarée ; si personne n'est
-  // déclaré, il ne correspond à aucune carte
-  const valeurs = filtre.valeurs.includes(MOI)
-    ? filtre.valeurs.filter(v => v !== MOI).concat(nomMoi() || [])
-    : filtre.valeurs;
-  const vals = valeursCellule(record[filtre.col]);
-  const cochee = vals.length === 0
-    ? valeurs.includes(VIDE)
-    : vals.some(v => valeurs.includes(v));
-  return filtre.op === 'nestpas' ? !cochee : cochee;
+  return Filtres.ligneRespecte(record, filtre, remplacerMoi);
 }
 
 /**
- * Valeurs proposées pour une colonne : celles présentes dans les cartes du
- * projet, avec leur nombre de cartes, plus les valeurs déjà cochées (pour
- * pouvoir les décocher même si plus aucune carte ne les porte).
- * @returns {Array<{valeur:string, nb:number}>} « (vide) » en tête, puis ordre alphabétique
+ * Valeurs proposées pour une colonne : celles des cartes du projet, avec
+ * leur nombre de cartes, plus les valeurs déjà cochées.
+ * @returns {Array<{valeur:string, nb:number}>} « 👤 Moi » puis « (vide) » en tête, puis ordre alphabétique
  */
 function valeursProposees(colId, dejaCochees) {
-  const comptes = new Map();
-  recordsDuProjet().forEach(r => {
-    const vals = valeursCellule(r[colId]);
-    (vals.length ? vals : [VIDE]).forEach(v => comptes.set(v, (comptes.get(v) || 0) + 1));
-  });
-  dejaCochees.forEach(v => { if (v !== MOI && !comptes.has(v)) comptes.set(v, 0); });
-  const proposees = [...comptes.entries()]
-    .map(([valeur, nb]) => ({ valeur, nb }))
-    .sort((a, b) => a.valeur === VIDE ? -1 : b.valeur === VIDE ? 1 : a.valeur.localeCompare(b.valeur, 'fr'));
+  const proposees = Filtres.valeursProposees(recordsDuProjet(), colId, dejaCochees, [MOI]);
   // « 👤 Moi » tout en tête pour la colonne « Assigné à » (#202), avec le
   // nombre de cartes de la personne déclarée
   if ((colId === STATE.mapping.assigne && REFS.assigne) || dejaCochees.includes(MOI)) {
     const nom = nomMoi();
-    proposees.unshift({ valeur: MOI, nb: nom ? (comptes.get(nom) || 0) : 0 });
+    const sienne = nom ? proposees.find(p => p.valeur === nom) : null;
+    proposees.unshift({ valeur: MOI, nb: sienne ? sienne.nb : 0 });
   }
   return proposees;
 }
@@ -1620,50 +1586,22 @@ function attributsDe(colId) {
   return STATE.colonnesTriables.filter(c => c.ref === colId);
 }
 
+/** Mémoire des attributs affichés (../_commun/filtres.js), propre au document et au projet du Kanban. */
+const MEMOIRE_ATTRIBUTS = Filtres.memoireAttributs(() => cleMemoire('attributs'));
+
 /** Attributs affichés pour la colonne `colId`, limités à ceux qui existent encore. */
 function attributsAffiches(colId) {
-  // Relu si la clé change (document ou projet du Kanban connus plus tard)
-  const cle = cleMemoire('attributs');
-  if (!STATE.attributsAffiches || STATE.attributsCle !== cle) {
-    STATE.attributsAffiches = {};
-    STATE.attributsCle = cle;
-    try {
-      const lus = cle && JSON.parse(localStorage.getItem(cle) || '{}');
-      if (lus && typeof lus === 'object') STATE.attributsAffiches = lus;
-    } catch (err) { /* mémoire indisponible : rien d'affiché par défaut */ }
-  }
-  const possibles = attributsDe(colId).map(c => c.colId);
-  return (STATE.attributsAffiches[colId] || []).filter(a => possibles.includes(a));
+  return MEMOIRE_ATTRIBUTS.affiches(colId, attributsDe(colId).map(c => c.colId));
 }
 
 /** Retient dans ce navigateur les attributs affichés pour la colonne `colId`. */
 function definirAttributs(colId, choisis) {
-  // Ordre de la liste (alphabétique), plutôt que l'ordre des clics
-  STATE.attributsAffiches[colId] = attributsDe(colId).map(c => c.colId).filter(a => choisis.includes(a));
-  try {
-    if (!STATE.attributsCle) throw new Error('document inconnu');
-    localStorage.setItem(STATE.attributsCle, JSON.stringify(STATE.attributsAffiches));
-  } catch (err) { /* le choix vaut pour la séance seulement */ }
+  MEMOIRE_ATTRIBUTS.definir(colId, choisis, attributsDe(colId).map(c => c.colId));
   // Le panneau du filtre, s'il montre cette colonne, suit le nouveau choix
   if (STATE.filtreEdite && STATE.filtreEdite.col === colId) {
     calculerDetails();
     remplirPanneauFiltre();
   }
-}
-
-/**
- * Texte lisible d'une cellule d'attribut : dates en jj/mm/aaaa (Grist les
- * envoie en secondes depuis 1970), case cochée en ✓, listes séparées par
- * des virgules. '' si la cellule est vide.
- */
-function texteAttribut(valeur, type) {
-  if (valeur === null || valeur === undefined || valeur === '') return '';
-  if (Array.isArray(valeur)) return valeur.map(v => texteAttribut(v, type)).filter(Boolean).join(', ');
-  if (/^Date/.test(type) && typeof valeur === 'number') {
-    return new Date(valeur * 1000).toLocaleDateString('fr-FR', { timeZone: 'UTC' });
-  }
-  if (type === 'Bool') return valeur ? '✓' : '';
-  return String(valeur).replace(/\s+/g, ' ').trim();
 }
 
 /**
@@ -1675,52 +1613,20 @@ function styleChoix(colId, texte) {
 }
 
 /**
- * Attributs affichés pour chaque valeur de la référence `colId` (#223, #226) :
- * Map « nom de la valeur » → morceaux [[{ texte, style }…] par attribut].
- * Lus dans les cartes `records` qui portent cette valeur ; si elles ne sont
- * pas d'accord, toutes les valeurs rencontrées sont données.
- * Liste de références (ex. qui_) : la colonne rapportée ($qui_.Equipe) donne
- * une liste dans le même ordre que les personnes ; on les apparie une à une.
+ * Attributs affichés pour chaque valeur de la référence `colId` (#223, #226),
+ * lus dans les cartes `records` : Map « nom de la valeur » → morceaux.
  * Commun au panneau des filtres et aux menus de la fiche et de la création.
  */
 function morceauxParValeur(colId, records) {
   const attributs = attributsAffiches(colId)
     .map(a => STATE.colonnesTriables.find(c => c.colId === a))
     .filter(Boolean);
-  const textes = new Map(); // valeur → [Set de textes, par attribut]
-  if (attributs.length) {
-    // Une liste peut arriver « encodée » par Grist : ['L', a, b…] → [a, b…]
-    const decoder = (v) => (Array.isArray(v) && v[0] === 'L') ? v.slice(1) : v;
-    records.forEach(r => {
-      const brute = decoder(r[colId]);
-      const liste = Array.isArray(brute);
-      const noms = liste ? brute : [brute];
-      noms.forEach((nom, k) => {
-        const v = valeursCellule(nom)[0];
-        if (v === undefined) return;
-        if (!textes.has(v)) textes.set(v, attributs.map(() => new Set()));
-        attributs.forEach((a, i) => {
-          const cellule = decoder(r[a.colId]);
-          // Même longueur que la liste des références : la k-ième va avec la k-ième
-          const propre = liste && Array.isArray(cellule) && cellule.length === brute.length ? cellule[k] : cellule;
-          const t = texteAttribut(propre, a.type);
-          if (t) textes.get(v)[i].add(t);
-        });
-      });
-    });
-  }
-  const resultat = new Map();
-  textes.forEach((ensembles, v) => {
-    resultat.set(v, ensembles
-      .map((e, i) => [...e].map(t => ({ texte: t, style: styleChoix(attributs[i].colId, t) })))
-      .filter(m => m.length));
-  });
-  return resultat;
+  return Filtres.morceauxParValeur(records, colId, attributs, styleChoix);
 }
 
 /** Texte entier des morceaux (« Then · Cerema »), pour la recherche et la bulle. */
 function texteMorceaux(morceaux) {
-  return morceaux.map(m => m.map(x => x.texte).join(', ')).join(' · ');
+  return Filtres.texteMorceaux(morceaux);
 }
 
 /**
