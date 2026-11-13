@@ -8,10 +8,9 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-12 22:26_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-13 22:07_
 
 ### 🖐️ À faire
-- [ ] #204 Galerie : filtres et vues enregistrées du Kanban, par le moteur commun (Haute, EPIC « Filtrer la galerie »)
 - [ ] #205 Modifier des pastilles sans ouvrir la carte (Moyenne, EPIC « Rendre les cartes de galerie modifiable »)
 - [ ] #206 Modifier des pastilles dans la carte (Moyenne, EPIC « Rendre les cartes de galerie modifiable »)
 - [ ] #232 Galerie : trier les cartes sur n'importe quelle colonne (_commun/tri.js), tri enregistré dans la vue (Moyenne, EPIC « Filtrer la galerie »)
@@ -23,6 +22,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [ ] #227 Rechercher dans les menus de choix d'une référence quand la liste est longue (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #228 Proposer les colonnes natives de la table visée comme attributs d'une référence (façon Notion) (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #234 Relire la structure des colonnes (libellés, couleurs des choix, noms des références) quand le document change, au même moment dans le Kanban et la Galerie (_commun/colonnes.js) (Basse, EPIC « Mutualiser les fonctions communes du Kanban et de la Galerie »)
+- [ ] #237 Ajuster la taille des cartes (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
 
 <!-- fin kanban -->
 
@@ -55,6 +55,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [x] #223 étape 1 : attributs d'une référence affichables dans le panneau des filtres (🏷 Afficher), aux couleurs des choix Grist ; colonnes rapportées nommées « EPIC › Priorite » (PR #39), 2026-11-10 ; testée dans le document réel
 - [x] #226 : panneau des filtres compacté, bouton « Afficher ▾ », attributs dans les menus de la fiche et de « Nouvelle carte », toutes les colonnes reçues (includeColumns normal) (PR #40), 2026-11-11 ; testée dans le builder
 - [x] #229, #230 : banc d'essai du Kanban dans tests/kanban (PR #41, #42) : 143 vérifications par largeur, casses volontaires détectées, 2026-11-12
+- [x] #204 : filtres et vues enregistrées dans la Galerie, par _commun/filtres.js et _commun/vues.js (PR #49), 2026-11-13 ; banc 142 vérifications, testée dans le builder
 
 ## Prochaines étapes
 (Les étapes du projet sont désormais suivies dans Grist : voir « Kanban (Grist) » ci-dessus.)
@@ -73,6 +74,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - Dépôt .claude : ajouter à taches.py des options --bloque / --bloquee-par (colonnes Bloque / Bloquee_par de Grist), pour lier les tâches sans passer par Grist à la main — demandé le 2026-10-26
 - Sécurité : vider les sorties des notebooks avant chaque commit (contrôle automatique type nbstripout ?) — à formaliser à l'étape 6 de #201
 - Sécurité : CSP dans index.html, reportée (#201) — protège contre un texte piégé, pas contre un code modifié sur GitHub
+- Filtres : une cellule de référence en erreur (['E', 'InvalidTypedValue', …]) semble proposée comme valeurs « E », « InvalidTypedValue »… (constaté dans le faux Grist, Kanban et Galerie) ; à vérifier dans le vrai Grist avant d'en faire une carte
 
 ## Décisions récentes
 <!-- Une ligne par décision : date — décision — raison en quelques mots -->
@@ -171,3 +173,6 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - 2026-11-12 — EPIC 34 « Vérifier les widgets avant leur mise en production » ; banc d'essai dans tests/<widget>/ (Python et Chrome ou Edge, sans npm), à jouer avant toute PR d'un widget en service — le banc de #214 avait été perdu dans un dossier temporaire
 - 2026-11-12 — section « Sécurité : priorité absolue » dans CLAUDE.md ; données de test inventées — dépôt public publié par GitHub Pages (noms réels retirés du banc avant publication)
 - 2026-11-12 — nouvelle priorité : moteur de cartes commun Galerie / Kanban (#188 à #192 en priorité haute) — décision de Martin
+- 2026-11-13 — Galerie : filtrable sur toute colonne Choix ou Référence de la table, associée ou non ; onRecords avec includeColumns 'normal' ; tri (#232) et préremplissage (#186) hors périmètre de #204 — même règle que le Kanban
+- 2026-11-13 — Galerie : mémoire du navigateur sous galerie.<nom>.<document>.<table>, sans contexte ; deux Galeries sur la même table partagent vues perso et vue active — accepté, les vues partagées restent propres à chaque widget
+- 2026-11-13 — #186 : dans « Nouvelle carte », valeurs de la vue en tête puis les autres sous un séparateur, message si la carte sera masquée (piste B), plutôt qu'une liste limitée — liste complète conservée, cas « n'est pas » sans ambiguïté
