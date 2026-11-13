@@ -17,6 +17,10 @@
           crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <!-- Fiche partagée avec le Kanban (mode URL uniquement) -->
   <link rel="stylesheet" href="../_commun/fiche.css" />
+  <!-- Filtres et vues enregistrées, communs avec le Kanban (#204) -->
+  <link rel="stylesheet" href="../_commun/fenetre.css" />
+  <link rel="stylesheet" href="../_commun/filtres.css" />
+  <link rel="stylesheet" href="../_commun/vues.css" />
   <style>
 /* ══════════════════════════════════════════════════════════════
    GALERIE GRIST — styles (même palette que le Kanban)
@@ -28,6 +32,7 @@
   --text:       #2d3748;
   --text-muted: #718096;
   --accent:     #667eea;
+  --danger:     #e53e3e;
   --border:     #e2e8f0;
   --font:       'Segoe UI', system-ui, sans-serif;
 }
@@ -58,6 +63,40 @@ body { display: flex; flex-direction: column; overflow: hidden; }
 }
 .bouton-barre:hover { border-color: var(--accent); }
 .bouton-nouvelle { border: none; background: var(--accent); color: #fff; font-weight: 600; }
+
+/* Barre des vues (#204) : onglets, « ＋ Vue » et « 🔽 Filtres » sont
+   construits par ../_commun/vues.js, leurs styles sont dans vues.css et
+   filtres.css. Ici, la barre elle-même et ce que le Kanban définit pour lui. */
+.barre-vues {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  height: 46px; padding: 0 16px; background: var(--surface); border-bottom: 1px solid var(--border);
+  overflow-x: auto; overflow-y: hidden;
+}
+.barre-vues::-webkit-scrollbar { height: 0; }
+.view-tabs, .resumes-vue { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.resumes-vue { gap: 6px; }
+.filter-sep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
+/* Liste des colonnes dans l'éditeur d'un filtre */
+.filter-select {
+  padding: 5px 10px; border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 12px; font-family: var(--font); color: var(--text); background: var(--surface);
+  cursor: pointer; max-width: 180px; min-width: 110px;
+}
+.filter-select:focus { outline: none; border-color: var(--accent); }
+/* Boutons de la fenêtre « Gérer la vue » et du panneau du nom */
+.btn-primary {
+  background: var(--accent); color: #fff; border: none; border-radius: 8px;
+  padding: 9px 22px; font-size: 13px; font-weight: 600; font-family: var(--font); cursor: pointer;
+}
+.btn-primary:hover { background: #5a6fd6; }
+.btn-ghost {
+  background: none; color: var(--text-muted); border: 1.5px solid var(--border);
+  border-radius: 8px; padding: 9px 18px; font-size: 13px; font-family: var(--font); cursor: pointer;
+}
+.btn-ghost:hover { background: var(--col-bg); color: var(--text); }
+/* Titres et aides des onglets de « Gérer la vue » */
+.config-etape { font-size: 15px; font-weight: 700; margin: 0 0 6px; }
+.config-aide { font-size: 12px; color: var(--text-muted); margin: 0; }
 
 /* Fenêtre des réglages (élément <dialog> du navigateur) */
 .reglages {
@@ -138,6 +177,15 @@ body { display: flex; flex-direction: column; overflow: hidden; }
     <button type="button" class="bouton-barre" id="btn-reglages" title="Réglages de la Galerie">⚙</button>
   </header>
 
+  <!-- Vues enregistrées et filtres (#204) : onglets (ou sélecteur ▾), « ＋ Vue »
+       et « 🔽 Filtres » sont construits par ../_commun/vues.js, comme leurs
+       petits panneaux et la fenêtre « Gérer la vue ». -->
+  <div class="barre-vues" id="barre-vues">
+    <div class="view-tabs" id="view-tabs"></div>
+    <div class="filter-sep"></div>
+    <div class="resumes-vue" id="resumes-vue"></div>
+  </div>
+
   <!-- Réglages : modèle de texte des nouvelles cartes, enregistré dans le
        document Grist (propre à chaque Galerie). -->
   <dialog class="reglages" id="reglages">
@@ -183,6 +231,10 @@ body { display: flex; flex-direction: column; overflow: hidden; }
   <script src="../_commun/fiche.js"></script>
   <!-- Structure du document (libellés, types, couleurs des choix), commune aux widgets -->
   <script src="../_commun/colonnes.js"></script>
+  <!-- Fenêtre à onglets, règle et panneau des filtres, vues enregistrées (#204) -->
+  <script src="../_commun/fenetre.js"></script>
+  <script src="../_commun/filtres.js"></script>
+  <script src="../_commun/vues.js"></script>
   <script src="galerie.js"></script>
 </body>
 </html>

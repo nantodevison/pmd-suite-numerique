@@ -23,9 +23,12 @@
    Couleur d'une pastille : celle du choix dans Grist pour une colonne
    Choix ; une échelle du rouge au vert pour un pourcentage ; sinon un
    pastel fixe propre à chaque valeur.
-   Pour n'afficher qu'une partie des lignes (par exemple les EPICs d'un
-   projet), on utilise le filtrage natif de Grist : « Sélectionner par » ou
-   les filtres de la vue.
+   Filtres et vues enregistrées (#204), communs avec le Kanban
+   (../_commun/filtres.js et ../_commun/vues.js) : on filtre sur n'importe
+   quelle colonne Choix ou Référence de la table, et on garde ses réglages
+   dans des vues 👥 partagées ou 🔒 personnelles. Le filtrage natif de Grist
+   (« Sélectionner par », filtres de la vue Grist) reste possible : il
+   choisit les lignes envoyées au widget, nos filtres s'appliquent ensuite.
    ══════════════════════════════════════════════════════════════ */
 
 'use strict';
@@ -34,6 +37,16 @@ const ETAT = {
   lignes:     [],     // lignes reçues de Grist
   colonnes:   null,   // association : { Titre: 'colId', Description: 'colId', Pastilles: [...], Contexte: [...] }
   table:      null,   // identifiant de la table affichée
+  docNom:     null,   // identifiant du document (clés de mémoire du navigateur)
+  // Filtres affichés (format de ../_commun/filtres.js) et tri de la vue
+  // (vide tant que la Galerie ne trie pas, #232 : gardé tel quel dans la vue)
+  filtres:    [],
+  tri:        [],
+  // Colonnes de la table, d'après la structure du document (#204) :
+  // toutes (pour les attributs d'une référence), et celles qu'on peut filtrer
+  colonnesTable:      [],
+  colonnesFiltrables: [],
+  optionsChargees: false,   // vues lues à l'ouverture seulement (voir onOptions)
   // Structure du document (libellés, types, couleurs des choix…), lue une
   // fois par table affichée : voir ../_commun/colonnes.js
   doc:        null,
@@ -44,6 +57,29 @@ const ETAT = {
   fiche:      { id: null, nouvelle: false, modifs: {} },
   modele:     '',     // texte de départ des nouvelles cartes (réglage ⚙)
 };
+
+/* Registre des vues enregistrées (#204), commun avec le Kanban : voir
+   ../_commun/vues.js. Vues 👥 partagées dans les options du widget (chaque
+   Galerie a les siennes), vues 🔒 perso et vue active dans le navigateur.
+   Pas de contexte (la Galerie n'a pas de projet) : toutes les vues
+   s'affichent. Créé ici, avant que Grist n'appelle onOptions. */
+const VUES = Vues.creer({
+  cle: (nom) => cleMemoire(nom),
+  prevenir: (message, duree) => afficherToast(message, duree),
+});
+
+/**
+ * Clé de mémoire du navigateur pour la donnée `nom` ('vueActive',
+ * 'vuesPerso', 'attributs'), ou null si le document est encore inconnu.
+ * Tous les widgets publiés sur nantodevison.github.io partagent cette
+ * mémoire : la clé contient donc le document et la table. Deux Galeries
+ * sur la même table partagent ainsi leurs vues perso (accepté, #204).
+ * NE PAS CHANGER le format de ces clés : chacun perdrait ses vues perso.
+ */
+function cleMemoire(nom) {
+  if (!ETAT.docNom || !ETAT.table) return null;
+  return `galerie.${nom}.${ETAT.docNom}.${ETAT.table}`;
+}
 
 /* ══════════════════════════════════════════════════════════════
    1. LIEN AVEC GRIST
@@ -67,6 +103,19 @@ grist.ready({
   ],
 });
 
+// Identifiants du document et de la table, lus une fois au chargement : ils
+// composent les clés de mémoire du navigateur (vues perso, vue active). On
+// garde la « promesse » pour pouvoir les attendre avant de lire les vues.
+const _identitePrete = (async () => {
+  try { ETAT.docNom = await grist.docApi.getDocName(); }
+  catch (err) { console.warn('Galerie – nom du document introuvable :', err); }
+  try { ETAT.table = ETAT.table || await grist.getTable().getTableId(); }
+  catch (err) { console.warn('Galerie – nom de la table introuvable :', err); }
+})();
+
+// includeColumns 'normal' : toutes les colonnes de la table, même masquées
+// dans le widget. Sinon une colonne masquée serait proposée dans les filtres
+// sans aucune valeur (même choix que le Kanban).
 grist.onRecords(async (lignes, colonnes) => {
   ETAT.lignes   = lignes;
   ETAT.colonnes = colonnes;
@@ -74,19 +123,30 @@ grist.onRecords(async (lignes, colonnes) => {
     await chargerInfosColonnes();
   } catch (err) {
     // Sans ces informations, le widget fonctionne quand même : libellés =
-    // identifiants des colonnes, pastilles sans les couleurs de Grist.
+    // identifiants des colonnes, pastilles sans les couleurs de Grist, et
+    // pas de filtre (on ne sait pas quelles colonnes sont des choix).
     console.error('Galerie – lecture de la structure impossible :', err);
   }
   afficherGrille();
   // Fiche ouverte sans modification en cours : on la rafraîchit avec les
   // nouvelles valeurs (par exemple juste après une sauvegarde).
   if (ETAT.fiche.id !== null && !ficheModifiee()) remplirFiche(ETAT.fiche.id);
-});
+}, { includeColumns: 'normal' });
 
 // Réglages du widget, enregistrés dans le document Grist (grist.setOption) :
 // chaque Galerie (EPICs, OKR…) garde les siens.
-grist.onOptions((options) => {
+grist.onOptions(async (options) => {
   ETAT.modele = (options && options.modele) || '';
+  // Vues enregistrées (#204) : lues à l'ouverture seulement. Grist rappelle
+  // onOptions après chaque setOption (une vue partagée créée, le modèle…),
+  // parfois dans le désordre : relire ramènerait un état périmé. Le widget
+  // étant seul à les écrire, sa copie en mémoire fait foi.
+  if (ETAT.optionsChargees) return;
+  ETAT.optionsChargees = true;   // tout de suite : onOptions peut revenir pendant l'attente
+  await _identitePrete;           // les clés de mémoire en dépendent
+  VUES.charger(options && options.vues);
+  appliquerVue();
+  afficherGrille();
 });
 
 grist.onRecord((ligne) => {
@@ -103,7 +163,32 @@ grist.onRecord((ligne) => {
 async function chargerInfosColonnes() {
   const table = await grist.getTable().getTableId();
   if (table !== ETAT.table) { ETAT.table = table; ETAT.doc = null; }
-  if (!ETAT.doc) ETAT.doc = await Colonnes.lireDocument();
+  if (!ETAT.doc) {
+    ETAT.doc = await Colonnes.lireDocument();
+    preparerColonnesFiltrables();
+  }
+}
+
+/**
+ * Colonnes de la table pour les filtres (#204), d'après la structure du
+ * document. Seules les colonnes Choix, Choix multiple, Référence et Liste
+ * de références sont filtrables (même règle que le Kanban). Une colonne
+ * « rapportée » d'une autre table ($Projet.Statut) est nommée
+ * « Projet › Statut » : elle sert d'attribut à sa référence (#223).
+ */
+function preparerColonnesFiltrables() {
+  ETAT.colonnesTable = ETAT.doc.colonnes(ETAT.table).map(c => {
+    const r = c.rapportee;
+    return {
+      colId:    c.colId,
+      type:     c.type,
+      label:    r ? `${r.via} › ${r.attribut}` : c.libelle,
+      ref:      r ? r.colRef : null,     // référence dont elle est un attribut
+      attribut: r ? r.attribut : null,   // libellé court de l'attribut
+    };
+  }).sort((a, b) => a.label.localeCompare(b.label, 'fr'));
+  ETAT.colonnesFiltrables = ETAT.colonnesTable
+    .filter(c => /^(Choice|ChoiceList|Ref:.+|RefList:.+)$/.test(c.type));
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -263,6 +348,8 @@ function creerPastilles(colId, valeur) {
    ══════════════════════════════════════════════════════════════ */
 
 function afficherGrille() {
+  // Barre des vues (onglets, « 🔽 Filtres ») et bas de « Gérer la vue »
+  majBarreVues();
   const grille = document.getElementById('grille');
   grille.innerHTML = '';
   document.getElementById('titre-table').textContent = '🖼️ ' + (ETAT.table || 'Galerie');
@@ -279,15 +366,31 @@ function afficherGrille() {
 
   majBandeauNotepad();
 
-  const visibles = ETAT.lignes.filter(correspondRecherche);
+  const visibles = lignesVisibles();
   document.getElementById('compte').textContent = visibles.length === ETAT.lignes.length
     ? String(ETAT.lignes.length) : `${visibles.length} / ${ETAT.lignes.length}`;
 
   if (!visibles.length) {
-    grille.appendChild(message(ETAT.lignes.length ? 'Aucune carte ne correspond à la recherche.' : 'Aucune ligne à afficher.'));
+    grille.appendChild(message(ETAT.lignes.length
+      ? 'Aucune carte ne correspond aux filtres ou à la recherche.'
+      : 'Aucune ligne à afficher.'));
     return;
   }
   visibles.forEach(ligne => grille.appendChild(construireCarte(ligne)));
+}
+
+/** Lignes affichées : celles qui respectent les filtres de la vue ET la recherche. */
+function lignesVisibles() {
+  return ETAT.lignes.filter(l => respecteFiltres(l) && correspondRecherche(l));
+}
+
+/**
+ * Règle commune avec le Kanban (../_commun/filtres.js) : une carte doit
+ * respecter tous les filtres (« et ») ; dans un filtre, une seule des
+ * valeurs cochées suffit (« ou »).
+ */
+function respecteFiltres(ligne) {
+  return ETAT.filtres.every(f => Filtres.ligneRespecte(ligne, f));
 }
 
 /**
@@ -327,6 +430,85 @@ function message(texte) {
   div.className = 'message';
   div.textContent = texte;
   return div;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   4 bis. FILTRES ET VUES ENREGISTRÉES (#204)
+   La barre des vues, ses petits panneaux, la fenêtre « Gérer la vue » et
+   le panneau des filtres sont construits par les modules communs avec le
+   Kanban (../_commun/vues.js et ../_commun/filtres.js). La Galerie leur
+   prête son état affiché (ETAT.filtres, ETAT.tri) et ses cartes, et
+   redessine la grille quand ils changent quelque chose.
+   ══════════════════════════════════════════════════════════════ */
+
+let UI_VUES = null;          // interface des vues, créée au chargement de la page
+let PANNEAU_FILTRES = null;  // panneau des filtres, dans l'onglet Filtres de « Gérer la vue »
+
+/** Filtres et tri de la vue active, copiés : les modifier ne touche pas la vue. */
+function appliquerVue() {
+  const vue = VUES.active();
+  ETAT.filtres = vue ? Filtres.copier(vue.filtres) : [];
+  ETAT.tri = vue ? (vue.tri || []).map(c => ({ ...c })) : [];
+}
+
+/** Onglets des vues, étiquettes des filtres et bas de « Gérer la vue », à jour. */
+function majBarreVues() {
+  if (!UI_VUES) return;
+  PANNEAU_FILTRES.dessinerEtiquettes();   // qui met aussi à jour « 🔽 Filtres »
+  UI_VUES.dessinerBarre();
+  UI_VUES.majFenetre();
+}
+
+/** Colonnes rapportées de la référence `colId` (ex. pour 'Projet' : Projet › Statut). */
+function attributsDe(colId) {
+  return ETAT.colonnesTable.filter(c => c.ref === colId);
+}
+
+/** Couleur Grist d'un choix ({ fond, texte }), ou null s'il n'en a pas. */
+function styleChoix(colId, texte) {
+  return info(colId).couleurs[texte] || null;
+}
+
+function creerPanneauFiltres(zone) {
+  PANNEAU_FILTRES = Filtres.creerPanneau({
+    zone,
+    colonnes:         () => ETAT.colonnesFiltrables,
+    filtres:          () => ETAT.filtres,
+    remplacerFiltres: (liste) => { ETAT.filtres = liste; },
+    lignes:           () => ETAT.lignes,
+    choixDe:          (colId) => info(colId).choix,   // ordre des choix de Grist (#236)
+    styleChoix,
+    attributsDe,
+    // Attributs affichés (#223) : retenus par le navigateur, comme les vues perso
+    memoire:          Filtres.memoireAttributs(() => cleMemoire('attributs')),
+    surChangement:    afficherGrille,
+    surEtiquettes:    () => UI_VUES && UI_VUES.majBoutonFiltres(),
+  });
+  return PANNEAU_FILTRES;
+}
+
+function creerInterfaceVues() {
+  UI_VUES = Vues.creerInterface(VUES, {
+    barre:            document.getElementById('barre-vues'),
+    zoneVues:         document.getElementById('view-tabs'),
+    zoneResumes:      document.getElementById('resumes-vue'),
+    filtres:          () => ETAT.filtres,
+    remplacerFiltres: (liste) => { ETAT.filtres = liste; },
+    tri:              () => ETAT.tri,
+    remplacerTri:     (tri) => { ETAT.tri = tri; },
+    appliquerVue,
+    redessiner:       afficherGrille,
+    compter:          () => ({ affichees: lignesVisibles().length, total: ETAT.lignes.length }),
+    panneauFiltres:   creerPanneauFiltres,
+    decrireContenu:   'les filtres',
+    aideDefaut:       'Toutes les lignes que Grist envoie à la Galerie',
+    prevenir:         afficherToast,
+  });
+}
+
+/** Un panneau des vues ou des filtres est-il ouvert ? */
+function panneauOuvert() {
+  return [...document.querySelectorAll('.filtre-popover')].some(p => !p.classList.contains('hidden'));
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -552,11 +734,17 @@ async function creerCarte() {
     grist.setCursorPos({ rowId: id }).catch(() => {});
     if (await attendreLigne(id)) {
       remplirFiche(id);
-      afficherToast('✓ Carte créée');
+      // La fiche reste ouverte, mais la carte peut ne pas figurer dans la
+      // grille : les filtres de la vue active la masquent (#204).
+      const ligne = ETAT.lignes.find(l => l.id === id);
+      afficherToast(respecteFiltres(ligne)
+        ? '✓ Carte créée'
+        : '✓ Carte créée ; elle est masquée par les filtres de la vue', 4000);
     } else {
       // Grist ne l'a pas renvoyée : un filtre de la vue la masque.
       fermerFiche(true);
-      afficherToast(`✓ Carte créée (ligne n° ${id}) ; elle est peut-être masquée par un filtre de la vue`, 6000);
+      afficherToast(`✓ Carte créée (ligne n° ${id}) ; elle est peut-être masquée par un filtre de Grist `
+        + '(« Sélectionner par », filtres de la vue Grist)', 6000);
     }
   } catch (err) {
     afficherToast(`⚠️ Erreur : ${err.message || err}`, 4000);
@@ -720,6 +908,16 @@ async function convertirNotepad() {
    ══════════════════════════════════════════════════════════════ */
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Barre des vues et « Gérer la vue » (#204) ; Grist a pu envoyer ses
+  // données avant : on dessine la barre tout de suite.
+  creerInterfaceVues();
+  majBarreVues();
+  // Un clic ailleurs ferme les panneaux des vues et des filtres (sauf sur ce qui en ouvre un)
+  document.addEventListener('mousedown', (e) => {
+    if (e.target.closest('.fenetre, .filtre-popover, #vue-ajouter, .vue-menu-btn, .vue-selecteur, .fiche-menu')) return;
+    UI_VUES.fermerMenus();
+  });
+
   Fiche.installer(panneau(), {
     actions: document.getElementById('fiche-actions'),
     fermer:  () => fermerFiche(),
@@ -739,8 +937,12 @@ document.addEventListener('DOMContentLoaded', () => {
     afficherGrille();
   });
   document.addEventListener('keydown', (e) => {
-    // Réglages ouverts : Échap ferme seulement leur fenêtre (géré par le navigateur).
-    if (fenetreReglages().open) return;
-    if (e.key === 'Escape' && panneau().classList.contains('open')) fermerFiche();
+    if (e.key !== 'Escape') return;
+    // Réglages ou « Gérer la vue » ouverts : Échap ne concerne qu'eux
+    // (le navigateur ferme lui-même ces fenêtres <dialog>).
+    if (fenetreReglages().open || UI_VUES.fenetre.estOuverte()) return;
+    // Un panneau des vues ou un filtre ouvert : on le ferme, lui seul
+    if (panneauOuvert()) { UI_VUES.fermerMenus(); return; }
+    if (panneau().classList.contains('open')) fermerFiche();
   });
 });
