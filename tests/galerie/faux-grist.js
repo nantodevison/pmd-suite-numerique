@@ -40,7 +40,10 @@
     // Titre calculé par une formule : sert à vérifier la lecture seule
     [9,  1, 'Code',        'Any',            'Code',        '"E" + str($id)',   true,  '', 0],
     [10, 1, 'manualSort',  'ManualSortPos',  'manualSort',  '',                 false, '', 0],
+    // Colonne « rapportée » du projet ($Projet.Etat) : attribut de la référence Projet (#204)
+    [11, 1, 'Projet_Etat', 'Any',            'Projet_Etat', '$Projet.Etat',     true,  '', 0],
     [20, 2, 'Nom',         'Text',           'Nom',         '',                 false, '', 0],
+    [21, 2, 'Etat',        'Text',           'État',        '',                 false, '', 0],
     [30, 3, 'Nom',         'Text',           'Nom',         '',                 false, '', 0],
   ];
   const meta = {
@@ -50,7 +53,7 @@
   };
   // Tables visées par les références
   const donnees = {
-    Projets: { id: [1, 2], Nom: ['Atelier', 'Vitrine'] },
+    Projets: { id: [1, 2], Nom: ['Atelier', 'Vitrine'], Etat: ['Ouvert', 'Fermé'] },
     Taches:  { id: [1, 2, 3], Nom: ['Rédiger le guide', 'Relire le guide', 'Copier les pages'] },
   };
 
@@ -63,14 +66,17 @@
   let records = [
     { id: 1, Titre: 'Écrire la documentation', Description: '- [ ] Plan\n- [x] Sommaire', Priorite: 'Now',
       Avancement: 0.67, Projet: 'Atelier', Taches: ['Rédiger le guide', 'Relire le guide'],
-      Objectif: 'Guide publié', Echeance: JANVIER_2026, Code: 'E1' },
+      Objectif: 'Guide publié', Echeance: JANVIER_2026, Code: 'E1', Projet_Etat: 'Ouvert' },
     { id: 2, Titre: 'Préparer la démonstration', Description: NOTEPAD, Priorite: 'Later',
-      Avancement: 1, Projet: 'Atelier', Taches: [], Objectif: 'Démonstration jouée', Echeance: null, Code: 'E2' },
+      Avancement: 1, Projet: 'Atelier', Taches: [], Objectif: 'Démonstration jouée', Echeance: null, Code: 'E2',
+      Projet_Etat: 'Ouvert' },
     { id: 3, Titre: 'Archiver le site', Description: 'Texte simple', Priorite: null,
-      Avancement: 0.1, Projet: 'Vitrine', Taches: ['Copier les pages'], Objectif: '', Echeance: null, Code: 'E3' },
+      Avancement: 0.1, Projet: 'Vitrine', Taches: ['Copier les pages'], Objectif: '', Echeance: null, Code: 'E3',
+      Projet_Etat: 'Fermé' },
     // Référence vers une ligne qui n'existe pas : cellule en erreur
     { id: 4, Titre: 'Carte en erreur', Description: '', Priorite: null, Avancement: 0,
-      Projet: ['E', 'InvalidTypedValue', 'Ref:Projets', 99], Taches: [], Objectif: '', Echeance: null, Code: 'E4' },
+      Projet: ['E', 'InvalidTypedValue', 'Ref:Projets', 99], Taches: [], Objectif: '', Echeance: null, Code: 'E4',
+      Projet_Etat: null },
   ];
 
   // Association des colonnes faite dans le panneau de droite de Grist
@@ -127,16 +133,19 @@
     get records() { return records; },
     // Tables lues par le widget (fetchTable), dans l'ordre
     lectures: [],
+    // Options passées à onRecords (ex. { includeColumns: 'normal' })
+    optionsRecords: null,
   };
   window.grist = {
     ready() {},
-    onRecords(f) { rappels.records = f; },
+    onRecords(f, options) { rappels.records = f; window.FAUX_GRIST.optionsRecords = options || null; },
     onRecord(f) { rappels.record = f; },
     onOptions(f) { rappels.options = f; },
     setOption(cle, valeur) { window.FAUX_GRIST.options[cle] = valeur; return Promise.resolve(); },
     setCursorPos(pos) { window.FAUX_GRIST.curseur = pos; return Promise.resolve(); },
     getTable() { return { getTableId: async () => 'EPICs' }; },
     docApi: {
+      getDocName: async () => 'doc-invente',
       fetchTable: async (t) => {
         window.FAUX_GRIST.lectures.push(t);
         if (t === 'EPICs') return tableEnColonnes();
@@ -163,6 +172,8 @@
     rappels.options(options);
     envoyer();
   };
+  /** Rappelle onOptions, comme Grist après chaque setOption (le widget ne doit pas relire ses vues). */
+  window.FAUX_GRIST.renvoyerOptions = (options) => rappels.options(options);
   /** Renvoie les cartes avec une autre association (null retire un champ). */
   window.FAUX_GRIST.associer = (autre) => {
     association = Object.fromEntries(Object.entries({ ...ASSOCIATION, ...autre }).filter(([, v]) => v !== null));

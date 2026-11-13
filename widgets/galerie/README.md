@@ -17,6 +17,9 @@ EPICs, objectifs et résultats clés, projets… Les tâches restent gérées pa
 | [`../_commun/fiche.js`](../_commun/fiche.js), [`fiche.css`](../_commun/fiche.css) | Fiche partagée avec le Kanban : disposition côté / centre, Markdown |
 | [`../_commun/recherche.js`](../_commun/recherche.js) | Règle de recherche commune avec le Kanban |
 | [`../_commun/colonnes.js`](../_commun/colonnes.js) | Structure du document (libellés, types, formules, couleurs des choix), commune aux widgets |
+| [`../_commun/filtres.js`](../_commun/filtres.js), [`filtres.css`](../_commun/filtres.css) | Règle et panneau des filtres, communs avec le Kanban |
+| [`../_commun/vues.js`](../_commun/vues.js), [`vues.css`](../_commun/vues.css) | Vues enregistrées : barre des vues et fenêtre « Gérer la vue », communes avec le Kanban |
+| [`../_commun/fenetre.js`](../_commun/fenetre.js), [`fenetre.css`](../_commun/fenetre.css) | Fenêtre à onglets (« Gérer la vue ») |
 
 La Galerie dépend du dossier `_commun/` : elle ne fonctionne qu'**en mode URL**.
 
@@ -63,13 +66,38 @@ La carte ne montre que le titre et les pastilles : elle doit rester concise.
 - référence : un pastel propre à chaque valeur (toujours le même) ;
 - autres colonnes : gris neutre ; cellule en erreur : « ⚠️ invalide » en rouge.
 
-Pour n'afficher qu'une partie des lignes (par exemple les EPICs d'un projet),
-utiliser le filtrage natif de Grist : **« Sélectionner par »** une autre vue,
-ou les filtres de la vue. L'ordre des cartes est celui du tri de la vue.
+L'ordre des cartes est celui du tri de la vue Grist.
 
-À l'inverse, ouvrir une carte déplace le curseur de Grist sur sa ligne : une
-autre vue peut donc « Sélectionner par » la Galerie (par exemple, les tâches de
-l'EPIC ouvert).
+Ouvrir une carte déplace le curseur de Grist sur sa ligne : une autre vue peut
+donc « Sélectionner par » la Galerie (par exemple, les tâches de l'EPIC ouvert).
+
+## Filtres et vues enregistrées
+
+Mêmes outils que le [Kanban](../kanban/README.md), par les modules communs
+`_commun/filtres.js` et `_commun/vues.js` (#204). La barre sous l'en-tête
+montre les vues (en onglets, ou dans un sélecteur ▾ si la place manque),
+« ＋ Vue » et « 🔽 Filtres ».
+
+- **Filtres** : sur toute colonne Choix, Choix multiple, Référence ou Liste de
+  références de la table, associée au widget ou non (Projet, Assigné à,
+  Priorité…). « est » / « n'est pas », plusieurs valeurs cochées (« ou »),
+  plusieurs filtres (« et »). Les choix suivent l'ordre et les couleurs de
+  Grist. Pour une référence, « Afficher ▾ » montre des attributs de l'objet
+  visé, lus dans les colonnes rapportées de la table (`$Projet.Etat`).
+- **Vues** : « Toutes les cartes » (fixe), vues 👥 **partagées** (gardées dans
+  le document, puis bouton « Enregistrer » de Grist ; chaque Galerie a les
+  siennes) et 🔒 **personnelles** (gardées par le navigateur). ⋯ sur la vue
+  active : gérer, renommer, copier en vue perso, supprimer.
+- **« Gérer la vue »** (⋯ › Gérer, ou « 🔽 Filtres ») : nom et filtres ; 💾
+  enregistre, Annuler rétablit la vue telle qu'elle était.
+- La recherche 🔍 s'ajoute aux filtres de la vue ; elle n'est jamais enregistrée.
+- Le navigateur retient la vue active, les vues perso et les attributs
+  affichés, par document et par table : deux Galeries sur la **même table**
+  partagent donc ces réglages-là (leurs vues partagées restent distinctes).
+
+Le filtrage natif de Grist (« Sélectionner par », filtres de la vue Grist)
+reste possible : il choisit les lignes envoyées au widget, et nos filtres
+s'appliquent ensuite.
 
 ## Fiche
 
@@ -100,8 +128,10 @@ l'EPIC ouvert).
   « Reprendre le texte de … » copie le texte de la carte ouverte ou
   sélectionnée, pour en faire un squelette.
 - Les pastilles, objets liés et contexte ne se remplissent pas à la création :
-  à saisir dans Grist. Si la vue est filtrée (« Sélectionner par » un
-  projet…), la carte créée peut être aussitôt masquée ; un message le signale.
+  à saisir dans Grist. La carte créée peut donc être aussitôt masquée, par
+  les filtres de la vue active ou par un filtre de Grist (« Sélectionner
+  par »…) ; un message le signale. Préremplir la carte d'après les filtres :
+  #186.
 
 ## Limites connues (v1)
 
@@ -110,7 +140,10 @@ l'EPIC ouvert).
   rechargement du widget (#234). Les noms des références, eux, arrivent avec
   les données et sont toujours à jour.
 - Le contexte n'est pas modifiable depuis la fiche (prévu en amélioration).
+- Pas encore de tri des cartes dans les vues (#232) : une vue enregistre un
+  tri vide, qui sera repris tel quel.
 - La recherche (règle commune avec le Kanban : tous les mots, accents
-  ignorés, `#12` pour la ligne n° 12) porte sur toutes les colonnes que
-  Grist envoie au widget, références comprises (sous leur nom affiché) ;
+  ignorés, `#12` pour la ligne n° 12) porte sur toutes les colonnes de la
+  table, même masquées dans le widget (#204, comme le Kanban), références
+  comprises (sous leur nom affiché) ;
   les nombres, dates et cases à cocher sont ignorés.
