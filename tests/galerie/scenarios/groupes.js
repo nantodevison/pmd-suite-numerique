@@ -37,7 +37,7 @@ Banc.lancer(async () => {
   ok('onglet Regrouper affiché', $('#groupe-colonne').offsetParent !== null);
   const options = [...$('#groupe-colonne').options].map(o => o.textContent).join('|');
   ok('colonnes proposées : Choix, Références, Case à cocher, par libellé',
-    options === 'Aucun regroupement|Priorité|Projet|Tâches|Urgent', options);
+    options === 'Aucun regroupement|Priorité|Projet|Tâches|Thèmes|Urgent|Version', options);
   ok('« Aucun regroupement » choisi au départ', $('#groupe-colonne').value === '');
 
   // ── Par référence ──

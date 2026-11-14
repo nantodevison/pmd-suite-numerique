@@ -17,7 +17,9 @@ Banc.lancer(async () => {
   ok('pastilles de la carte 1 : choix, pourcentage, référence par son nom',
     textes(1).join('|') === 'Now|67 %|Atelier', textes(1).join('|'));
   ok('pastille vide omise (carte 3 sans priorité)', textes(3).join('|') === '10 %|Vitrine', textes(3).join('|'));
-  ok('libellé de la colonne au survol', pastilles(1)[0].title === 'Priorité : Now', pastilles(1)[0].title);
+  ok('libellé de la colonne au survol (modifiable : #205)', pastilles(1)[0].title === 'Priorité : Now — cliquer pour modifier',
+    pastilles(1)[0].title);
+  ok('pastille calculée : libellé seul', pastilles(1)[1].title === 'Avancement : 67 %', pastilles(1)[1].title);
 
   // Couleurs
   ok('choix coloré dans Grist : sa couleur', fond(1, 'Now').includes('rgb(254, 202, 202)'), fond(1, 'Now'));

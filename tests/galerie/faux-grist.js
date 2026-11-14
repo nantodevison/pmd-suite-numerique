@@ -27,6 +27,7 @@
     // « Now » a une couleur dans Grist, « Later » n'en a pas (→ pastel)
     choiceOptions: { Now: { fillColor: '#FECACA', textColor: '#7F1D1D' } },
   });
+  const choixThemes = JSON.stringify({ choices: ['Guide', 'Site', 'Formation'] });
   const colonnes = [
     [1,  1, 'Titre',       'Text',           'Titre',       '',                 false, '', 0],
     [2,  1, 'Description', 'Text',           'Description', '',                 false, '', 0],
@@ -44,12 +45,18 @@
     [11, 1, 'Projet_Etat', 'Any',            'Projet_Etat', '$Projet.Etat',     true,  '', 0],
     // Case à cocher : sert au regroupement « ✓ oui » / « ✗ non » (#233)
     [12, 1, 'Urgent',      'Bool',           'Urgent',      '',                 false, '', 0],
+    // Choix multiple : sert aux pastilles à cases à cocher (#205, #206)
+    [13, 1, 'Themes',      'ChoiceList',     'Thèmes',      '',                 false, choixThemes, 0],
+    // Version : chaque version relève d'un projet → cohérence Projet / Version (#205)
+    [14, 1, 'Version',       'Ref:Versions',     'Version',       '',                 false, '', 40],
     [20, 2, 'Nom',         'Text',           'Nom',         '',                 false, '', 0],
     [21, 2, 'Etat',        'Text',           'État',        '',                 false, '', 0],
     [30, 3, 'Nom',         'Text',           'Nom',         '',                 false, '', 0],
+    [40, 4, 'Nom',         'Text',           'Nom',         '',                 false, '', 0],
+    [41, 4, 'Projet',      'Ref:Projets',    'Projet',      '',                 false, '', 20],
   ];
   const meta = {
-    _grist_Tables: { id: [1, 2, 3], tableId: ['EPICs', 'Projets', 'Taches'] },
+    _grist_Tables: { id: [1, 2, 3, 4], tableId: ['EPICs', 'Projets', 'Taches', 'Versions'] },
     _grist_Tables_column: ['id', 'parentId', 'colId', 'type', 'label', 'formula', 'isFormula', 'widgetOptions', 'visibleCol']
       .reduce((o, k, i) => (o[k] = colonnes.map(c => c[i]), o), {}),
   };
@@ -57,6 +64,8 @@
   const donnees = {
     Projets: { id: [1, 2], Nom: ['Atelier', 'Vitrine'], Etat: ['Ouvert', 'Fermé'] },
     Taches:  { id: [1, 2, 3], Nom: ['Rédiger le guide', 'Relire le guide', 'Copier les pages'] },
+    // Comme fetchTable : une référence sous son NUMÉRO (Version A → Atelier, Version B → Vitrine)
+    Versions:  { id: [1, 2], Nom: ['Version A', 'Version B'], Projet: [1, 2] },
   };
 
   // Ancien texte du widget Notepad (JSON), à convertir en Markdown
@@ -68,17 +77,18 @@
   let records = [
     { id: 1, Titre: 'Écrire la documentation', Description: '- [ ] Plan\n- [x] Sommaire', Priorite: 'Now',
       Avancement: 0.67, Projet: 'Atelier', Taches: ['Rédiger le guide', 'Relire le guide'],
-      Objectif: 'Guide publié', Echeance: JANVIER_2026, Code: 'E1', Projet_Etat: 'Ouvert', Urgent: true },
+      Objectif: 'Guide publié', Echeance: JANVIER_2026, Code: 'E1', Projet_Etat: 'Ouvert', Urgent: true,
+      Themes: ['Guide'], Version: 'Version A' },
     { id: 2, Titre: 'Préparer la démonstration', Description: NOTEPAD, Priorite: 'Later',
       Avancement: 1, Projet: 'Atelier', Taches: [], Objectif: 'Démonstration jouée', Echeance: null, Code: 'E2',
-      Projet_Etat: 'Ouvert', Urgent: false },
+      Projet_Etat: 'Ouvert', Urgent: false, Themes: null, Version: '' },
     { id: 3, Titre: 'Archiver le site', Description: 'Texte simple', Priorite: null,
       Avancement: 0.1, Projet: 'Vitrine', Taches: ['Copier les pages'], Objectif: '', Echeance: null, Code: 'E3',
-      Projet_Etat: 'Fermé', Urgent: true },
+      Projet_Etat: 'Fermé', Urgent: true, Themes: null, Version: 'Version B' },
     // Référence vers une ligne qui n'existe pas : cellule en erreur
     { id: 4, Titre: 'Carte en erreur', Description: '', Priorite: null, Avancement: 0,
       Projet: ['E', 'InvalidTypedValue', 'Ref:Projets', 99], Taches: [], Objectif: '', Echeance: null, Code: 'E4',
-      Projet_Etat: null, Urgent: false },
+      Projet_Etat: null, Urgent: false, Themes: null, Version: '' },
   ];
 
   // Association des colonnes faite dans le panneau de droite de Grist
@@ -100,9 +110,29 @@
     rappels.records(visibles.map(r => ({ ...r })), association);
   }
 
+  /**
+   * Valeurs écrites par le widget → valeurs que Grist lui renverra :
+   * une liste « encodée » ['L', a, b] revient [a, b] ; une référence écrite
+   * sous son NUMÉRO revient sous son NOM ('' pour 0, la référence vide).
+   */
+  function commeGristLesRenvoie(champs) {
+    return Object.fromEntries(Object.entries(champs).map(([col, v]) => {
+      const c = colonnes.find(x => x[1] === 1 && x[2] === col);
+      const ref = c && /^Ref(?:List)?:(.+)$/.exec(c[3]);
+      if (Array.isArray(v) && v[0] === 'L') v = v.slice(1);
+      if (ref) {
+        const t = donnees[ref[1]];
+        const nom = (n) => { const i = t.id.indexOf(n); return i === -1 ? n : t.Nom[i]; };
+        v = Array.isArray(v) ? v.map(nom) : (v ? nom(v) : '');
+      }
+      return [col, v];
+    }));
+  }
+
   /** Applique une action Grist aux cartes ; renvoie sa valeur de retour. */
   function appliquer([nom, table, id, champs]) {
     if (table !== 'EPICs') throw new Error('table inattendue : ' + table);
+    if (champs && !Array.isArray(id)) champs = commeGristLesRenvoie(champs);
     if (nom === 'AddRecord') {
       const nouveau = { id: prochainNumero++, ...champs };
       records.push(nouveau);
@@ -133,6 +163,8 @@
     actions: [], options: {}, curseur: null,
     masquerCreees: false,   // true : une carte créée n'est pas renvoyée (vue filtrée)
     get records() { return records; },
+    // Tables visées par les références : un scénario peut y ajouter des lignes
+    donnees,
     // Tables lues par le widget (fetchTable), dans l'ordre
     lectures: [],
     // Options passées à onRecords (ex. { includeColumns: 'normal' })

@@ -63,8 +63,10 @@ const ETAT = {
   recherche:  '',     // texte saisi dans la recherche (règle : ../_commun/recherche.js)
   selection:  null,   // numéro de la ligne sélectionnée dans Grist
   // Carte affichée dans la fiche : numéro de ligne (null pour une nouvelle
-  // carte, pas encore créée dans Grist) et colonnes modifiées.
-  fiche:      { id: null, nouvelle: false, modifs: {} },
+  // carte, pas encore créée dans Grist) et colonnes modifiées : modifs dans
+  // le format qu'attend Grist (écrit par « ✓ Sauvegarder »), apercu dans
+  // celui qu'il renvoie, pour afficher les pastilles choisies (#206).
+  fiche:      { id: null, nouvelle: false, modifs: {}, apercu: {} },
   modele:     '',     // texte de départ des nouvelles cartes (réglage ⚙)
 };
 
@@ -97,7 +99,7 @@ function cleMemoire(nom) {
 
 // grist.ready() doit précéder tout autre appel à l'API Grist.
 grist.ready({
-  requiredAccess: 'full',   // le widget écrit le titre et la description
+  requiredAccess: 'full',   // le widget écrit le titre, la description et les pastilles
   columns: [
     { name: 'Titre',       title: 'Titre', type: 'Text' },
     { name: 'Description', title: 'Texte principal (Markdown)', type: 'Text', optional: true },
@@ -357,6 +359,255 @@ function creerPastilles(colId, valeur) {
 }
 
 /* ══════════════════════════════════════════════════════════════
+   3 bis. MODIFIER UNE PASTILLE (#205 sur la carte, #206 dans la fiche)
+   Un clic sur une pastille ouvre un petit menu (../_commun/fiche.js),
+   choisi d'après le TYPE de la colonne :
+     - Choix            → la liste des choix de Grist, plus « — aucun — » ;
+     - Choix multiple   → la même liste, en cases à cocher ;
+     - Référence        → les lignes de la table visée, plus « — aucune — »
+                          (champ de recherche au-delà de SEUIL_RECHERCHE) ;
+     - Case à cocher    → oui / non ;
+     - Date             → un calendrier, avec « Effacer la date ».
+   Les autres colonnes (texte, nombre, colonne calculée par une formule)
+   restent en lecture seule.
+   Le menu ne fait que CHOISIR : c'est l'appelant qui décide quoi faire de
+   la valeur (l'écrire tout de suite sur la carte, la garder jusqu'à
+   « ✓ Sauvegarder » dans la fiche).
+   ══════════════════════════════════════════════════════════════ */
+
+// Types de colonnes (sans le nom de table : « Ref » pour « Ref:Projets »)
+// dont la pastille se modifie d'un clic. Les listes de références n'en font
+// pas partie : Grist ne les propose pas en pastilles.
+const TYPES_MODIFIABLES = ['Choice', 'ChoiceList', 'Ref', 'Bool', 'Date'];
+// Au-delà de ce nombre de lignes visées, le menu d'une référence devient un
+// champ de recherche : une longue liste se parcourt mal.
+const SEUIL_RECHERCHE = 12;
+
+/** La pastille de cette colonne peut-elle être modifiée depuis le widget ? */
+function pastilleModifiable(colId) {
+  const colonne = info(colId);
+  return !colonne.formule && TYPES_MODIFIABLES.includes(colonne.typeBase);
+}
+
+/**
+ * Rend une pastille cliquable (et utilisable au clavier : Tab, puis Entrée).
+ * Le clic ne « remonte » pas jusqu'à la carte : il n'ouvre pas sa fiche.
+ *   ouvrir : fonction appelée avec la pastille, qui ouvre le menu
+ */
+function rendreModifiable(pastille, colId, ouvrir) {
+  pastille.classList.add('pastille-modifiable');
+  pastille.tabIndex = 0;
+  pastille.setAttribute('role', 'button');
+  pastille.title += ' — cliquer pour modifier';
+  pastille.addEventListener('click', (e) => { e.stopPropagation(); ouvrir(pastille); });
+  pastille.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    e.stopPropagation();
+    ouvrir(pastille);
+  });
+}
+
+/** Pastille « + Priorité » d'une colonne vide, dans la fiche (#206). */
+function pastilleVide(colId) {
+  const p = document.createElement('span');
+  p.className = 'pastille pastille-vide';
+  p.textContent = '+ ' + libelle(colId);
+  p.title = `${libelle(colId)} : vide`;
+  return p;
+}
+
+/**
+ * Ouvre près de `ancre` le menu qui convient au type de la colonne.
+ *   valeur   : valeur actuelle, telle que Grist l'envoie au widget
+ *   surChoix : appelée avec deux formes de la valeur choisie :
+ *     ecrite   → ce qu'attend Grist pour l'écrire (numéro de ligne pour une
+ *                référence, ['L', …] pour une liste, secondes pour une date) ;
+ *     affichee → ce qu'il renverra ensuite au widget (nom de la référence…),
+ *                pour afficher la pastille avant même la sauvegarde.
+ */
+async function ouvrirMenuPastille(ancre, colId, valeur, surChoix) {
+  const colonne = info(colId);
+  const erreur = estErreur(valeur);
+
+  if (colonne.typeBase === 'Choice') {
+    // Une valeur absente de la liste des choix (choix retiré dans Grist) reste proposée
+    const choix = [...colonne.choix];
+    if (!erreur && valeur && !choix.includes(valeur)) choix.push(valeur);
+    Fiche.menuChoix(ancre, {
+      options: choix.map(v => ({ valeur: v, libelle: v })),
+      selection: [valeur || ''], vide: '— aucun —', valeurVide: '',
+      surChoix: (v) => surChoix(v, v),
+    });
+
+  } else if (colonne.typeBase === 'ChoiceList') {
+    // Grist peut envoyer la liste « encodée » : ['L', a, b…]
+    const liste = Array.isArray(valeur) && !erreur ? (valeur[0] === 'L' ? valeur.slice(1) : valeur) : [];
+    const choix = [...colonne.choix, ...liste.filter(v => !colonne.choix.includes(v))];
+    // Menu à cases : il reste ouvert, chaque case cochée ou décochée compte.
+    Fiche.menuChoix(ancre, {
+      options: choix.map(v => ({ valeur: v, libelle: v })),
+      selection: liste, multiple: true,
+      surChoix: (choisis) => surChoix(choisis.length ? ['L', ...choisis] : null, choisis),
+    });
+
+  } else if (colonne.typeBase === 'Bool') {
+    Fiche.menuChoix(ancre, {
+      options: [{ valeur: true, libelle: '✓ oui' }, { valeur: false, libelle: '✗ non' }],
+      selection: [valeur === true],
+      surChoix: (v) => surChoix(v, v),
+    });
+
+  } else if (colonne.typeBase === 'Date') {
+    Fiche.menuDate(ancre, {
+      valeur: erreur ? '' : dateVersIso(valeur),
+      // Grist range une date en secondes depuis le 1er janvier 1970 (minuit UTC)
+      surChoix: (iso) => {
+        const secondes = iso ? Date.parse(iso) / 1000 : null;
+        surChoix(secondes, secondes);
+      },
+    });
+
+  } else if (colonne.typeBase === 'Ref') {
+    await ouvrirMenuReference(ancre, colId, valeur, surChoix);
+  }
+}
+
+/**
+ * Menu d'une référence. La table visée est relue à CHAQUE ouverture : une
+ * ligne ajoutée entre-temps dans Grist (un nouveau projet…) est proposée
+ * tout de suite. Elle n'est jamais lue au chargement du widget (#188).
+ */
+async function ouvrirMenuReference(ancre, colId, valeur, surChoix) {
+  let ref = null;
+  try {
+    // Structure relue elle aussi : elle dit quelle colonne la référence affiche.
+    ref = await Colonnes.lireReference(await Colonnes.lireDocument(), ETAT.table, colId);
+  } catch (err) {
+    console.error('Galerie – lecture de la table visée impossible :', err);
+  }
+  if (!ref) { afficherToast('⚠️ Impossible de lire les valeurs possibles', 3000); return; }
+  // Pendant la lecture, la grille a pu être redessinée : la pastille cliquée
+  // n'est plus à l'écran, et le menu n'aurait plus où s'accrocher.
+  if (!ancre.isConnected) return;
+
+  const options = ref.options
+    .map(o => ({ valeur: o.id, libelle: o.nom || `n° ${o.id}` }))
+    .sort((a, b) => a.libelle.localeCompare(b.libelle, 'fr'));
+  // Grist envoie la référence sous son nom : on retrouve son numéro.
+  const actuel = estErreur(valeur) ? undefined : (valeur ? ref.id(valeur) : 0);
+  // Le nom renvoyé ensuite par Grist ('' pour une référence vide, numéro 0)
+  const choisir = (id) => surChoix(id, id ? ref.nom(id) : '');
+
+  if (options.length > SEUIL_RECHERCHE) {
+    Fiche.menuRecherche(ancre, {
+      options: [{ valeur: 0, libelle: '— aucune —' }, ...options],
+      placeholder: `Rechercher : ${libelle(colId)}`,
+      surChoix: choisir,
+    });
+  } else {
+    Fiche.menuChoix(ancre, {
+      options, selection: [actuel], vide: '— aucune —', valeurVide: 0,
+      surChoix: choisir,
+    });
+  }
+}
+
+/**
+ * Cohérence entre deux références d'une carte. Exemple : un EPIC a un
+ * Projet et un Objectif ; or chaque objectif appartient lui-même à un
+ * projet. Changer le projet de l'EPIC sans changer son objectif (ou
+ * choisir l'objectif d'un autre projet) rend la carte incohérente.
+ *
+ * Règle générique, lue dans la structure du document : pour deux colonnes
+ * de référence A et B de la table (non calculées), si la table visée par B
+ * a une colonne qui vise la même table que A, alors la ligne visée par B
+ * doit avoir, dans cette colonne, la même valeur que la carte dans A.
+ * On ne vérifie que les paires qui contiennent la colonne modifiée, et
+ * seulement si les deux références sont remplies.
+ *
+ *   ligne      : la carte, telle que Grist l'a envoyée (références par nom)
+ *   colId      : la colonne qui vient d'être modifiée
+ *   idsConnus  : { colId: numéro } des références déjà connues par leur
+ *                numéro (la valeur choisie, les choix en attente de la fiche)
+ * Renvoie le texte de l'alerte, ou '' si tout concorde. Une erreur de
+ * lecture ne bloque rien : pas d'alerte.
+ */
+async function alerteCoherence(ligne, colId, idsConnus = {}) {
+  if (info(colId).typeBase !== 'Ref') return '';
+  try {
+    const doc = await Colonnes.lireDocument();   // relu : données fraîches
+    const refs = doc.colonnes(ETAT.table).filter(c => c.typeBase === 'Ref' && c.tableVisee && !c.formule);
+    const refsLues = {};
+    const reference = async (c) => (refsLues[c.colId] ??= await Colonnes.lireReference(doc, ETAT.table, c.colId));
+    // Numéro de la ligne visée par la colonne c de la carte (0 si vide)
+    const numero = async (c) => {
+      if (c.colId in idsConnus) return Number(idsConnus[c.colId]) || 0;
+      const v = ligne[c.colId];
+      if (!v || estErreur(v)) return 0;
+      const ref = await reference(c);
+      return (ref && ref.id(v)) || 0;
+    };
+
+    const alertes = [];
+    for (const a of refs) {
+      for (const b of refs) {
+        if (a === b || (a.colId !== colId && b.colId !== colId)) continue;
+        // Colonnes de la table visée par B qui visent la table de A (objectif → projet)
+        const liens = doc.colonnes(b.tableVisee).filter(d => d.tableVisee === a.tableVisee);
+        if (!liens.length) continue;
+        const idA = await numero(a), idB = await numero(b);
+        if (!idA || !idB) continue;
+        const lignesB = await Colonnes.lireLignes(doc, b.tableVisee);
+        const i = lignesB.id.indexOf(idB);
+        if (i === -1) continue;
+        // fetchTable donne les références par numéro ; une liste arrive ['L', …]
+        const concorde = liens.every(d => {
+          const v = lignesB[d.colId][i];
+          const valeurs = Array.isArray(v) ? (v[0] === 'L' ? v.slice(1) : v) : (v ? [v] : []);
+          return !valeurs.length || valeurs.includes(idA);   // non rattaché : rien à dire
+        });
+        if (!concorde) {
+          const nomA = (await reference(a)).nom(idA), nomB = (await reference(b)).nom(idB);
+          alertes.push(`⚠️ « ${nomB} » (${b.libelle}) relève d'un autre ${a.libelle.toLowerCase()} `
+            + `que « ${nomA} » : pensez à le changer`);
+        }
+      }
+    }
+    return alertes.join(' ; ');
+  } catch (err) {
+    console.warn('Galerie – vérification de cohérence impossible :', err);
+    return '';
+  }
+}
+
+/** Date reçue de Grist (Date, secondes ou texte) → « AAAA-MM-JJ » ('' si aucune). Même règle que le Kanban. */
+function dateVersIso(v) {
+  if (!v) return '';
+  if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  try {
+    return (typeof v === 'number' ? new Date(v * 1000) : new Date(v)).toISOString().slice(0, 10);
+  } catch (_) { return ''; }
+}
+
+/**
+ * Écrit tout de suite une cellule dans Grist (pastille modifiée sur une
+ * carte, #205), comme une cellule modifiée dans la grille de Grist : la
+ * grille n'a pas de bouton « Sauvegarder ». Ctrl + Z dans Grist annule.
+ * Grist renvoie ensuite les cartes au widget (onRecords), qui les redessine.
+ */
+async function ecrireCellule(ligne, colId, valeur) {
+  try {
+    await grist.docApi.applyUserActions([['UpdateRecord', ETAT.table, ligne.id, { [colId]: valeur }]]);
+    const alerte = await alerteCoherence(ligne, colId, { [colId]: valeur });
+    afficherToast(`✓ ${libelle(colId)} modifié` + (alerte ? ' — ' + alerte : ''), alerte ? 8000 : 2200);
+  } catch (err) {
+    afficherToast(`⚠️ Erreur : ${err.message || err}`, 4000);
+    console.error('Galerie – erreur d\'écriture :', err);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
    4. GRILLE DE CARTES
    ══════════════════════════════════════════════════════════════ */
 
@@ -437,10 +688,18 @@ function construireCarte(ligne) {
   titre.textContent = ligne[ETAT.colonnes.Titre] || '(sans titre)';
   carte.appendChild(titre);
 
-  // Pastilles : toutes les colonnes associées comme « Pastilles », non vides
+  // Pastilles : toutes les colonnes associées comme « Pastilles », non vides.
+  // Une pastille modifiable s'écrit tout de suite dans Grist (#205).
   const pastilles = document.createElement('div');
   pastilles.className = 'carte-contexte';
-  colonnesPastilles().forEach(colId => pastilles.append(...creerPastilles(colId, ligne[colId])));
+  colonnesPastilles().forEach(colId => {
+    const elements = creerPastilles(colId, ligne[colId]);
+    if (pastilleModifiable(colId)) {
+      elements.forEach(p => rendreModifiable(p, colId, (ancre) =>
+        ouvrirMenuPastille(ancre, colId, ligne[colId], (ecrite) => ecrireCellule(ligne, colId, ecrite))));
+    }
+    pastilles.append(...elements);
+  });
   if (pastilles.children.length) carte.appendChild(pastilles);
   // Pas d'aperçu du texte principal : la carte reste concise (titre et
   // pastilles) ; le texte se lit dans la fiche. La place libre en bas de
@@ -815,6 +1074,8 @@ function remplirFiche(id) {
     ? { id: null, [ETAT.colonnes.Description]: ETAT.modele }
     : ETAT.lignes.find(l => l.id === id);
   if (!ligne) { fermerFiche(true); return; }   // ligne supprimée ou filtrée entre-temps
+  // Pastilles choisies mais pas encore sauvegardées (#206) : on repart de Grist
+  ETAT.fiche.apercu = {};
 
   document.getElementById('fiche-libelle').textContent = nouvelle ? 'Nouvelle carte' : 'Fiche';
   const corps = document.getElementById('fiche-corps');
@@ -849,7 +1110,7 @@ function remplirFiche(id) {
   }
 
   // Une nouvelle carte n'a encore ni objets liés, ni pastilles, ni contexte
-  // (non modifiables dans la fiche pour l'instant) : on passe au texte.
+  // (à remplir une fois la carte créée ; préremplissage : #186) : on passe au texte.
   if (!nouvelle) remplirEntete(ligne, principal, encart, corps);
 
   // Texte principal en Markdown
@@ -893,8 +1154,8 @@ function remplirEntete(ligne, principal, encart, corps) {
     principal.appendChild(ligneLies);
   });
 
-  // Pastilles colorées, sans libellé (rappelé au survol) ; vides omises
-  colonnesPastilles().forEach(colId => encart.append(...creerPastilles(colId, ligne[colId])));
+  // Pastilles colorées, sans libellé (rappelé au survol), modifiables (#206)
+  dessinerPastillesFiche(encart, ligne);
 
   // Contexte : paires « libellé : valeur », même vides (« — »)
   const contexte = colonnesContexte();
@@ -904,6 +1165,34 @@ function remplirEntete(ligne, principal, encart, corps) {
     contexte.forEach(colId => liste.append(...ligneEntete(colId, valeurContexte(colId, ligne[colId]))));
     corps.appendChild(liste);
   }
+}
+
+/**
+ * Pastilles de la fiche (#206). Une pastille modifiée affiche son nouveau
+ * choix (ETAT.fiche.apercu) en attendant « ✓ Sauvegarder », qui l'écrit
+ * avec le titre et le texte (ETAT.fiche.modifs). Une colonne modifiable
+ * mais vide s'affiche « + Priorité », pour pouvoir la remplir ; une colonne
+ * en lecture seule et vide reste omise, comme sur la carte.
+ */
+function dessinerPastillesFiche(encart, ligne) {
+  encart.innerHTML = '';
+  colonnesPastilles().forEach(colId => {
+    const valeur = colId in ETAT.fiche.apercu ? ETAT.fiche.apercu[colId] : ligne[colId];
+    let elements = creerPastilles(colId, valeur);
+    if (pastilleModifiable(colId)) {
+      if (!elements.length) elements = [pastilleVide(colId)];
+      elements.forEach(p => rendreModifiable(p, colId, (ancre) =>
+        ouvrirMenuPastille(ancre, colId, valeur, (ecrite, affichee) => {
+          ETAT.fiche.apercu[colId] = affichee;
+          noterModif(colId, ecrite);
+          dessinerPastillesFiche(encart, ligne);
+          // Choix en attente compris (les références y sont des numéros)
+          alerteCoherence(ligne, colId, ETAT.fiche.modifs)
+            .then(alerte => { if (alerte) afficherToast(alerte, 8000); });
+        })));
+    }
+    encart.append(...elements);
+  });
 }
 
 /** Une ligne de l'en-tête de la fiche : libellé, puis les éléments donnés (ou « — »). */
