@@ -21,14 +21,14 @@ py tests/kanban/jouer.py --largeurs 1200 -v   # une largeur, toutes les lignes
 Le bilan s'affiche par scénario et par largeur (`BILAN 42 OK, 0 KO`), suivi des
 lignes en échec. Le code de sortie vaut 0 si tout est OK.
 
-## Ce qui est vérifié (212 vérifications par largeur)
+## Ce qui est vérifié (277 vérifications par largeur)
 
 | Scénario | Fonctions |
 |---|---|
 | `vues` | Vues enregistrées (#196, #214) : créer une vue partagée ou perso, changer de vue, Annuler, colonnes de la vue, supprimer ; onglet actif et vues perso retenus par le navigateur (#202) |
 | `liens` | Bloque / Bloquée par (#183, #222) : badges ⛔ / ➡️, bande de la fiche, confirmation avant de terminer une carte bloquée, carte liée créée depuis la fiche, suppression d'une carte liée |
 | `tri-recherche` | Tri sur toute colonne et enregistré dans la vue (#211) ; recherche 🔍 (#209) : accents, tous les mots, #numéro, références, colonnes masquées |
-| `fiche` | Numéro #id (#203), couleur de statut choisie dans ⚙ (#212), cases à cocher de l'aperçu (#208), sauvegarde et fermeture de la fiche |
+| `fiche` | Numéro #id (#203), couleur de statut choisie dans ⚙ (#212), cases à cocher de l'aperçu (#208), sauvegarde et fermeture de la fiche, Échap |
 | `attributs-filtre` | Panneau des filtres compacté et bouton « Afficher ▾ » (#226, étape 1) |
 | `attributs-menus` | Attributs dans les menus de la fiche et de « Nouvelle carte », colonnes masquées reçues (#226, étape 2) |
 | `filtres` | Règle des filtres de `_commun/filtres.js` (#191), vérifiée directement sur le module : est / n'est pas, `(vide)`, listes, valeurs proposées et leur ordre, copie et signature des vues, attributs (listes de références, désaccords, couleurs), mémoire des attributs ; dans le Kanban, « 👤 Moi » (#202) ; panneau commun dans « Gérer la vue » : choix dans l'ordre de Grist et à leur couleur (#236), cocher, est / n'est pas, étiquette, supprimer |

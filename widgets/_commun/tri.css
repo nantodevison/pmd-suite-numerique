@@ -1,0 +1,20 @@
+/* ══════════════════════════════════════════════════════════════
+   TRI — styles du panneau du tri (../_commun/tri.js, Tri.creerPanneau)
+   Commun au Kanban et à la Galerie (#232). Le panneau reprend les
+   classes du panneau des filtres (filtres.css) : .filtre-popover,
+   .filtre-ops, .filtre-op, .filtre-lien… À charger APRÈS filtres.css.
+   ══════════════════════════════════════════════════════════════ */
+
+/* (.filtre-popover fixe 290 px : il faut une règle plus précise) */
+.filtre-popover.tri-popover { width: 460px; max-width: calc(100vw - 16px); }
+/* Dans la fenêtre « Gérer la vue », le panneau ne flotte pas : il prend place dans l'onglet */
+.fenetre .tri-popover { width: auto; max-width: none; }
+
+.tri-criteres { display: flex; flex-direction: column; gap: 6px; }
+.tri-critere { display: flex; align-items: center; gap: 6px; }
+.tri-critere .filter-select { flex: 1; min-width: 120px; max-width: none; }
+.tri-critere .filtre-op { padding: 5px 7px; }
+.tri-rang { width: 30px; flex-shrink: 0; font-size: 11px; color: var(--text-muted); }
+.tri-retirer { border: none; background: none; cursor: pointer; padding: 0; }
+.tri-ajouter { align-self: flex-start; }
+.filtre-lien:disabled { opacity: .5; cursor: default; text-decoration: none; }

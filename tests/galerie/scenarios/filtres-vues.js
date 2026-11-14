@@ -79,7 +79,7 @@ Banc.lancer(async () => {
   afficherGrille();
   ok('Priorité n\'est pas (vide) : cartes 1 et 2', cartes() === '1,2', cartes());
   $('#vue-ajouter').click();
-  ok('panneau du nom : « Reprend les filtres affichés. »', $('#vue-nom-aide').textContent === 'Reprend les filtres affichés.',
+  ok('panneau du nom : « Reprend les filtres et le tri affichés. »', $('#vue-nom-aide').textContent === 'Reprend les filtres et le tri affichés.',
     $('#vue-nom-aide').textContent);
   $('#vue-nom').value = 'Priorisées';
   $('#vue-nom-popover input[name="vue-portee"][value="partagee"]').checked = true;

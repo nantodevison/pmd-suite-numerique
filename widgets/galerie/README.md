@@ -18,6 +18,7 @@ EPICs, objectifs et résultats clés, projets… Les tâches restent gérées pa
 | [`../_commun/recherche.js`](../_commun/recherche.js) | Règle de recherche commune avec le Kanban |
 | [`../_commun/colonnes.js`](../_commun/colonnes.js) | Structure du document (libellés, types, formules, couleurs des choix), commune aux widgets |
 | [`../_commun/filtres.js`](../_commun/filtres.js), [`filtres.css`](../_commun/filtres.css) | Règle et panneau des filtres, communs avec le Kanban |
+| [`../_commun/tri.js`](../_commun/tri.js), [`tri.css`](../_commun/tri.css) | Comparaison des valeurs selon le type de leur colonne, et panneau du tri ⇅, communs avec le Kanban |
 | [`../_commun/vues.js`](../_commun/vues.js), [`vues.css`](../_commun/vues.css) | Vues enregistrées : barre des vues et fenêtre « Gérer la vue », communes avec le Kanban |
 | [`../_commun/fenetre.js`](../_commun/fenetre.js), [`fenetre.css`](../_commun/fenetre.css) | Fenêtre à onglets (« Gérer la vue ») |
 
@@ -66,17 +67,18 @@ La carte ne montre que le titre et les pastilles : elle doit rester concise.
 - référence : un pastel propre à chaque valeur (toujours le même) ;
 - autres colonnes : gris neutre ; cellule en erreur : « ⚠️ invalide » en rouge.
 
-L'ordre des cartes est celui du tri de la vue Grist.
+L'ordre des cartes est celui du tri de la vue Grist, sauf si la vue de la
+Galerie a son propre tri (voir plus bas).
 
 Ouvrir une carte déplace le curseur de Grist sur sa ligne : une autre vue peut
 donc « Sélectionner par » la Galerie (par exemple, les tâches de l'EPIC ouvert).
 
-## Filtres et vues enregistrées
+## Filtres, tri et vues enregistrées
 
 Mêmes outils que le [Kanban](../kanban/README.md), par les modules communs
-`_commun/filtres.js` et `_commun/vues.js` (#204). La barre sous l'en-tête
-montre les vues (en onglets, ou dans un sélecteur ▾ si la place manque),
-« ＋ Vue » et « 🔽 Filtres ».
+`_commun/filtres.js`, `_commun/tri.js` et `_commun/vues.js` (#204, #232). La
+barre sous l'en-tête montre les vues (en onglets, ou dans un sélecteur ▾ si
+la place manque), « ＋ Vue », « 🔽 Filtres » et « ⇅ Trier ».
 
 - **Filtres** : sur toute colonne Choix, Choix multiple, Référence ou Liste de
   références de la table, associée au widget ou non (Projet, Assigné à,
@@ -84,12 +86,19 @@ montre les vues (en onglets, ou dans un sélecteur ▾ si la place manque),
   plusieurs filtres (« et »). Les choix suivent l'ordre et les couleurs de
   Grist. Pour une référence, « Afficher ▾ » montre des attributs de l'objet
   visé, lus dans les colonnes rapportées de la table (`$Projet.Etat`).
+- **Tri** (#232) : sur n'importe quelle colonne de la table, ou le numéro de
+  la ligne, jusqu'à 10 critères (« Par…, puis… »). Chaque type est rangé à sa
+  façon : choix dans l'ordre de Grist, nombres et dates, textes de A à Z
+  (accents ignorés), références sur leur nom. Les cartes sans valeur (ou en
+  erreur) restent en bas, quel que soit le sens. Sans tri, ou à égalité,
+  l'ordre de la vue Grist départage. « ＋ Ajouter un critère » propose
+  d'abord les colonnes de pastilles, puis le titre.
 - **Vues** : « Toutes les cartes » (fixe), vues 👥 **partagées** (gardées dans
   le document, puis bouton « Enregistrer » de Grist ; chaque Galerie a les
   siennes) et 🔒 **personnelles** (gardées par le navigateur). ⋯ sur la vue
   active : gérer, renommer, copier en vue perso, supprimer.
-- **« Gérer la vue »** (⋯ › Gérer, ou « 🔽 Filtres ») : nom et filtres ; 💾
-  enregistre, Annuler rétablit la vue telle qu'elle était.
+- **« Gérer la vue »** (⋯ › Gérer, « 🔽 Filtres » ou « ⇅ Trier ») : nom,
+  filtres et tri ; 💾 enregistre, Annuler rétablit la vue telle qu'elle était.
 - La recherche 🔍 s'ajoute aux filtres de la vue ; elle n'est jamais enregistrée.
 - Le navigateur retient la vue active, les vues perso et les attributs
   affichés, par document et par table : deux Galeries sur la **même table**
@@ -140,8 +149,6 @@ s'appliquent ensuite.
   rechargement du widget (#234). Les noms des références, eux, arrivent avec
   les données et sont toujours à jour.
 - Le contexte n'est pas modifiable depuis la fiche (prévu en amélioration).
-- Pas encore de tri des cartes dans les vues (#232) : une vue enregistre un
-  tri vide, qui sera repris tel quel.
 - La recherche (règle commune avec le Kanban : tous les mots, accents
   ignorés, `#12` pour la ligne n° 12) porte sur toutes les colonnes de la
   table, même masquées dans le widget (#204, comme le Kanban), références
