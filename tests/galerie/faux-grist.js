@@ -48,7 +48,9 @@
     // Choix multiple : sert aux pastilles à cases à cocher (#205, #206)
     [13, 1, 'Themes',      'ChoiceList',     'Thèmes',      '',                 false, choixThemes, 0],
     // Version : chaque version relève d'un projet → cohérence Projet / Version (#205)
-    [14, 1, 'Version',       'Ref:Versions',     'Version',       '',                 false, '', 40],
+    // displayCol 50 : colonne cachée où Grist range le nom affiché de la version (#239)
+    [14, 1, 'Version',       'Ref:Versions',     'Version',       '',                 false, '', 40, 50],
+    [50, 1, 'gristHelper_Display', 'Any',    'gristHelper_Display', '$Version.Nom', true, '', 0],
     [20, 2, 'Nom',         'Text',           'Nom',         '',                 false, '', 0],
     [21, 2, 'Etat',        'Text',           'État',        '',                 false, '', 0],
     [30, 3, 'Nom',         'Text',           'Nom',         '',                 false, '', 0],
@@ -57,8 +59,9 @@
   ];
   const meta = {
     _grist_Tables: { id: [1, 2, 3, 4], tableId: ['EPICs', 'Projets', 'Taches', 'Versions'] },
-    _grist_Tables_column: ['id', 'parentId', 'colId', 'type', 'label', 'formula', 'isFormula', 'widgetOptions', 'visibleCol']
-      .reduce((o, k, i) => (o[k] = colonnes.map(c => c[i]), o), {}),
+    // displayCol (10e champ) : 0 si absent, comme une référence sans colonne cachée
+    _grist_Tables_column: ['id', 'parentId', 'colId', 'type', 'label', 'formula', 'isFormula', 'widgetOptions', 'visibleCol', 'displayCol']
+      .reduce((o, k, i) => (o[k] = colonnes.map(c => c[i] ?? 0), o), {}),
   };
   // Tables visées par les références
   const donnees = {
@@ -103,11 +106,18 @@
   let association = { ...ASSOCIATION };
   let prochainNumero = 100;
 
-  /** Envoie les cartes au widget (de nouveaux objets, comme Grist à chaque changement). */
+  /**
+   * Envoie les cartes au widget (de nouveaux objets, comme Grist à chaque
+   * changement). Comme le vrai Grist (#239) : seulement l'id et les colonnes
+   * ASSOCIÉES, même si le widget demande includeColumns 'normal'.
+   */
   function envoyer() {
+    const associees = new Set(['id', ...Object.values(association).flat().filter(Boolean)]);
     // Une carte créée alors que la vue est filtrée n'est pas renvoyée
     const visibles = records.filter(r => !(window.FAUX_GRIST.masquerCreees && r.id >= 100));
-    rappels.records(visibles.map(r => ({ ...r })), association);
+    const envoi = visibles.map(r => Object.fromEntries(Object.entries(r).filter(([col]) => associees.has(col))));
+    window.FAUX_GRIST.dernierEnvoi = envoi;
+    rappels.records(envoi.map(r => ({ ...r })), association);
   }
 
   /**
@@ -153,10 +163,30 @@
     throw new Error('action inattendue : ' + nom);
   }
 
-  /** La table des cartes « en colonnes », comme la renvoie fetchTable. */
+  /**
+   * La table des cartes « en colonnes », comme la renvoie fetchTable : TOUTES
+   * les colonnes, références sous leur NUMÉRO, listes encodées ['L', …], et la
+   * colonne cachée gristHelper_Display (nom affiché de la version).
+   */
   function tableEnColonnes() {
-    const cles = Object.keys(records[0]);
-    return Object.fromEntries(cles.map(c => [c, records.map(r => r[c] ?? null)]));
+    const cles = colonnes.filter(c => c[1] === 1 && !c[2].startsWith('gristHelper_')).map(c => c[2]);
+    const t = { id: records.map(r => r.id) };
+    cles.forEach(col => { t[col] = records.map(r => commeFetchTable(col, r[col] ?? null)); });
+    t.gristHelper_Display = records.map(r => r.Version ?? '');
+    return t;
+  }
+
+  /** Valeur d'une carte (format d'onRecords) → format de fetchTable. */
+  function commeFetchTable(col, v) {
+    if (v === null || (Array.isArray(v) && v[0] === 'E')) return v;   // vide ou cellule en erreur
+    const c = colonnes.find(x => x[1] === 1 && x[2] === col);
+    const ref = c && /^Ref(?:List)?:(.+)$/.exec(c[3]);
+    if (ref) {
+      const t = donnees[ref[1]];
+      const numero = (nom) => { const i = t.Nom.indexOf(nom); return i === -1 ? 0 : t.id[i]; };
+      v = Array.isArray(v) ? v.map(numero) : (v ? numero(v) : 0);
+    }
+    return Array.isArray(v) ? ['L', ...v] : v;
   }
 
   window.FAUX_GRIST = {

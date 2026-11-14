@@ -60,6 +60,14 @@ colonne calculée sans type déclaré (comme `Avancement`) est proposée partout
 La colonne du texte principal est ignorée si elle est aussi choisie ailleurs,
 de même qu'une colonne de contexte déjà affichée en pastille ou en objet lié.
 
+**Colonnes non associées** (#239) : inutile d'associer une colonne pour la
+filtrer, trier les cartes, les regrouper ou l'afficher en attribut
+(« Afficher ▾ »). Grist n'envoie au widget que les colonnes associées ; la
+Galerie relit donc la table à chaque changement et complète les cartes avec
+les autres colonnes (références sous leur nom affiché, lu dans la colonne
+cachée que Grist tient à jour). Seules les cartes envoyées par Grist sont
+complétées : « Sélectionner par » reste respecté.
+
 La carte ne montre que le titre et les pastilles : elle doit rester concise.
 
 **Couleur des pastilles** :

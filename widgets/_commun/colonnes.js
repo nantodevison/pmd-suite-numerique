@@ -29,7 +29,8 @@
 
    BON À SAVOIR : Grist envoie aux widgets (onRecords) les références sous
    leur NOM affiché, mais attend leur NUMÉRO de ligne pour les écrire ;
-   lireReference donne la correspondance entre les deux.
+   lireReference donne la correspondance entre les deux. fetchTable, lui,
+  donne le numéro ; le nom est dans la colonne cachée `colAffichage`.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -88,6 +89,10 @@
       // référence affiche, par exemple « Nom » pour une référence vers EPICs ;
       // 0 = aucune, Grist montre alors le numéro de la ligne.
       const iAffichee = cols.id.indexOf(cols.visibleCol[i]);
+      // displayCol : colonne cachée (« gristHelper_Display… ») que Grist tient
+      // à jour pour une référence : le nom affiché de chaque ligne visée, déjà
+      // calculé. fetchTable la renvoie avec la table (#239).
+      const iAffichage = cols.displayCol ? cols.id.indexOf(cols.displayCol[i]) : -1;
       (parTable[table] = parTable[table] || []).push({
         colId,
         table,
@@ -97,6 +102,7 @@
         tableVisee:  ref ? ref[2] : null,             // références seulement
         estListe:    Boolean(ref) && ref[1] === 'RefList',
         colAffichee: iAffichee !== -1 ? cols.colId[iAffichee] : null,
+        colAffichage: iAffichage !== -1 ? cols.colId[iAffichage] : null,
         // isFormula avec une formule vide = colonne vide, encore modifiable
         formule:     Boolean(cols.isFormula[i]) && Boolean(cols.formula[i]),
         texteFormule: String(cols.formula[i] || ''),

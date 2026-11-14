@@ -41,9 +41,11 @@ Banc.lancer(async () => {
     toast() === '✓ Version modifié — ⚠️ « Version A » (Version) relève d\'un autre projet que « Vitrine » : pensez à le changer', toast());
 
   // ── Changer une colonne qui n'est pas une référence : pas de vérification ──
-  const lectures = FAUX_GRIST.lectures.length;
+  // (la table des cartes, elle, est relue à chaque envoi de Grist : #239)
+  const luesHorsCartes = () => FAUX_GRIST.lectures.filter(t => t !== 'EPICs').length;
+  const lectures = luesHorsCartes();
   await choisir(1, 'Now', 'Later');
-  ok('choix simple : aucune lecture, pas d\'alerte', FAUX_GRIST.lectures.length === lectures && toast() === '✓ Priorité modifié', toast());
+  ok('choix simple : aucune autre table lue, pas d\'alerte', luesHorsCartes() === lectures && toast() === '✓ Priorité modifié', toast());
 
   // ── Dans la fiche : les choix en attente comptent ──
   ouvrirFiche(3);   // Vitrine + Version A : incohérente
