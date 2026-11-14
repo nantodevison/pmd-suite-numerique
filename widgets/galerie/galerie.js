@@ -40,7 +40,7 @@
 'use strict';
 
 const ETAT = {
-  lignes:     [],     // lignes reçues de Grist
+  lignes:     [],     // lignes reçues de Grist, complétées des colonnes non associées (#239)
   colonnes:   null,   // association : { Titre: 'colId', Description: 'colId', Pastilles: [...], Contexte: [...] }
   table:      null,   // identifiant de la table affichée
   docNom:     null,   // identifiant du document (clés de mémoire du navigateur)
@@ -125,11 +125,17 @@ const _identitePrete = (async () => {
   catch (err) { console.warn('Galerie – nom de la table introuvable :', err); }
 })();
 
-// includeColumns 'normal' : toutes les colonnes de la table, même masquées
-// dans le widget. Sinon une colonne masquée serait proposée dans les filtres
-// sans aucune valeur (même choix que le Kanban).
+// Numéro du dernier envoi de Grist : si un envoi arrive pendant qu'on
+// complète le précédent, seul le plus récent est affiché.
+let _dernierEnvoi = 0;
+
+// Grist n'envoie au widget que les colonnes ASSOCIÉES (Titre, Pastilles…) :
+// includeColumns 'normal' est sans effet dès qu'un widget déclare des
+// associations (constaté en production, #239). completerLignes ajoute les
+// autres, dont les filtres, le tri, le regroupement et les attributs ont
+// besoin. L'option reste demandée : elle ne coûte rien.
 grist.onRecords(async (lignes, colonnes) => {
-  ETAT.lignes   = lignes;
+  const envoi = ++_dernierEnvoi;
   ETAT.colonnes = colonnes;
   try {
     await chargerInfosColonnes();
@@ -139,6 +145,9 @@ grist.onRecords(async (lignes, colonnes) => {
     // pas de filtre (on ne sait pas quelles colonnes sont des choix).
     console.error('Galerie – lecture de la structure impossible :', err);
   }
+  const completes = await completerLignes(lignes);
+  if (envoi !== _dernierEnvoi) return;   // un envoi plus récent est arrivé entre-temps
+  ETAT.lignes = completes;
   afficherGrille();
   // Fiche ouverte sans modification en cours : on la rafraîchit avec les
   // nouvelles valeurs (par exemple juste après une sauvegarde).
@@ -179,6 +188,70 @@ async function chargerInfosColonnes() {
     ETAT.doc = await Colonnes.lireDocument();
     preparerColonnesFiltrables();
   }
+}
+
+/**
+ * Complète les cartes reçues de Grist avec les colonnes NON associées (#239).
+ * On relit la table (fetchTable donne toutes ses colonnes), puis chaque carte
+ * reçoit, par son numéro, les valeurs qui lui manquent, au format d'onRecords
+ * pour que le reste du widget ne voie aucune différence :
+ *   - liste « encodée » ['L', a, b] → [a, b] ;
+ *   - référence : son NOM affiché, lu dans la colonne cachée de Grist
+ *     (colAffichage), sinon dans la table visée.
+ * Seules les cartes envoyées par Grist sont complétées : « Sélectionner
+ * par » et les filtres de la vue Grist restent respectés.
+ * En cas d'échec, les cartes sont gardées telles quelles.
+ */
+async function completerLignes(lignes) {
+  if (!ETAT.doc || !lignes.length) return lignes;
+  const recues = new Set(Object.keys(lignes[0]));
+  const manquantes = ETAT.doc.colonnes(ETAT.table).filter(c => !recues.has(c.colId));
+  if (!manquantes.length) return lignes;
+  try {
+    const table = await grist.docApi.fetchTable(ETAT.table);
+    const rang = new Map(table.id.map((id, i) => [id, i]));   // numéro de carte → rang dans la table
+    const convertir = {};
+    for (const c of manquantes) {
+      if (c.colId in table) convertir[c.colId] = await convertisseur(c, table);
+    }
+    return lignes.map(ligne => {
+      const i = rang.get(ligne.id);
+      if (i === undefined) return ligne;
+      const complete = { ...ligne };
+      Object.entries(convertir).forEach(([colId, f]) => { complete[colId] = f(table[colId][i], i); });
+      return complete;
+    });
+  } catch (err) {
+    console.warn('Galerie – colonnes non associées illisibles :', err);
+    return lignes;
+  }
+}
+
+/** Liste « encodée » par Grist ['L', a, b…] → [a, b…] ; autre valeur inchangée. */
+function decoderListe(v) {
+  return Array.isArray(v) && v[0] === 'L' ? v.slice(1) : v;
+}
+
+/**
+ * Fonction (valeur, rang) → valeur au format d'onRecords, pour la colonne `c`
+ * lue par fetchTable dans `table`.
+ */
+async function convertisseur(c, table) {
+  const estRef = c.typeBase === 'Ref' || c.typeBase === 'RefList';
+  // Une référence qui n'affiche aucune colonne montre son numéro : rien à traduire.
+  if (!estRef || !c.colAffichee) return (v) => decoderListe(v);
+  // 1. Le nom affiché, déjà calculé par Grist dans sa colonne cachée
+  const noms = c.colAffichage && table[c.colAffichage];
+  if (noms) return (v, i) => (estErreur(v) ? v : decoderListe(noms[i]));
+  // 2. À défaut, on lit la table visée. Lecture mémorisée avec la structure :
+  //    un nom changé dans Grist n'apparaît qu'au rechargement du widget.
+  const ref = await Colonnes.lireReference(ETAT.doc, ETAT.table, c.colId);
+  const nom = (id) => (id ? ref.nom(id) || String(id) : '');
+  return (v) => {
+    if (estErreur(v)) return v;
+    const brute = decoderListe(v);
+    return Array.isArray(brute) ? brute.map(nom) : nom(brute);
+  };
 }
 
 /**
