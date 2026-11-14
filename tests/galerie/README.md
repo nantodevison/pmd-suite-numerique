@@ -20,7 +20,7 @@ py tests/galerie/jouer.py --largeurs 1200 -v  # une largeur, toutes les lignes
 Le bilan s'affiche par scénario et par largeur (`BILAN 26 OK, 0 KO`), suivi des
 lignes en échec. Le code de sortie vaut 0 si tout est OK.
 
-## Ce qui est vérifié (184 vérifications par largeur)
+## Ce qui est vérifié (225 vérifications par largeur)
 
 | Scénario | Fonctions |
 |---|---|
@@ -28,6 +28,7 @@ lignes en échec. Le code de sortie vaut 0 si tout est OK.
 | `recherche` | Recherche 🔍 (règle commune avec le Kanban) : majuscules et accents, tous les mots, `#numéro`, noms des références, contexte, texte Notepad |
 | `filtres-vues` | Filtres et vues enregistrées (#204, modules communs avec le Kanban) : toutes les colonnes reçues, colonnes filtrables, ordre et couleur des choix, attributs d'une référence, compteurs, vue perso et vue partagée, changement de vue, cumul avec la recherche, Annuler dans « Gérer la vue », options rappelées par Grist sans relecture, carte créée masquée par les filtres, Échap |
 | `tri` | Tri des cartes (#232, panneau commun avec le Kanban) : ordre de Grist sans tri, « ⇅ Trier » et son résumé, onglet Tri de « Gérer la vue », colonnes proposées (« # Numéro » en tête), critère ajouté sur une pastille, sens selon le type, second critère, ✕, vides et cellule en erreur en bas, tri enregistré dans la vue, Annuler, cumul avec un filtre, colonne disparue, tri mal formé nettoyé, limite de 10 critères, Échap |
+| `groupes` | Regroupement en zones repliables (#233) : « ▤ Regrouper », onglet Regrouper, colonnes proposées, zones par Choix (ordre de Grist), Référence (cellule en erreur à la fin), Liste de références (une carte dans plusieurs zones) et Case à cocher, tri et filtre dans les zones, repli retenu par le navigateur pour chaque vue sans modifier la vue, 💾 dans une nouvelle vue et dans une vue existante, Annuler, colonne disparue, valeur mal formée, Échap |
 | `fiche` | En-tête (objets liés, pastilles, contexte, date au format français), cases à cocher, modification et sauvegarde du titre, confirmation avant de perdre une modification, Échap, titre calculé en lecture seule |
 | `nouvelle-carte` | « + Nouvelle carte » : modèle de texte, titre exigé, création, carte masquée par un filtre ; ⚙ : reprendre le texte d'une carte (Notepad compris) et l'enregistrer comme modèle |
 | `notepad` | Anciens textes Notepad : bandeau, texte affiché converti, conversion en une seule écriture après confirmation |
@@ -49,7 +50,7 @@ Propre à la Galerie :
 
 | Fichier | Rôle |
 |---|---|
-| `faux-grist.js` | Imite l'API Grist avec une table d'EPICs inventée (choix colorés, pourcentage, référence, liste de références, titre calculé, texte Notepad, cellule en erreur). Comme le vrai Grist, il renvoie les cartes au widget après chaque écriture. `FAUX_GRIST.associer({...})` change l'association des colonnes ; `FAUX_GRIST.masquerCreees` imite une vue filtrée ; `FAUX_GRIST.lectures` liste les tables lues ; `FAUX_GRIST.optionsRecords` garde les options passées à `onRecords` ; `FAUX_GRIST.renvoyerOptions(...)` rappelle `onOptions`, comme Grist après un `setOption`. |
+| `faux-grist.js` | Imite l'API Grist avec une table d'EPICs inventée (choix colorés, pourcentage, référence, liste de références, case à cocher, titre calculé, texte Notepad, cellule en erreur). Comme le vrai Grist, il renvoie les cartes au widget après chaque écriture. `FAUX_GRIST.associer({...})` change l'association des colonnes ; `FAUX_GRIST.masquerCreees` imite une vue filtrée ; `FAUX_GRIST.lectures` liste les tables lues ; `FAUX_GRIST.optionsRecords` garde les options passées à `onRecords` ; `FAUX_GRIST.renvoyerOptions(...)` rappelle `onOptions`, comme Grist après un `setOption`. |
 | `scenarios/*.js` | Un scénario par fonction. |
 | `assembler.py`, `jouer.py` | Relais vers `../_commun/banc.py`. |
 

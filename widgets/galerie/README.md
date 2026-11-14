@@ -78,7 +78,7 @@ donc « Sélectionner par » la Galerie (par exemple, les tâches de l'EPIC ouve
 Mêmes outils que le [Kanban](../kanban/README.md), par les modules communs
 `_commun/filtres.js`, `_commun/tri.js` et `_commun/vues.js` (#204, #232). La
 barre sous l'en-tête montre les vues (en onglets, ou dans un sélecteur ▾ si
-la place manque), « ＋ Vue », « 🔽 Filtres » et « ⇅ Trier ».
+la place manque), « ＋ Vue », « 🔽 Filtres », « ⇅ Trier » et « ▤ Regrouper ».
 
 - **Filtres** : sur toute colonne Choix, Choix multiple, Référence ou Liste de
   références de la table, associée au widget ou non (Projet, Assigné à,
@@ -93,15 +93,26 @@ la place manque), « ＋ Vue », « 🔽 Filtres » et « ⇅ Trier ».
   erreur) restent en bas, quel que soit le sens. Sans tri, ou à égalité,
   l'ordre de la vue Grist départage. « ＋ Ajouter un critère » propose
   d'abord les colonnes de pastilles, puis le titre.
+- **Regroupement** (#233) : les cartes sont réparties en zones, une par
+  valeur d'une colonne Choix, Choix multiple, Référence, Liste de références
+  ou Case à cocher. Zones dans l'ordre des choix de Grist (de A à Z pour une
+  référence ; « ✓ oui » puis « ✗ non » pour une case), « ⚠️ invalide » et
+  « (vide) » à la fin ; seules les zones non vides s'affichent. Une carte à
+  plusieurs valeurs figure dans chacune de ses zones. Dans une zone, les
+  cartes suivent le tri de la vue ; filtres et recherche s'appliquent avant.
+  Un clic sur l'en-tête d'une zone (▾ / ▸, valeur, nombre de cartes) la
+  replie : ce choix est retenu par le navigateur, pour chaque vue, et ne
+  modifie pas la vue.
 - **Vues** : « Toutes les cartes » (fixe), vues 👥 **partagées** (gardées dans
   le document, puis bouton « Enregistrer » de Grist ; chaque Galerie a les
   siennes) et 🔒 **personnelles** (gardées par le navigateur). ⋯ sur la vue
   active : gérer, renommer, copier en vue perso, supprimer.
-- **« Gérer la vue »** (⋯ › Gérer, « 🔽 Filtres » ou « ⇅ Trier ») : nom,
-  filtres et tri ; 💾 enregistre, Annuler rétablit la vue telle qu'elle était.
+- **« Gérer la vue »** (⋯ › Gérer, « 🔽 Filtres », « ⇅ Trier » ou
+  « ▤ Regrouper ») : nom, filtres, tri et regroupement ; 💾 enregistre,
+  Annuler rétablit la vue telle qu'elle était.
 - La recherche 🔍 s'ajoute aux filtres de la vue ; elle n'est jamais enregistrée.
-- Le navigateur retient la vue active, les vues perso et les attributs
-  affichés, par document et par table : deux Galeries sur la **même table**
+- Le navigateur retient la vue active, les vues perso, les attributs
+  affichés et les zones repliées, par document et par table : deux Galeries sur la **même table**
   partagent donc ces réglages-là (leurs vues partagées restent distinctes).
 
 Le filtrage natif de Grist (« Sélectionner par », filtres de la vue Grist)

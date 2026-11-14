@@ -9,6 +9,10 @@ Banc.lancer(async () => {
   const { ok, attendre, $, $$ } = Banc;
   const cartes = () => Banc.cartes().join();
   const onglets = () => $$('#view-tabs .vue-enregistree').map(o => o.textContent.replace('⋯', '').trim());
+  // Sur un widget étroit, les onglets ne tiennent plus : un sélecteur ▾ les remplace (vues.js)
+  const selecteur = () => $('#view-tabs .vue-selecteur');
+  // Aller sur la vue n° i des onglets (en mode sélecteur : par le module, comme un choix dans la liste)
+  const allerSur = (i) => selecteur() ? UI_VUES.afficher(VUES.rangees()[i].id) : $$('#view-tabs .vue-enregistree')[i].click();
   const dialogue = () => UI_VUES.fenetre.element;
 
   // ── Mise en place ──
@@ -61,14 +65,16 @@ Banc.lancer(async () => {
     JSON.stringify(vueVitrine));
   ok('vue perso retenue par le navigateur', (localStorage.getItem('galerie.vuesPerso.doc-invente.EPICs') || '').includes('Vitrine'));
   ok('vue perso : rien d\'écrit dans le document', !FAUX_GRIST.options.vues);
-  ok('onglets : « Toutes les cartes », « 🔒 Vitrine »', onglets().join('|') === 'Toutes les cartes|🔒 Vitrine', onglets().join('|'));
+  ok('onglets : « Toutes les cartes », « 🔒 Vitrine » (ou sélecteur sur « 🔒 Vitrine » si la place manque)', selecteur()
+    ? selecteur().querySelector('.vue-selecteur-nom').textContent === '🔒 Vitrine'
+    : onglets().join('|') === 'Toutes les cartes|🔒 Vitrine', onglets().join('|'));
   ok('« 🔽 1 filtre »', $('#filtres-bouton').textContent === '🔽 1 filtre', $('#filtres-bouton').textContent);
 
   // ── Changer de vue ──
-  $$('#view-tabs .vue-enregistree')[0].click();
+  allerSur(0);
   await attendre(50);
   ok('« Toutes les cartes » : quatre cartes, aucun filtre', cartes() === '1,2,3,4' && ETAT.filtres.length === 0);
-  $$('#view-tabs .vue-enregistree')[1].click();
+  allerSur(1);
   await attendre(50);
   ok('retour sur « Vitrine » : ses filtres rechargés', cartes() === '3', cartes());
   ok('vue active retenue par le navigateur', localStorage.getItem('galerie.vueActive.doc-invente.EPICs') === vueVitrine.id);
@@ -79,7 +85,8 @@ Banc.lancer(async () => {
   afficherGrille();
   ok('Priorité n\'est pas (vide) : cartes 1 et 2', cartes() === '1,2', cartes());
   $('#vue-ajouter').click();
-  ok('panneau du nom : « Reprend les filtres et le tri affichés. »', $('#vue-nom-aide').textContent === 'Reprend les filtres et le tri affichés.',
+  ok('panneau du nom : « Reprend les filtres, le tri et le regroupement affichés. »',
+    $('#vue-nom-aide').textContent === 'Reprend les filtres, le tri et le regroupement affichés.',
     $('#vue-nom-aide').textContent);
   $('#vue-nom').value = 'Priorisées';
   $('#vue-nom-popover input[name="vue-portee"][value="partagee"]').checked = true;

@@ -32,6 +32,9 @@
    Tri (#232), commun avec le Kanban (../_commun/tri.js) : sur n'importe
    quelle colonne de la table, enregistré dans la vue. Sans tri, ou à
    égalité, les cartes gardent l'ordre envoyé par Grist (tri de la vue Grist).
+   Regroupement (#233) : les cartes sont réparties en zones repliables, une
+   par valeur d'une colonne Choix, Référence ou Case à cocher ; la colonne
+   est enregistrée dans la vue, les zones repliées par le navigateur.
    ══════════════════════════════════════════════════════════════ */
 
 'use strict';
@@ -45,10 +48,14 @@ const ETAT = {
   // (format de ../_commun/tri.js : [{ col, sens }], #232)
   filtres:    [],
   tri:        [],
+  // Colonne de regroupement affichée (#233), ou null : cartes non regroupées
+  groupe:     null,
   // Colonnes de la table, d'après la structure du document (#204) :
-  // toutes (pour le tri et les attributs d'une référence), et celles qu'on peut filtrer
+  // toutes (pour le tri et les attributs d'une référence), celles qu'on
+  // peut filtrer, et celles qui peuvent regrouper les cartes (#233)
   colonnesTable:      [],
   colonnesFiltrables: [],
+  colonnesGroupables: [],
   optionsChargees: false,   // vues lues à l'ouverture seulement (voir onOptions)
   // Structure du document (libellés, types, couleurs des choix…), lue une
   // fois par table affichée : voir ../_commun/colonnes.js
@@ -73,7 +80,7 @@ const VUES = Vues.creer({
 
 /**
  * Clé de mémoire du navigateur pour la donnée `nom` ('vueActive',
- * 'vuesPerso', 'attributs'), ou null si le document est encore inconnu.
+ * 'vuesPerso', 'attributs', 'groupesReplies'), ou null si le document est encore inconnu.
  * Tous les widgets publiés sur nantodevison.github.io partagent cette
  * mémoire : la clé contient donc le document et la table. Deux Galeries
  * sur la même table partagent ainsi leurs vues perso (accepté, #204).
@@ -192,6 +199,9 @@ function preparerColonnesFiltrables() {
   }).sort((a, b) => a.label.localeCompare(b.label, 'fr'));
   ETAT.colonnesFiltrables = ETAT.colonnesTable
     .filter(c => /^(Choice|ChoiceList|Ref:.+|RefList:.+)$/.test(c.type));
+  // Regroupement (#233) : les mêmes, plus les cases à cocher (oui / non)
+  ETAT.colonnesGroupables = ETAT.colonnesTable
+    .filter(c => /^(Choice|ChoiceList|Ref:.+|RefList:.+|Bool)$/.test(c.type));
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -379,7 +389,8 @@ function afficherGrille() {
       : 'Aucune ligne à afficher.'));
     return;
   }
-  visibles.forEach(ligne => grille.appendChild(construireCarte(ligne)));
+  if (ETAT.groupe) dessinerGroupes(grille, visibles);
+  else visibles.forEach(ligne => grille.appendChild(construireCarte(ligne)));
 }
 
 /**
@@ -447,6 +458,191 @@ function message(texte) {
 }
 
 /* ══════════════════════════════════════════════════════════════
+   4 ter. REGROUPEMENT EN ZONES REPLIABLES (#233)
+   Les cartes affichées (après filtres et recherche, dans l'ordre du tri)
+   sont réparties en zones, une par valeur de la colonne ETAT.groupe :
+     - Choix, Choix multiple : dans l'ordre des choix de Grist ;
+     - Référence, Liste de références : de A à Z sur le nom affiché ;
+     - Case à cocher : « ✓ oui », puis « ✗ non » ;
+     - « ⚠️ invalide » (cellule en erreur), puis « (vide) », toujours à la fin.
+   Une carte à plusieurs valeurs (choix multiple, liste de références)
+   figure dans chacune de ses zones. Seules les zones non vides s'affichent.
+   La colonne est enregistrée dans la vue (champ « regroupement ») ; les
+   zones repliées sont retenues par le navigateur, pour chaque vue et
+   chaque colonne : replier une zone ne modifie pas la vue.
+   ══════════════════════════════════════════════════════════════ */
+
+const GROUPE_VIDE = '(vide)';
+const GROUPE_INVALIDE = '⚠️ invalide';   // texte donné par elementsAffiches()
+
+/**
+ * Valeurs de la carte `ligne` pour la colonne `colId` : ses zones. Une
+ * seule en général, plusieurs pour une liste, « (vide) » s'il n'y en a pas.
+ */
+function zonesDe(ligne, colId) {
+  const valeurs = [...new Set(elementsAffiches(colId, ligne[colId]))];
+  return valeurs.length ? valeurs : [GROUPE_VIDE];
+}
+
+/** Ordre des zones : voir l'en-tête de cette partie. */
+function comparerZones(colId, a, b) {
+  const rangFin = (v) => (v === GROUPE_VIDE ? 2 : v === GROUPE_INVALIDE ? 1 : 0);
+  if (rangFin(a) || rangFin(b)) return rangFin(a) - rangFin(b);
+  const colonne = info(colId);
+  if (colonne.type === 'Bool') return (a === '✓ oui' ? 0 : 1) - (b === '✓ oui' ? 0 : 1);
+  const choix = colonne.choix || [];
+  if (/^Choice/.test(colonne.type)) {
+    // Un choix inconnu de Grist (ancienne valeur) passe après les choix déclarés
+    const rang = (v) => (choix.includes(v) ? choix.indexOf(v) : choix.length);
+    if (rang(a) !== rang(b)) return rang(a) - rang(b);
+  }
+  return a.localeCompare(b, 'fr', { numeric: true, sensitivity: 'base' });
+}
+
+/**
+ * Zones de la colonne `colId` pour les cartes `lignes` (déjà triées) :
+ * [{ valeur, lignes }], dans l'ordre d'affichage.
+ */
+function calculerZones(lignes, colId) {
+  const zones = new Map();
+  lignes.forEach(ligne => zonesDe(ligne, colId).forEach(valeur => {
+    if (!zones.has(valeur)) zones.set(valeur, []);
+    zones.get(valeur).push(ligne);
+  }));
+  return [...zones.keys()]
+    .sort((a, b) => comparerZones(colId, a, b))
+    .map(valeur => ({ valeur, lignes: zones.get(valeur) }));
+}
+
+/* ── Zones repliées, retenues par le navigateur ──
+   Une seule entrée de mémoire par Galerie : { 'vue|colonne': [valeurs] }.
+   Si la mémoire est indisponible (navigation privée…), le choix vaut pour
+   la séance seulement. */
+
+let _repliees = null;   // copie en mémoire vive, lue au premier besoin
+
+function lireRepliees() {
+  if (_repliees) return _repliees;
+  const cle = cleMemoire('groupesReplies');
+  if (!cle) return {};   // document pas encore connu : on relira plus tard
+  _repliees = {};
+  try {
+    const lu = JSON.parse(localStorage.getItem(cle) || '{}');
+    if (lu && typeof lu === 'object' && !Array.isArray(lu)) _repliees = lu;
+  } catch (err) { /* mémoire illisible : rien de replié */ }
+  return _repliees;
+}
+
+/** Clé de la vue active et de la colonne de regroupement, dans la mémoire des zones repliées. */
+function cleRepliees() { return `${VUES.activeId()}|${ETAT.groupe}`; }
+
+function estRepliee(valeur) {
+  return (lireRepliees()[cleRepliees()] || []).includes(valeur);
+}
+
+/** Replie (`repliee` vrai) ou déplie la zone `valeur`, et le retient. */
+function retenirRepliee(valeur, repliee) {
+  const toutes = lireRepliees();
+  const liste = (toutes[cleRepliees()] || []).filter(v => v !== valeur);
+  if (repliee) liste.push(valeur);
+  if (liste.length) toutes[cleRepliees()] = liste; else delete toutes[cleRepliees()];
+  try {
+    const cle = cleMemoire('groupesReplies');
+    if (cle) localStorage.setItem(cle, JSON.stringify(toutes));
+  } catch (err) { /* le choix vaut pour la séance seulement */ }
+}
+
+/** Dessine les zones dans la grille : un en-tête cliquable, puis ses cartes. */
+function dessinerGroupes(grille, lignes) {
+  const colId = ETAT.groupe;
+  calculerZones(lignes, colId).forEach(({ valeur, lignes: cartes }) => {
+    const zone = document.createElement('section');
+    zone.className = 'groupe';
+    zone.dataset.valeur = valeur;
+
+    const entete = document.createElement('button');
+    entete.type = 'button';
+    entete.className = 'groupe-entete';
+    const fleche = document.createElement('span');
+    fleche.className = 'groupe-fleche';
+    const nom = document.createElement('span');
+    nom.className = 'pastille groupe-nom' + (valeur === GROUPE_INVALIDE ? ' pastille-erreur' : '');
+    nom.textContent = valeur;
+    const couleur = valeur === GROUPE_VIDE || valeur === GROUPE_INVALIDE ? null : couleurPastille(colId, valeur);
+    if (couleur) { nom.style.background = couleur.fond; nom.style.color = couleur.texte; }
+    const nombre = document.createElement('span');
+    nombre.className = 'groupe-nombre';
+    nombre.textContent = String(cartes.length);
+    entete.append(fleche, nom, nombre);
+
+    const contenu = document.createElement('div');
+    contenu.className = 'groupe-cartes';
+    cartes.forEach(ligne => contenu.appendChild(construireCarte(ligne)));
+
+    /** Affiche la zone repliée ou dépliée (sans redessiner la grille). */
+    const montrer = (repliee) => {
+      zone.classList.toggle('repliee', repliee);
+      contenu.hidden = repliee;
+      fleche.textContent = repliee ? '▸' : '▾';
+      entete.setAttribute('aria-expanded', String(!repliee));
+      entete.title = `${libelle(colId)} : ${valeur} — cliquer pour ${repliee ? 'déplier' : 'replier'}`;
+    };
+    montrer(estRepliee(valeur));
+    entete.addEventListener('click', () => {
+      const repliee = !zone.classList.contains('repliee');
+      retenirRepliee(valeur, repliee);
+      montrer(repliee);
+    });
+
+    zone.append(entete, contenu);
+    grille.appendChild(zone);
+  });
+}
+
+/* ── Onglet « Regrouper » de « Gérer la vue » et bouton de la barre ── */
+
+/** Libellé d'une colonne de regroupement (« Projet »), même absente de la table. */
+function libelleGroupe(colId) {
+  const c = ETAT.colonnesTable.find(c => c.colId === colId);
+  return c ? c.label : colId;
+}
+
+/** Liste « Aucun » + colonnes groupables, sur la colonne affichée. */
+function remplirGroupes() {
+  const choix = document.getElementById('groupe-colonne');
+  choix.innerHTML = '';
+  const option = (valeur, texte) => {
+    const o = document.createElement('option');
+    o.value = valeur;
+    o.textContent = texte;
+    choix.appendChild(o);
+  };
+  option('', 'Aucun regroupement');
+  ETAT.colonnesGroupables.forEach(c => option(c.colId, c.label));
+  // Colonne enregistrée dans la vue mais absente de la table (renommée, supprimée)
+  if (ETAT.groupe && !ETAT.colonnesGroupables.some(c => c.colId === ETAT.groupe)) {
+    option(ETAT.groupe, `${ETAT.groupe} (absente)`);
+  }
+  choix.value = ETAT.groupe || '';
+}
+
+/** Bouton-résumé de la barre : « ▤ Regrouper », ou « ▤ Projet ». */
+function majBoutonGroupes() {
+  const bouton = document.getElementById('groupe-bouton');
+  bouton.classList.toggle('actif', !!ETAT.groupe);
+  bouton.textContent = ETAT.groupe ? `▤ ${libelleGroupe(ETAT.groupe)}` : '▤ Regrouper';
+  bouton.title = ETAT.groupe
+    ? `Cartes regroupées par « ${libelleGroupe(ETAT.groupe)} »`
+    : 'Regrouper les cartes selon une colonne, en zones repliables';
+}
+
+/** Une autre colonne (ou aucune) choisie dans l'onglet Regrouper. */
+function changerGroupe(colId) {
+  ETAT.groupe = colId || null;
+  afficherGrille();
+}
+
+/* ══════════════════════════════════════════════════════════════
    4 bis. FILTRES ET VUES ENREGISTRÉES (#204)
    La barre des vues, ses petits panneaux, la fenêtre « Gérer la vue » et
    les panneaux des filtres et du tri (#232) sont construits par les
@@ -465,6 +661,8 @@ function appliquerVue() {
   ETAT.filtres = vue ? Filtres.copier(vue.filtres) : [];
   // Tri.nettoyer renvoie une copie bien formée (la vue vient du document ou du navigateur)
   ETAT.tri = vue ? Tri.nettoyer(vue.tri) : [];
+  // Regroupement (#233) : un identifiant de colonne, sinon aucun
+  ETAT.groupe = vue && typeof vue.regroupement === 'string' && vue.regroupement ? vue.regroupement : null;
 }
 
 /** Onglets des vues, étiquettes des filtres et bas de « Gérer la vue », à jour. */
@@ -502,6 +700,7 @@ function creerPanneauFiltres(zone) {
     surEtiquettes:    () => {
       if (UI_VUES) UI_VUES.majBoutonFiltres();
       if (PANNEAU_TRI) PANNEAU_TRI.majBouton();
+      majBoutonGroupes();
     },
   });
   return PANNEAU_FILTRES;
@@ -544,9 +743,20 @@ function creerInterfaceVues() {
     redessiner:       afficherGrille,
     compter:          () => ({ affichees: lignesVisibles().length, total: ETAT.lignes.length }),
     panneauFiltres:   creerPanneauFiltres,
-    // Onglet Tri (#232), rempli à chaque ouverture de la fenêtre
-    onglets:          [{ id: 'tri', libelle: 'Tri', contenu: document.getElementById('fv-tri') }],
-    surOuverture:     () => PANNEAU_TRI.remplir(),
+    // Onglets Tri (#232) et Regrouper (#233), remplis à chaque ouverture de la fenêtre
+    onglets: [
+      { id: 'tri',     libelle: 'Tri',       contenu: document.getElementById('fv-tri') },
+      { id: 'groupes', libelle: 'Regrouper', contenu: document.getElementById('fv-groupes') },
+    ],
+    surOuverture:     () => { PANNEAU_TRI.remplir(); remplirGroupes(); },
+    // Regroupement (#233) : repris par une nouvelle vue, écrit par 💾,
+    // photographié à l'ouverture de la fenêtre pour qu'Annuler le rétablisse
+    contenu:          () => ({ regroupement: ETAT.groupe }),
+    garderContenu:    (vue) => { vue.regroupement = ETAT.groupe; },
+    photographier:    () => ETAT.groupe,
+    restaurer:        (groupe) => { ETAT.groupe = groupe; },
+    modifiee:         (groupe) => ETAT.groupe !== groupe,
+    decrireContenu:   'les filtres, le tri et le regroupement',
     aideDefaut:       'Toutes les lignes que Grist envoie à la Galerie',
     prevenir:         afficherToast,
   });
@@ -965,6 +1175,9 @@ document.addEventListener('DOMContentLoaded', () => {
   majBarreVues();
   // « ⇅ Trier » (#232) : ouvre « Gérer la vue » sur l'onglet Tri
   document.getElementById('tri-bouton').addEventListener('click', () => UI_VUES.ouvrirFenetre('tri'));
+  // « ▤ Regrouper » (#233) : ouvre « Gérer la vue » sur l'onglet Regrouper
+  document.getElementById('groupe-bouton').addEventListener('click', () => UI_VUES.ouvrirFenetre('groupes'));
+  document.getElementById('groupe-colonne').addEventListener('change', (e) => changerGroupe(e.target.value));
   // Un clic ailleurs ferme les panneaux des vues et des filtres (sauf sur ce qui en ouvre un)
   document.addEventListener('mousedown', (e) => {
     if (e.target.closest('.fenetre, .filtre-popover, #vue-ajouter, .vue-menu-btn, .vue-selecteur, .fiche-menu')) return;

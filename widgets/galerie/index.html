@@ -140,6 +140,24 @@ body { display: flex; flex-direction: column; overflow: hidden; }
 }
 .pastille-erreur { background: #fff5f5; color: #c53030; }
 
+/* Regroupement en zones (#233) : chaque zone occupe toute la largeur de la
+   grille et contient sa propre grille de cartes */
+.groupe { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 10px; }
+.groupe-entete {
+  display: flex; align-items: center; gap: 8px; align-self: flex-start;
+  padding: 4px 8px; border: none; border-radius: 8px; background: none;
+  font-family: inherit; font-size: 13px; color: var(--text); cursor: pointer;
+}
+.groupe-entete:hover { background: var(--col-bg); }
+.groupe-fleche { width: 12px; color: var(--text-muted); }
+.groupe .groupe-nom { font-size: 12.5px; font-weight: 600; max-width: 60vw; }
+.groupe-nombre { font-size: 12px; font-weight: 700; color: var(--text-muted); }
+.groupe-cartes {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px;
+}
+.groupe-cartes[hidden] { display: none; }
+.groupe-colonne { display: block; width: 100%; max-width: 360px; margin: 12px 0 6px; }
+
 /* Bandeau de conversion des anciens textes Notepad */
 .bandeau {
   display: flex; align-items: center; gap: 12px; flex-shrink: 0;
@@ -188,15 +206,25 @@ body { display: flex; flex-direction: column; overflow: hidden; }
     <div class="filter-sep"></div>
     <div class="resumes-vue" id="resumes-vue">
       <button type="button" id="tri-bouton" class="filtre-ajouter resume-vue">⇅ Trier</button>
+      <button type="button" id="groupe-bouton" class="filtre-ajouter resume-vue">▤ Regrouper</button>
     </div>
   </div>
 
-  <!-- Onglet Tri de « Gérer la vue » (#232) : déplacé dans la fenêtre par
-       ../_commun/vues.js, panneau construit par ../_commun/tri.js.
+  <!-- Onglets Tri (#232) et Regrouper (#233) de « Gérer la vue » : déplacés
+       dans la fenêtre par ../_commun/vues.js ; panneau du tri construit par
+       ../_commun/tri.js, liste du regroupement remplie par galerie.js.
        data-neutre : le module des vues calcule lui-même si la vue a changé. -->
   <div id="vue-sections" hidden>
     <section id="fv-tri" data-neutre>
       <h3 class="config-etape">Tri</h3>
+    </section>
+    <section id="fv-groupes" data-neutre>
+      <h3 class="config-etape">Regrouper</h3>
+      <p class="config-aide">Répartit les cartes en zones, une par valeur de la colonne choisie.
+        Un clic sur l'en-tête d'une zone la replie ; ce navigateur s'en souvient.</p>
+      <select id="groupe-colonne" class="filter-select groupe-colonne" title="Colonne de regroupement"></select>
+      <p class="vue-aide">Colonnes Choix, Référence ou Case à cocher. Une carte à plusieurs valeurs
+        figure dans chacune de ses zones ; les cartes sans valeur sont regroupées sous « (vide) », à la fin.</p>
     </section>
   </div>
 
