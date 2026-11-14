@@ -20,7 +20,7 @@ py tests/galerie/jouer.py --largeurs 1200 -v  # une largeur, toutes les lignes
 Le bilan s'affiche par scénario et par largeur (`BILAN 26 OK, 0 KO`), suivi des
 lignes en échec. Le code de sortie vaut 0 si tout est OK.
 
-## Ce qui est vérifié (285 vérifications par largeur)
+## Ce qui est vérifié (294 vérifications par largeur)
 
 | Scénario | Fonctions |
 |---|---|
@@ -30,6 +30,7 @@ lignes en échec. Le code de sortie vaut 0 si tout est OK.
 | `tri` | Tri des cartes (#232, panneau commun avec le Kanban) : ordre de Grist sans tri, « ⇅ Trier » et son résumé, onglet Tri de « Gérer la vue », colonnes proposées (« # Numéro » en tête), critère ajouté sur une pastille, sens selon le type, second critère, ✕, vides et cellule en erreur en bas, tri enregistré dans la vue, Annuler, cumul avec un filtre, colonne disparue, tri mal formé nettoyé, limite de 10 critères, Échap |
 | `groupes` | Regroupement en zones repliables (#233) : « ▤ Regrouper », onglet Regrouper, colonnes proposées, zones par Choix (ordre de Grist), Référence (cellule en erreur à la fin), Liste de références (une carte dans plusieurs zones) et Case à cocher, tri et filtre dans les zones, repli retenu par le navigateur pour chaque vue sans modifier la vue, 💾 dans une nouvelle vue et dans une vue existante, Annuler, colonne disparue, valeur mal formée, Échap |
 | `pastilles` | Pastilles modifiables (#205, #206). Sur la carte : menu selon le type (Choix, Choix multiple à cases, Référence, Case à cocher, Date et « Effacer la date »), colonne calculée en lecture seule, clic qui n'ouvre pas la fiche, écriture immédiate dans le format de Grist (référence sous son numéro, liste `['L', …]`, vide → `null` ou 0), clavier (Entrée), Échap, cellule en erreur corrigée, table visée lue au clic et relue à chaque ouverture, champ de recherche au-delà de 12 lignes. Dans la fiche : colonnes vides en « + … », choix affichés aussitôt mais écrits par « ✓ Sauvegarder » en une seule action, Échap qui ferme le menu et non la fiche, confirmation avant de perdre un choix |
+| `coherence` | Alerte de cohérence entre deux références (chaque version relève d'un projet) : projet changé sans la version, retour au bon projet, carte sans version, version d'un autre projet choisie (l'autre sens), aucune lecture pour un choix simple, choix en attente de la fiche pris en compte ; l'écriture a toujours lieu |
 | `fiche` | En-tête (objets liés, pastilles, contexte, date au format français), cases à cocher, modification et sauvegarde du titre, confirmation avant de perdre une modification, Échap, titre calculé en lecture seule |
 | `nouvelle-carte` | « + Nouvelle carte » : modèle de texte, titre exigé, création, carte masquée par un filtre ; ⚙ : reprendre le texte d'une carte (Notepad compris) et l'enregistrer comme modèle |
 | `notepad` | Anciens textes Notepad : bandeau, texte affiché converti, conversion en une seule écriture après confirmation |
@@ -51,7 +52,7 @@ Propre à la Galerie :
 
 | Fichier | Rôle |
 |---|---|
-| `faux-grist.js` | Imite l'API Grist avec une table d'EPICs inventée (choix colorés, choix multiple, pourcentage, référence, liste de références, case à cocher, titre calculé, texte Notepad, cellule en erreur). Comme le vrai Grist, il renvoie les cartes au widget après chaque écriture, références sous leur nom et listes décodées. `FAUX_GRIST.donnees` donne les tables visées (un scénario peut y ajouter des lignes). `FAUX_GRIST.associer({...})` change l'association des colonnes ; `FAUX_GRIST.masquerCreees` imite une vue filtrée ; `FAUX_GRIST.lectures` liste les tables lues ; `FAUX_GRIST.optionsRecords` garde les options passées à `onRecords` ; `FAUX_GRIST.renvoyerOptions(...)` rappelle `onOptions`, comme Grist après un `setOption`. |
+| `faux-grist.js` | Imite l'API Grist avec une table d'EPICs inventée (choix colorés, choix multiple, pourcentage, références (dont une vers des versions qui relèvent chacune d'un projet), liste de références, case à cocher, titre calculé, texte Notepad, cellule en erreur). Comme le vrai Grist, il renvoie les cartes au widget après chaque écriture, références sous leur nom et listes décodées. `FAUX_GRIST.donnees` donne les tables visées (un scénario peut y ajouter des lignes). `FAUX_GRIST.associer({...})` change l'association des colonnes ; `FAUX_GRIST.masquerCreees` imite une vue filtrée ; `FAUX_GRIST.lectures` liste les tables lues ; `FAUX_GRIST.optionsRecords` garde les options passées à `onRecords` ; `FAUX_GRIST.renvoyerOptions(...)` rappelle `onOptions`, comme Grist après un `setOption`. |
 | `scenarios/*.js` | Un scénario par fonction. |
 | `assembler.py`, `jouer.py` | Relais vers `../_commun/banc.py`. |
 

@@ -513,6 +513,74 @@ async function ouvrirMenuReference(ancre, colId, valeur, surChoix) {
   }
 }
 
+/**
+ * Cohérence entre deux références d'une carte. Exemple : un EPIC a un
+ * Projet et un Objectif ; or chaque objectif appartient lui-même à un
+ * projet. Changer le projet de l'EPIC sans changer son objectif (ou
+ * choisir l'objectif d'un autre projet) rend la carte incohérente.
+ *
+ * Règle générique, lue dans la structure du document : pour deux colonnes
+ * de référence A et B de la table (non calculées), si la table visée par B
+ * a une colonne qui vise la même table que A, alors la ligne visée par B
+ * doit avoir, dans cette colonne, la même valeur que la carte dans A.
+ * On ne vérifie que les paires qui contiennent la colonne modifiée, et
+ * seulement si les deux références sont remplies.
+ *
+ *   ligne      : la carte, telle que Grist l'a envoyée (références par nom)
+ *   colId      : la colonne qui vient d'être modifiée
+ *   idsConnus  : { colId: numéro } des références déjà connues par leur
+ *                numéro (la valeur choisie, les choix en attente de la fiche)
+ * Renvoie le texte de l'alerte, ou '' si tout concorde. Une erreur de
+ * lecture ne bloque rien : pas d'alerte.
+ */
+async function alerteCoherence(ligne, colId, idsConnus = {}) {
+  if (info(colId).typeBase !== 'Ref') return '';
+  try {
+    const doc = await Colonnes.lireDocument();   // relu : données fraîches
+    const refs = doc.colonnes(ETAT.table).filter(c => c.typeBase === 'Ref' && c.tableVisee && !c.formule);
+    const refsLues = {};
+    const reference = async (c) => (refsLues[c.colId] ??= await Colonnes.lireReference(doc, ETAT.table, c.colId));
+    // Numéro de la ligne visée par la colonne c de la carte (0 si vide)
+    const numero = async (c) => {
+      if (c.colId in idsConnus) return Number(idsConnus[c.colId]) || 0;
+      const v = ligne[c.colId];
+      if (!v || estErreur(v)) return 0;
+      const ref = await reference(c);
+      return (ref && ref.id(v)) || 0;
+    };
+
+    const alertes = [];
+    for (const a of refs) {
+      for (const b of refs) {
+        if (a === b || (a.colId !== colId && b.colId !== colId)) continue;
+        // Colonnes de la table visée par B qui visent la table de A (objectif → projet)
+        const liens = doc.colonnes(b.tableVisee).filter(d => d.tableVisee === a.tableVisee);
+        if (!liens.length) continue;
+        const idA = await numero(a), idB = await numero(b);
+        if (!idA || !idB) continue;
+        const lignesB = await Colonnes.lireLignes(doc, b.tableVisee);
+        const i = lignesB.id.indexOf(idB);
+        if (i === -1) continue;
+        // fetchTable donne les références par numéro ; une liste arrive ['L', …]
+        const concorde = liens.every(d => {
+          const v = lignesB[d.colId][i];
+          const valeurs = Array.isArray(v) ? (v[0] === 'L' ? v.slice(1) : v) : (v ? [v] : []);
+          return !valeurs.length || valeurs.includes(idA);   // non rattaché : rien à dire
+        });
+        if (!concorde) {
+          const nomA = (await reference(a)).nom(idA), nomB = (await reference(b)).nom(idB);
+          alertes.push(`⚠️ « ${nomB} » (${b.libelle}) relève d'un autre ${a.libelle.toLowerCase()} `
+            + `que « ${nomA} » : pensez à le changer`);
+        }
+      }
+    }
+    return alertes.join(' ; ');
+  } catch (err) {
+    console.warn('Galerie – vérification de cohérence impossible :', err);
+    return '';
+  }
+}
+
 /** Date reçue de Grist (Date, secondes ou texte) → « AAAA-MM-JJ » ('' si aucune). Même règle que le Kanban. */
 function dateVersIso(v) {
   if (!v) return '';
@@ -528,10 +596,11 @@ function dateVersIso(v) {
  * grille n'a pas de bouton « Sauvegarder ». Ctrl + Z dans Grist annule.
  * Grist renvoie ensuite les cartes au widget (onRecords), qui les redessine.
  */
-async function ecrireCellule(id, colId, valeur) {
+async function ecrireCellule(ligne, colId, valeur) {
   try {
-    await grist.docApi.applyUserActions([['UpdateRecord', ETAT.table, id, { [colId]: valeur }]]);
-    afficherToast(`✓ ${libelle(colId)} modifié`);
+    await grist.docApi.applyUserActions([['UpdateRecord', ETAT.table, ligne.id, { [colId]: valeur }]]);
+    const alerte = await alerteCoherence(ligne, colId, { [colId]: valeur });
+    afficherToast(`✓ ${libelle(colId)} modifié` + (alerte ? ' — ' + alerte : ''), alerte ? 8000 : 2200);
   } catch (err) {
     afficherToast(`⚠️ Erreur : ${err.message || err}`, 4000);
     console.error('Galerie – erreur d\'écriture :', err);
@@ -627,7 +696,7 @@ function construireCarte(ligne) {
     const elements = creerPastilles(colId, ligne[colId]);
     if (pastilleModifiable(colId)) {
       elements.forEach(p => rendreModifiable(p, colId, (ancre) =>
-        ouvrirMenuPastille(ancre, colId, ligne[colId], (ecrite) => ecrireCellule(ligne.id, colId, ecrite))));
+        ouvrirMenuPastille(ancre, colId, ligne[colId], (ecrite) => ecrireCellule(ligne, colId, ecrite))));
     }
     pastilles.append(...elements);
   });
@@ -1117,6 +1186,9 @@ function dessinerPastillesFiche(encart, ligne) {
           ETAT.fiche.apercu[colId] = affichee;
           noterModif(colId, ecrite);
           dessinerPastillesFiche(encart, ligne);
+          // Choix en attente compris (les références y sont des numéros)
+          alerteCoherence(ligne, colId, ETAT.fiche.modifs)
+            .then(alerte => { if (alerte) afficherToast(alerte, 8000); });
         })));
     }
     encart.append(...elements);

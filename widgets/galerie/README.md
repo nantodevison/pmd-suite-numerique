@@ -95,6 +95,15 @@ type de la colonne :
 - La table visée par une référence est **relue à chaque ouverture** du menu :
   un projet ajouté dans Grist est proposé tout de suite. Elle n'est jamais lue
   au chargement du widget.
+- **Cohérence entre références** : si la carte a deux références dont l'une
+  dépend de l'autre (un objectif appartient à un projet), changer l'une
+  vérifie l'autre. Changer le projet sans changer l'objectif, ou choisir
+  l'objectif d'un autre projet, affiche une alerte « ⚠️ « … » (Objectif)
+  relève d'un autre projet que « … » : pensez à le changer ». La
+  modification est faite quand même. La règle est lue dans la structure du
+  document (la table des objectifs a une colonne qui vise les projets) :
+  rien n'est codé en dur. Dans la fiche, les choix pas encore sauvegardés
+  comptent.
 
 L'ordre des cartes est celui du tri de la vue Grist, sauf si la vue de la
 Galerie a son propre tri (voir plus bas).

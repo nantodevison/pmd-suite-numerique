@@ -47,12 +47,16 @@
     [12, 1, 'Urgent',      'Bool',           'Urgent',      '',                 false, '', 0],
     // Choix multiple : sert aux pastilles à cases à cocher (#205, #206)
     [13, 1, 'Themes',      'ChoiceList',     'Thèmes',      '',                 false, choixThemes, 0],
+    // Version : chaque version relève d'un projet → cohérence Projet / Version (#205)
+    [14, 1, 'Version',       'Ref:Versions',     'Version',       '',                 false, '', 40],
     [20, 2, 'Nom',         'Text',           'Nom',         '',                 false, '', 0],
     [21, 2, 'Etat',        'Text',           'État',        '',                 false, '', 0],
     [30, 3, 'Nom',         'Text',           'Nom',         '',                 false, '', 0],
+    [40, 4, 'Nom',         'Text',           'Nom',         '',                 false, '', 0],
+    [41, 4, 'Projet',      'Ref:Projets',    'Projet',      '',                 false, '', 20],
   ];
   const meta = {
-    _grist_Tables: { id: [1, 2, 3], tableId: ['EPICs', 'Projets', 'Taches'] },
+    _grist_Tables: { id: [1, 2, 3, 4], tableId: ['EPICs', 'Projets', 'Taches', 'Versions'] },
     _grist_Tables_column: ['id', 'parentId', 'colId', 'type', 'label', 'formula', 'isFormula', 'widgetOptions', 'visibleCol']
       .reduce((o, k, i) => (o[k] = colonnes.map(c => c[i]), o), {}),
   };
@@ -60,6 +64,8 @@
   const donnees = {
     Projets: { id: [1, 2], Nom: ['Atelier', 'Vitrine'], Etat: ['Ouvert', 'Fermé'] },
     Taches:  { id: [1, 2, 3], Nom: ['Rédiger le guide', 'Relire le guide', 'Copier les pages'] },
+    // Comme fetchTable : une référence sous son NUMÉRO (Version A → Atelier, Version B → Vitrine)
+    Versions:  { id: [1, 2], Nom: ['Version A', 'Version B'], Projet: [1, 2] },
   };
 
   // Ancien texte du widget Notepad (JSON), à convertir en Markdown
@@ -72,17 +78,17 @@
     { id: 1, Titre: 'Écrire la documentation', Description: '- [ ] Plan\n- [x] Sommaire', Priorite: 'Now',
       Avancement: 0.67, Projet: 'Atelier', Taches: ['Rédiger le guide', 'Relire le guide'],
       Objectif: 'Guide publié', Echeance: JANVIER_2026, Code: 'E1', Projet_Etat: 'Ouvert', Urgent: true,
-      Themes: ['Guide'] },
+      Themes: ['Guide'], Version: 'Version A' },
     { id: 2, Titre: 'Préparer la démonstration', Description: NOTEPAD, Priorite: 'Later',
       Avancement: 1, Projet: 'Atelier', Taches: [], Objectif: 'Démonstration jouée', Echeance: null, Code: 'E2',
-      Projet_Etat: 'Ouvert', Urgent: false, Themes: null },
+      Projet_Etat: 'Ouvert', Urgent: false, Themes: null, Version: '' },
     { id: 3, Titre: 'Archiver le site', Description: 'Texte simple', Priorite: null,
       Avancement: 0.1, Projet: 'Vitrine', Taches: ['Copier les pages'], Objectif: '', Echeance: null, Code: 'E3',
-      Projet_Etat: 'Fermé', Urgent: true, Themes: null },
+      Projet_Etat: 'Fermé', Urgent: true, Themes: null, Version: 'Version B' },
     // Référence vers une ligne qui n'existe pas : cellule en erreur
     { id: 4, Titre: 'Carte en erreur', Description: '', Priorite: null, Avancement: 0,
       Projet: ['E', 'InvalidTypedValue', 'Ref:Projets', 99], Taches: [], Objectif: '', Echeance: null, Code: 'E4',
-      Projet_Etat: null, Urgent: false, Themes: null },
+      Projet_Etat: null, Urgent: false, Themes: null, Version: '' },
   ];
 
   // Association des colonnes faite dans le panneau de droite de Grist
