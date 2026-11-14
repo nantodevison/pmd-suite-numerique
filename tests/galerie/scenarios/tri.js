@@ -27,7 +27,7 @@ Banc.lancer(async () => {
   // ── Sans tri : l'ordre de Grist ──
   ok('sans tri : ordre envoyé par Grist', cartes() === '1,2,3,4', cartes());
   ok('barre : « ⇅ Trier » après « 🔽 Filtres »',
-    [...$('#resumes-vue').children].map(b => b.textContent).join('|') === '🔽 Filtres|⇅ Trier');
+    [...$('#resumes-vue').children].map(b => b.textContent).join('|') === '🔽 Filtres|⇅ Trier|▤ Regrouper');
   ok('bulle : ordre de Grist par défaut', $('#tri-bouton').title === 'Trier les cartes (par défaut : ordre de Grist)', $('#tri-bouton').title);
 
   // ── « ⇅ Trier » ouvre « Gérer la vue » sur l'onglet Tri ──
@@ -35,7 +35,7 @@ Banc.lancer(async () => {
   await attendre(50);
   ok('« ⇅ Trier » ouvre « Gérer la vue »', dialogue().open);
   const libelles = $$('.fenetre-onglet-libelle').map(l => l.textContent);
-  ok('onglets Vue, Filtres, Tri', libelles.join('|') === 'Vue|Filtres|Tri', libelles.join('|'));
+  ok('onglets Vue, Filtres, Tri, Regrouper', libelles.join('|') === 'Vue|Filtres|Tri|Regrouper', libelles.join('|'));
   ok('onglet Tri affiché', $('#tri-criteres').offsetParent !== null);
   ok('message : aucun tri, ordre de Grist', ($('#tri-criteres .filtre-aucune')?.textContent || '').includes('ordre de Grist'));
   ok('« Retirer le tri » grisé sans tri', $('#tri-retirer-tout').disabled);

@@ -42,6 +42,8 @@
     [10, 1, 'manualSort',  'ManualSortPos',  'manualSort',  '',                 false, '', 0],
     // Colonne « rapportée » du projet ($Projet.Etat) : attribut de la référence Projet (#204)
     [11, 1, 'Projet_Etat', 'Any',            'Projet_Etat', '$Projet.Etat',     true,  '', 0],
+    // Case à cocher : sert au regroupement « ✓ oui » / « ✗ non » (#233)
+    [12, 1, 'Urgent',      'Bool',           'Urgent',      '',                 false, '', 0],
     [20, 2, 'Nom',         'Text',           'Nom',         '',                 false, '', 0],
     [21, 2, 'Etat',        'Text',           'État',        '',                 false, '', 0],
     [30, 3, 'Nom',         'Text',           'Nom',         '',                 false, '', 0],
@@ -66,17 +68,17 @@
   let records = [
     { id: 1, Titre: 'Écrire la documentation', Description: '- [ ] Plan\n- [x] Sommaire', Priorite: 'Now',
       Avancement: 0.67, Projet: 'Atelier', Taches: ['Rédiger le guide', 'Relire le guide'],
-      Objectif: 'Guide publié', Echeance: JANVIER_2026, Code: 'E1', Projet_Etat: 'Ouvert' },
+      Objectif: 'Guide publié', Echeance: JANVIER_2026, Code: 'E1', Projet_Etat: 'Ouvert', Urgent: true },
     { id: 2, Titre: 'Préparer la démonstration', Description: NOTEPAD, Priorite: 'Later',
       Avancement: 1, Projet: 'Atelier', Taches: [], Objectif: 'Démonstration jouée', Echeance: null, Code: 'E2',
-      Projet_Etat: 'Ouvert' },
+      Projet_Etat: 'Ouvert', Urgent: false },
     { id: 3, Titre: 'Archiver le site', Description: 'Texte simple', Priorite: null,
       Avancement: 0.1, Projet: 'Vitrine', Taches: ['Copier les pages'], Objectif: '', Echeance: null, Code: 'E3',
-      Projet_Etat: 'Fermé' },
+      Projet_Etat: 'Fermé', Urgent: true },
     // Référence vers une ligne qui n'existe pas : cellule en erreur
     { id: 4, Titre: 'Carte en erreur', Description: '', Priorite: null, Avancement: 0,
       Projet: ['E', 'InvalidTypedValue', 'Ref:Projets', 99], Taches: [], Objectif: '', Echeance: null, Code: 'E4',
-      Projet_Etat: null },
+      Projet_Etat: null, Urgent: false },
   ];
 
   // Association des colonnes faite dans le panneau de droite de Grist

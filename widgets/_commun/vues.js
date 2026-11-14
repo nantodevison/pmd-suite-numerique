@@ -307,6 +307,10 @@
    *                         (Filtres.creerPanneau) et le renvoie
    *   Ce qui est propre au widget (tout est facultatif) :
    *   - contenu()         : champs propres d'une nouvelle vue (le Kanban : { colonnes })
+   *   - garderContenu(vue): 💾 sur une vue existante : y écrire les champs
+   *                         propres affichés (la Galerie : son regroupement, #233).
+   *                         Le Kanban n'en a pas besoin : il écrit ses colonnes
+   *                         dans la vue au fil des changements.
    *   - decrireContenu    : ce que reprend une nouvelle vue, en mots
    *                         (par défaut « les filtres et le tri »)
    *   - aideDefaut        : bulle d'aide de l'onglet « Toutes les cartes »
@@ -634,6 +638,7 @@
       vue.nom = champ.value.trim();
       vue.filtres = Filtres.copier(o.filtres().filter(f => f.valeurs.length > 0));
       vue.tri = copierTri(o.tri());
+      if (o.garderContenu) o.garderContenu(vue);   // champs propres affichés (#233)
       photo = null;                   // rien à restaurer (les champs propres sont déjà dans la vue)
       fenetre.fermer({ forcer: true });
       R.enregistrer(vue);
