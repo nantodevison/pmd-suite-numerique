@@ -854,6 +854,7 @@ let fenetreVue = null;   // sa fenêtre « Gérer la vue » (lue aussi par les s
 
 function creerInterfaceVues() {
   const section = (id) => document.getElementById(id);
+  creerPanneauTri(section('fv-tri'));   // avant l'interface, qui reçoit son onglet
   UI_VUES = Vues.creerInterface(VUES, {
     barre:            section('filterbar'),
     zoneVues:         section('view-tabs'),
@@ -878,7 +879,7 @@ function creerInterfaceVues() {
       { id: 'tri',      libelle: 'Tri',      contenu: section('fv-tri') },
       { id: 'colonnes', libelle: 'Colonnes', contenu: section('fv-colonnes') },
     ],
-    surOuverture:     () => { remplirTri(); remplirColonnesVue(); },
+    surOuverture:     () => { PANNEAU_TRI.remplir(); remplirColonnesVue(); },
     photographier:    (vue) => (vue.colonnes ? [...vue.colonnes] : null),
     restaurer:        (colonnes, vue) => { if (vue) vue.colonnes = colonnes; },
     modifiee:         (colonnes, vue) => JSON.stringify(vue?.colonnes ?? null) !== JSON.stringify(colonnes),
@@ -1375,7 +1376,7 @@ function creerPanneauFiltres(zone) {
     attributsDe,
     memoire:          MEMOIRE_ATTRIBUTS,
     surChangement:    renderBoard,          // qui redessine aussi les étiquettes
-    surEtiquettes:    () => { majBoutonFiltres(); majBoutonTri(); majBoutonColonnes(); },
+    surEtiquettes:    () => { majBoutonFiltres(); PANNEAU_TRI?.majBouton(); majBoutonColonnes(); },
   });
   return PANNEAU_FILTRES;
 }
@@ -1416,20 +1417,11 @@ function majBoutonColonnes() {
    Sans critère, ou à égalité sur tous, les cartes sont rangées par priorité
    (haute → moyenne → basse), comme avant #211.
    Le tri fait partie de la vue, comme les filtres : il se règle dans
-   « Gérer la vue » (#214) et 💾 le garde. */
+   « Gérer la vue » (#214) et 💾 le garde.
+   Le panneau (critères, sens, ✕, bouton « ⇅ Trier ») est commun avec la
+   Galerie (#232) : Tri.creerPanneau, dans ../_commun/tri.js. */
 
-/** Colonne proposée pour trier sur le numéro de la carte (#id). */
-const COLONNE_NUMERO = { colId: 'id', label: '# Numéro', type: 'Int' };
-
-/** Colonnes proposées dans le tri : le numéro de la carte, puis toutes les colonnes. */
-function colonnesProposeesTri() {
-  return [COLONNE_NUMERO, ...STATE.colonnesTriables];
-}
-
-function libelleColonneTri(colId) {
-  const c = colonnesProposeesTri().find(c => c.colId === colId);
-  return c ? c.label : colId;
-}
+let PANNEAU_TRI = null;   // panneau du tri, dans l'onglet Tri de « Gérer la vue »
 
 /** Ordre de deux cartes d'une même colonne : critères du tri, puis priorité. */
 function comparerCartes(a, b) {
@@ -1437,106 +1429,26 @@ function comparerCartes(a, b) {
     || getPrioRank(getField(a, 'priorite')) - getPrioRank(getField(b, 'priorite'));
 }
 
-/** Libellés des deux sens [croissant, décroissant], adaptés au type de la colonne. */
-function libellesSens(colId) {
-  const type = colId === 'id' ? 'Int' : String((STATE.infosColonnes[colId] || {}).type || '');
-  if (/^Date/.test(type))            return ['↑ Ancienne', '↓ Récente'];
-  if (/^(Int|Numeric)$/.test(type))  return ['↑ 1 → 9', '↓ 9 → 1'];
-  if (/^Choice/.test(type))          return ['↑ Ordre Grist', '↓ Inverse'];
-  if (type === 'Bool')               return ['↑ Non', '↓ Oui'];
-  return ['↑ A → Z', '↓ Z → A'];
-}
-
-/** Bouton « ⇅ Trier » de la barre : résume le tri en cours (« ⇅ Échéance ↑ +1 »). */
-function majBoutonTri() {
-  const bouton = document.getElementById('tri-bouton');
-  if (!bouton) return;
-  const fleche = c => (c.sens === 'desc' ? '↓' : '↑');
-  const [premier, ...autres] = STATE.tri;
-  bouton.classList.toggle('actif', !!premier);
-  bouton.textContent = premier
-    ? `⇅ ${libelleColonneTri(premier.col)} ${fleche(premier)}${autres.length ? ` +${autres.length}` : ''}`
-    : '⇅ Trier';
-  bouton.title = premier
-    ? 'Tri : ' + STATE.tri.map(c => `${libelleColonneTri(c.col)} ${fleche(c)}`).join(', puis ')
-    : 'Trier les cartes de chaque colonne (par défaut : par priorité)';
-}
-
-/** (Re)dessine les critères du panneau : colonne, sens, ✕. */
-function remplirTri() {
-  const zone = document.getElementById('tri-criteres');
-  zone.innerHTML = '';
-  if (!STATE.tri.length) {
-    zone.innerHTML = '<div class="filtre-aucune">Aucun tri choisi : les cartes sont rangées par priorité.</div>';
-  }
-  const proposees = colonnesProposeesTri();
-  STATE.tri.forEach((critere, i) => {
-    const ligne = document.createElement('div');
-    ligne.className = 'tri-critere';
-
-    const rang = document.createElement('span');
-    rang.className = 'tri-rang';
-    rang.textContent = i === 0 ? 'Par' : 'puis';
-
-    const choix = document.createElement('select');
-    choix.className = 'filter-select';
-    choix.title = 'Colonne';
-    proposees.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c.colId; opt.textContent = c.label;
-      choix.appendChild(opt);
-    });
-    // Colonne enregistrée dans la vue mais absente de la table (renommée, supprimée)
-    if (!proposees.some(c => c.colId === critere.col)) {
-      const opt = document.createElement('option');
-      opt.value = critere.col; opt.textContent = `${critere.col} (absente)`;
-      choix.appendChild(opt);
-    }
-    choix.value = critere.col;
-    choix.addEventListener('change', () => { critere.col = choix.value; changerTri(); });
-
-    const sens = document.createElement('div');
-    sens.className = 'filtre-ops';
-    libellesSens(critere.col).forEach((libelle, j) => {
-      const valeur = j === 0 ? 'asc' : 'desc';
-      const bouton = document.createElement('button');
-      bouton.className = 'filtre-op' + (critere.sens === valeur ? ' actif' : '');
-      bouton.textContent = libelle;
-      bouton.addEventListener('click', () => { critere.sens = valeur; changerTri(); });
-      sens.appendChild(bouton);
-    });
-
-    const retirer = document.createElement('button');
-    retirer.className = 'filtre-chip-x tri-retirer';
-    retirer.textContent = '✕';
-    retirer.title = 'Retirer ce critère';
-    retirer.addEventListener('click', () => { STATE.tri.splice(i, 1); changerTri(); });
-
-    ligne.append(rang, choix, sens, retirer);
-    zone.appendChild(ligne);
+function creerPanneauTri(zone) {
+  PANNEAU_TRI = Tri.creerPanneau({
+    zone,
+    bouton:       document.getElementById('tri-bouton'),
+    colonnes:     () => STATE.colonnesTriables,
+    typeDe:       (colId) => (STATE.infosColonnes[colId] || {}).type,
+    tri:          () => STATE.tri,
+    remplacerTri: (tri) => { STATE.tri = tri; },
+    // « Par échéance, puis par priorité » est le tri le plus courant
+    preferees:    () => [STATE.mapping.date, STATE.mapping.priorite],
+    texteVide:    'Aucun tri choisi : les cartes sont rangées par priorité.',
+    aide:         'Range les cartes dans chaque colonne. Les cartes sans valeur restent en bas ; à égalité, la priorité départage.',
+    bulleVide:    'Trier les cartes de chaque colonne (par défaut : par priorité)',
+    surChangement: renderBoard,
   });
-  document.getElementById('tri-retirer-tout').disabled = STATE.tri.length === 0;
-  // Au-delà de Tri.CRITERES_MAX, un critère ne serait pas enregistré dans la vue
-  document.getElementById('tri-ajouter').disabled = STATE.tri.length >= Tri.CRITERES_MAX;
 }
 
-/**
- * Ajoute un critère : l'Échéance, puis la Priorité (« par échéance, puis par
- * priorité » est le tri le plus courant), sinon la première colonne pas
- * encore utilisée. On peut ensuite choisir une autre colonne.
- */
-function ajouterCritereTri() {
-  const utilisees = STATE.tri.map(c => c.col);
-  const libres = colonnesProposeesTri().filter(c => !utilisees.includes(c.colId)).map(c => c.colId);
-  const col = [STATE.mapping.date, STATE.mapping.priorite].find(c => c && libres.includes(c))
-    || libres[0] || 'id';
-  STATE.tri.push({ col, sens: 'asc' });
-  changerTri();
-}
-
-/** Le tri a changé : on redessine le panneau et le tableau. */
+/** Le tri a changé (STATE.tri remplacé) : on redessine le panneau et le tableau. */
 function changerTri() {
-  remplirTri();
+  PANNEAU_TRI.remplir();
   renderBoard();
 }
 
@@ -3083,8 +2995,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-aide')        ?.addEventListener('click', ouvrirAide);
   document.getElementById('tri-bouton')      ?.addEventListener('click', () => ouvrirFenetreVue('tri'));
   document.getElementById('colonnes-bouton') ?.addEventListener('click', () => ouvrirFenetreVue('colonnes'));
-  document.getElementById('tri-ajouter')     ?.addEventListener('click', ajouterCritereTri);
-  document.getElementById('tri-retirer-tout')?.addEventListener('click', () => { STATE.tri = []; changerTri(); });
   // 🔍 Recherche (#209). Échap vide le champ, sans fermer la fiche ouverte.
   const champRecherche = document.getElementById('recherche');
   champRecherche?.addEventListener('input', (e) => changerRecherche(e.target.value));
@@ -3134,7 +3044,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape') {
       // ⚙ ouverte : Échap ne concerne qu'elle (la fenêtre le gère elle-même)
       if (fenetreConfig && fenetreConfig.estOuverte()) return;
-      const panneauOuvert = [...document.querySelectorAll('.filtre-popover')].some(p => !p.classList.contains('hidden'));
+      // Les panneaux posés dans une fenêtre fermée (Tri, Colonnes de « Gérer
+      // la vue ») ne sont jamais masqués : ils ne comptent pas, sinon Échap
+      // ne fermerait jamais la fiche (#232)
+      const panneauOuvert = [...document.querySelectorAll('.filtre-popover')]
+        .some(p => !p.classList.contains('hidden') && !p.closest('.fenetre:not([open])'));
       if (panneauOuvert) { fermerPopovers(); return; }
       const panel = document.getElementById('edit-panel');
       if (panel?.classList.contains('open')) { closeEditPanel(); return; }

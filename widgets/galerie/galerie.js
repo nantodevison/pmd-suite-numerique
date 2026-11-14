@@ -29,6 +29,9 @@
    dans des vues 👥 partagées ou 🔒 personnelles. Le filtrage natif de Grist
    (« Sélectionner par », filtres de la vue Grist) reste possible : il
    choisit les lignes envoyées au widget, nos filtres s'appliquent ensuite.
+   Tri (#232), commun avec le Kanban (../_commun/tri.js) : sur n'importe
+   quelle colonne de la table, enregistré dans la vue. Sans tri, ou à
+   égalité, les cartes gardent l'ordre envoyé par Grist (tri de la vue Grist).
    ══════════════════════════════════════════════════════════════ */
 
 'use strict';
@@ -38,12 +41,12 @@ const ETAT = {
   colonnes:   null,   // association : { Titre: 'colId', Description: 'colId', Pastilles: [...], Contexte: [...] }
   table:      null,   // identifiant de la table affichée
   docNom:     null,   // identifiant du document (clés de mémoire du navigateur)
-  // Filtres affichés (format de ../_commun/filtres.js) et tri de la vue
-  // (vide tant que la Galerie ne trie pas, #232 : gardé tel quel dans la vue)
+  // Filtres affichés (format de ../_commun/filtres.js) et tri affiché
+  // (format de ../_commun/tri.js : [{ col, sens }], #232)
   filtres:    [],
   tri:        [],
   // Colonnes de la table, d'après la structure du document (#204) :
-  // toutes (pour les attributs d'une référence), et celles qu'on peut filtrer
+  // toutes (pour le tri et les attributs d'une référence), et celles qu'on peut filtrer
   colonnesTable:      [],
   colonnesFiltrables: [],
   optionsChargees: false,   // vues lues à l'ouverture seulement (voir onOptions)
@@ -379,9 +382,20 @@ function afficherGrille() {
   visibles.forEach(ligne => grille.appendChild(construireCarte(ligne)));
 }
 
-/** Lignes affichées : celles qui respectent les filtres de la vue ET la recherche. */
+/**
+ * Lignes affichées : celles qui respectent les filtres de la vue ET la
+ * recherche, rangées selon le tri de la vue (#232).
+ */
 function lignesVisibles() {
-  return ETAT.lignes.filter(l => respecteFiltres(l) && correspondRecherche(l));
+  const lignes = ETAT.lignes.filter(l => respecteFiltres(l) && correspondRecherche(l));
+  if (ETAT.tri.length) {
+    // Type et choix déclarés de chaque colonne du tri (ordre des choix de Grist…)
+    const infos = Object.fromEntries(ETAT.tri.map(c => [c.col, info(c.col)]));
+    // Le tri du navigateur est « stable » : à égalité, deux cartes gardent
+    // leur ordre de départ, celui envoyé par Grist.
+    lignes.sort((a, b) => Tri.comparerLignes(a, b, ETAT.tri, infos));
+  }
+  return lignes;
 }
 
 /**
@@ -435,20 +449,22 @@ function message(texte) {
 /* ══════════════════════════════════════════════════════════════
    4 bis. FILTRES ET VUES ENREGISTRÉES (#204)
    La barre des vues, ses petits panneaux, la fenêtre « Gérer la vue » et
-   le panneau des filtres sont construits par les modules communs avec le
-   Kanban (../_commun/vues.js et ../_commun/filtres.js). La Galerie leur
-   prête son état affiché (ETAT.filtres, ETAT.tri) et ses cartes, et
-   redessine la grille quand ils changent quelque chose.
+   les panneaux des filtres et du tri (#232) sont construits par les
+   modules communs avec le Kanban (../_commun/vues.js, filtres.js et
+   tri.js). La Galerie leur prête son état affiché (ETAT.filtres, ETAT.tri)
+   et ses cartes, et redessine la grille quand ils changent quelque chose.
    ══════════════════════════════════════════════════════════════ */
 
 let UI_VUES = null;          // interface des vues, créée au chargement de la page
 let PANNEAU_FILTRES = null;  // panneau des filtres, dans l'onglet Filtres de « Gérer la vue »
+let PANNEAU_TRI = null;      // panneau du tri, dans l'onglet Tri de « Gérer la vue » (#232)
 
 /** Filtres et tri de la vue active, copiés : les modifier ne touche pas la vue. */
 function appliquerVue() {
   const vue = VUES.active();
   ETAT.filtres = vue ? Filtres.copier(vue.filtres) : [];
-  ETAT.tri = vue ? (vue.tri || []).map(c => ({ ...c })) : [];
+  // Tri.nettoyer renvoie une copie bien formée (la vue vient du document ou du navigateur)
+  ETAT.tri = vue ? Tri.nettoyer(vue.tri) : [];
 }
 
 /** Onglets des vues, étiquettes des filtres et bas de « Gérer la vue », à jour. */
@@ -482,12 +498,39 @@ function creerPanneauFiltres(zone) {
     // Attributs affichés (#223) : retenus par le navigateur, comme les vues perso
     memoire:          Filtres.memoireAttributs(() => cleMemoire('attributs')),
     surChangement:    afficherGrille,
-    surEtiquettes:    () => UI_VUES && UI_VUES.majBoutonFiltres(),
+    // Résumés de la barre, à jour après chaque dessin des étiquettes
+    surEtiquettes:    () => {
+      if (UI_VUES) UI_VUES.majBoutonFiltres();
+      if (PANNEAU_TRI) PANNEAU_TRI.majBouton();
+    },
   });
   return PANNEAU_FILTRES;
 }
 
+/**
+ * Panneau du tri (#232), commun avec le Kanban : toutes les colonnes de la
+ * table sont proposées (plus « # Numéro », ajouté par le module).
+ * « ＋ Ajouter un critère » propose d'abord une colonne de pastilles, puis
+ * le titre : ce que l'on voit sur la carte.
+ */
+function creerPanneauTri(zone) {
+  PANNEAU_TRI = Tri.creerPanneau({
+    zone,
+    bouton:        document.getElementById('tri-bouton'),
+    colonnes:      () => ETAT.colonnesTable,
+    typeDe:        (colId) => info(colId).type,
+    tri:           () => ETAT.tri,
+    remplacerTri:  (tri) => { ETAT.tri = tri; },
+    preferees:     () => [...colonnesPastilles(), ETAT.colonnes && ETAT.colonnes.Titre],
+    texteVide:     'Aucun tri choisi : les cartes suivent l\'ordre de Grist.',
+    aide:          'Les cartes sans valeur restent en bas ; à égalité, l\'ordre de Grist départage.',
+    bulleVide:     'Trier les cartes (par défaut : ordre de Grist)',
+    surChangement: afficherGrille,
+  });
+}
+
 function creerInterfaceVues() {
+  creerPanneauTri(document.getElementById('fv-tri'));   // avant l'interface, qui reçoit son onglet
   UI_VUES = Vues.creerInterface(VUES, {
     barre:            document.getElementById('barre-vues'),
     zoneVues:         document.getElementById('view-tabs'),
@@ -496,19 +539,27 @@ function creerInterfaceVues() {
     remplacerFiltres: (liste) => { ETAT.filtres = liste; },
     tri:              () => ETAT.tri,
     remplacerTri:     (tri) => { ETAT.tri = tri; },
+    nettoyerTri:      Tri.nettoyer,
     appliquerVue,
     redessiner:       afficherGrille,
     compter:          () => ({ affichees: lignesVisibles().length, total: ETAT.lignes.length }),
     panneauFiltres:   creerPanneauFiltres,
-    decrireContenu:   'les filtres',
+    // Onglet Tri (#232), rempli à chaque ouverture de la fenêtre
+    onglets:          [{ id: 'tri', libelle: 'Tri', contenu: document.getElementById('fv-tri') }],
+    surOuverture:     () => PANNEAU_TRI.remplir(),
     aideDefaut:       'Toutes les lignes que Grist envoie à la Galerie',
     prevenir:         afficherToast,
   });
 }
 
-/** Un panneau des vues ou des filtres est-il ouvert ? */
+/**
+ * Un petit panneau flottant (vues, filtres) est-il ouvert ? Ceux posés dans
+ * la fenêtre « Gérer la vue » (le panneau du tri, #232) ne comptent pas :
+ * ils ne sont jamais masqués, ils suivent la fenêtre.
+ */
 function panneauOuvert() {
-  return [...document.querySelectorAll('.filtre-popover')].some(p => !p.classList.contains('hidden'));
+  return [...document.querySelectorAll('.filtre-popover')]
+    .some(p => !p.classList.contains('hidden') && !p.closest('.fenetre'));
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -912,6 +963,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // données avant : on dessine la barre tout de suite.
   creerInterfaceVues();
   majBarreVues();
+  // « ⇅ Trier » (#232) : ouvre « Gérer la vue » sur l'onglet Tri
+  document.getElementById('tri-bouton').addEventListener('click', () => UI_VUES.ouvrirFenetre('tri'));
   // Un clic ailleurs ferme les panneaux des vues et des filtres (sauf sur ce qui en ouvre un)
   document.addEventListener('mousedown', (e) => {
     if (e.target.closest('.fenetre, .filtre-popover, #vue-ajouter, .vue-menu-btn, .vue-selecteur, .fiche-menu')) return;

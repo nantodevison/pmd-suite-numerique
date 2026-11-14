@@ -20,13 +20,14 @@ py tests/galerie/jouer.py --largeurs 1200 -v  # une largeur, toutes les lignes
 Le bilan s'affiche par scénario et par largeur (`BILAN 26 OK, 0 KO`), suivi des
 lignes en échec. Le code de sortie vaut 0 si tout est OK.
 
-## Ce qui est vérifié (142 vérifications par largeur)
+## Ce qui est vérifié (184 vérifications par largeur)
 
 | Scénario | Fonctions |
 |---|---|
 | `cartes` | Grille : titres, pastilles (couleur des choix Grist, échelle des pourcentages, pastel des références, cellule en erreur), compteur, message sans colonne « Titre », clic qui ouvre la fiche et place le curseur de Grist ; structure lue une seule fois, tables visées non lues (#188) |
 | `recherche` | Recherche 🔍 (règle commune avec le Kanban) : majuscules et accents, tous les mots, `#numéro`, noms des références, contexte, texte Notepad |
 | `filtres-vues` | Filtres et vues enregistrées (#204, modules communs avec le Kanban) : toutes les colonnes reçues, colonnes filtrables, ordre et couleur des choix, attributs d'une référence, compteurs, vue perso et vue partagée, changement de vue, cumul avec la recherche, Annuler dans « Gérer la vue », options rappelées par Grist sans relecture, carte créée masquée par les filtres, Échap |
+| `tri` | Tri des cartes (#232, panneau commun avec le Kanban) : ordre de Grist sans tri, « ⇅ Trier » et son résumé, onglet Tri de « Gérer la vue », colonnes proposées (« # Numéro » en tête), critère ajouté sur une pastille, sens selon le type, second critère, ✕, vides et cellule en erreur en bas, tri enregistré dans la vue, Annuler, cumul avec un filtre, colonne disparue, tri mal formé nettoyé, limite de 10 critères, Échap |
 | `fiche` | En-tête (objets liés, pastilles, contexte, date au format français), cases à cocher, modification et sauvegarde du titre, confirmation avant de perdre une modification, Échap, titre calculé en lecture seule |
 | `nouvelle-carte` | « + Nouvelle carte » : modèle de texte, titre exigé, création, carte masquée par un filtre ; ⚙ : reprendre le texte d'une carte (Notepad compris) et l'enregistrer comme modèle |
 | `notepad` | Anciens textes Notepad : bandeau, texte affiché converti, conversion en une seule écriture après confirmation |

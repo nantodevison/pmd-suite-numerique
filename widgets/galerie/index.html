@@ -21,6 +21,8 @@
   <link rel="stylesheet" href="../_commun/fenetre.css" />
   <link rel="stylesheet" href="../_commun/filtres.css" />
   <link rel="stylesheet" href="../_commun/vues.css" />
+  <!-- Panneau du tri, commun avec le Kanban (#232) -->
+  <link rel="stylesheet" href="../_commun/tri.css" />
   <style>
 /* ══════════════════════════════════════════════════════════════
    GALERIE GRIST — styles (même palette que le Kanban)
@@ -179,11 +181,23 @@ body { display: flex; flex-direction: column; overflow: hidden; }
 
   <!-- Vues enregistrées et filtres (#204) : onglets (ou sélecteur ▾), « ＋ Vue »
        et « 🔽 Filtres » sont construits par ../_commun/vues.js, comme leurs
-       petits panneaux et la fenêtre « Gérer la vue ». -->
+       petits panneaux et la fenêtre « Gérer la vue ». « ⇅ Trier » (#232)
+       ouvre cette fenêtre sur l'onglet Tri ; son texte résume le tri. -->
   <div class="barre-vues" id="barre-vues">
     <div class="view-tabs" id="view-tabs"></div>
     <div class="filter-sep"></div>
-    <div class="resumes-vue" id="resumes-vue"></div>
+    <div class="resumes-vue" id="resumes-vue">
+      <button type="button" id="tri-bouton" class="filtre-ajouter resume-vue">⇅ Trier</button>
+    </div>
+  </div>
+
+  <!-- Onglet Tri de « Gérer la vue » (#232) : déplacé dans la fenêtre par
+       ../_commun/vues.js, panneau construit par ../_commun/tri.js.
+       data-neutre : le module des vues calcule lui-même si la vue a changé. -->
+  <div id="vue-sections" hidden>
+    <section id="fv-tri" data-neutre>
+      <h3 class="config-etape">Tri</h3>
+    </section>
   </div>
 
   <!-- Réglages : modèle de texte des nouvelles cartes, enregistré dans le
@@ -231,9 +245,11 @@ body { display: flex; flex-direction: column; overflow: hidden; }
   <script src="../_commun/fiche.js"></script>
   <!-- Structure du document (libellés, types, couleurs des choix), commune aux widgets -->
   <script src="../_commun/colonnes.js"></script>
-  <!-- Fenêtre à onglets, règle et panneau des filtres, vues enregistrées (#204) -->
+  <!-- Fenêtre à onglets, règle et panneau des filtres, vues enregistrées (#204),
+       comparaison des valeurs et panneau du tri (#232) -->
   <script src="../_commun/fenetre.js"></script>
   <script src="../_commun/filtres.js"></script>
+  <script src="../_commun/tri.js"></script>
   <script src="../_commun/vues.js"></script>
   <script src="galerie.js"></script>
 </body>

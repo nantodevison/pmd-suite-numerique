@@ -39,4 +39,12 @@ Banc.lancer(async () => {
   ok('« Annuler » : la fiche reste ouverte', STATE.editPanel.recordId === 1);
   closeEditPanel(true);
   ok('fermeture forcée', STATE.editPanel.recordId === null);
+
+  // ── Échap ferme la fiche ── (les panneaux Tri et Colonnes, posés dans la
+  // fenêtre « Gérer la vue » fermée, ne comptent pas comme panneaux ouverts)
+  await openEditPanel(2);
+  await attendre(100);
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await attendre(50);
+  ok('Échap : fiche fermée', STATE.editPanel.recordId === null && !document.getElementById('edit-panel').classList.contains('open'));
 });
