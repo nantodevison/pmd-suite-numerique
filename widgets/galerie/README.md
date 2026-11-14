@@ -2,7 +2,8 @@
 
 Affiche les lignes d'une table sous forme de **cartes**, en grille. Un clic sur
 une carte ouvre sa **fiche** pour lire et modifier son titre et son texte
-principal, écrit en **Markdown**.
+principal, écrit en **Markdown**. Les **pastilles** (priorité, projet…) se
+modifient d'un clic, sur la carte comme dans la fiche.
 
 Pensé pour les tables qui se lisent mieux en fiches qu'en colonnes de statut :
 EPICs, objectifs et résultats clés, projets… Les tâches restent gérées par le
@@ -34,8 +35,9 @@ https://nantodevison.github.io/pmd-suite-numerique/widgets/galerie/
 
 Voir [../README.md](../README.md#brancher-un-widget-par-url-github-pages) pour
 l'avertissement et le niveau d'accès (**accès complet** requis : le widget
-écrit le titre et le texte principal, et lit la structure du document pour
-afficher les libellés et les couleurs des choix).
+écrit le titre, le texte principal et les colonnes de pastilles, et lit la
+structure du document pour afficher les libellés et les couleurs des choix,
+ainsi que la table visée par une référence quand on ouvre son menu).
 
 Banc d'essai (à jouer avant toute PR qui touche la Galerie ou `_commun/`) :
 [`tests/galerie/`](../../tests/galerie/).
@@ -66,6 +68,33 @@ La carte ne montre que le titre et les pastilles : elle doit rester concise.
   33 %, orange jusqu'à 66 %, jaune-vert jusqu'à 99 %, vert à 100 % ;
 - référence : un pastel propre à chaque valeur (toujours le même) ;
 - autres colonnes : gris neutre ; cellule en erreur : « ⚠️ invalide » en rouge.
+
+## Modifier une pastille (#205, #206)
+
+Un clic sur une pastille (ou Tab puis Entrée) ouvre un petit menu, selon le
+type de la colonne :
+
+| Type | Menu |
+|---|---|
+| Choix | les choix de Grist, dans leur ordre, plus « — aucun — » |
+| Choix multiple | les mêmes, en cases à cocher (le menu reste ouvert) |
+| Référence | les lignes de la table visée, de A à Z, plus « — aucune — » ; un champ de recherche au-delà de 12 lignes |
+| Case à cocher | « ✓ oui » / « ✗ non » |
+| Date | un calendrier, et « Effacer la date » |
+
+- **Sur la carte** : le clic n'ouvre pas la fiche, et le choix est **écrit
+  tout de suite** dans Grist, comme une cellule modifiée (Ctrl + Z dans Grist
+  pour annuler). Pour une liste de choix, chaque case cochée est écrite. Les
+  pastilles vides ne s'affichent pas : la carte reste concise ; une colonne
+  vide se remplit depuis la fiche.
+- **Dans la fiche** : chaque colonne modifiable a sa pastille, « + Priorité »
+  quand elle est vide. Le choix s'affiche aussitôt mais n'est écrit qu'avec
+  « ✓ Sauvegarder », en même temps que le titre et le texte.
+- Restent en **lecture seule** : les colonnes calculées par une formule (comme
+  `Avancement`), les textes et les nombres.
+- La table visée par une référence est **relue à chaque ouverture** du menu :
+  un projet ajouté dans Grist est proposé tout de suite. Elle n'est jamais lue
+  au chargement du widget.
 
 L'ordre des cartes est celui du tri de la vue Grist, sauf si la vue de la
 Galerie a son propre tri (voir plus bas).
@@ -125,10 +154,11 @@ s'appliquent ensuite.
   le navigateur ; Échap, ✕ ou un clic sur le fond assombri la ferment.
 - Le **titre** et le **texte principal** sont modifiables, puis enregistrés avec
   « ✓ Sauvegarder ». Une colonne calculée par une formule reste en lecture seule.
-- En-tête en lecture seule (v1) : le titre, avec dessous les **objets liés**
-  (« — » si aucun) ; les **pastilles** dans un encart à droite (au centre) ou
-  sous le titre (sur le côté), libellé au survol ; puis le **contexte**, même
-  vide (« — »). Références par leur nom affiché, dates au format français.
+- En-tête : le titre, avec dessous les **objets liés** (« — » si aucun) ; les
+  **pastilles** dans un encart à droite (au centre) ou sous le titre (sur le
+  côté), libellé au survol, modifiables (voir plus haut) ; puis le
+  **contexte**, même vide (« — »). Références par leur nom affiché, dates au
+  format français. Objets liés et contexte sont en lecture seule.
 - Les **cases à cocher** du texte principal (`- [ ] à faire`) se cochent d'un
   clic dans l'aperçu, puis s'enregistrent avec « ✓ Sauvegarder » ; elles
   restent grisées si la colonne est calculée par une formule.
@@ -148,7 +178,8 @@ s'appliquent ensuite.
   « Reprendre le texte de … » copie le texte de la carte ouverte ou
   sélectionnée, pour en faire un squelette.
 - Les pastilles, objets liés et contexte ne se remplissent pas à la création :
-  à saisir dans Grist. La carte créée peut donc être aussitôt masquée, par
+  les pastilles se choisissent une fois la carte créée (la fiche reste
+  ouverte), le reste dans Grist. La carte créée peut donc être aussitôt masquée, par
   les filtres de la vue active ou par un filtre de Grist (« Sélectionner
   par »…) ; un message le signale. Préremplir la carte d'après les filtres :
   #186.

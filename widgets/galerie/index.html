@@ -139,6 +139,13 @@ body { display: flex; flex-direction: column; overflow: hidden; }
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .pastille-erreur { background: #fff5f5; color: #c53030; }
+/* Pastille modifiable d'un clic (#205, #206) : un liseré au survol */
+.pastille-modifiable { cursor: pointer; }
+.pastille-modifiable:hover, .pastille-modifiable:focus-visible {
+  outline: none; box-shadow: 0 0 0 2px var(--accent);
+}
+/* Colonne vide, dans la fiche : « + Priorité » en pointillés */
+.pastille-vide { background: transparent; border: 1px dashed #a0aec0; color: var(--text-muted); }
 
 /* Regroupement en zones (#233) : chaque zone occupe toute la largeur de la
    grille et contient sa propre grille de cartes */
