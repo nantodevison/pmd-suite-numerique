@@ -80,6 +80,11 @@ const VUES = Vues.creer({
   prevenir: (message, duree) => afficherToast(message, duree),
 });
 
+/* Attributs affichés à côté des valeurs d'une référence (ex. le statut de
+   chaque tâche), retenus par le navigateur : la même mémoire sert au panneau
+   des filtres (#223) et aux objets liés de la fiche (#184). */
+const MEMOIRE_ATTRIBUTS = Filtres.memoireAttributs(() => cleMemoire('attributs'));
+
 /**
  * Clé de mémoire du navigateur pour la donnée `nom` ('vueActive',
  * 'vuesPerso', 'attributs', 'groupesReplies'), ou null si le document est encore inconnu.
@@ -264,12 +269,16 @@ async function convertisseur(c, table) {
 function preparerColonnesFiltrables() {
   ETAT.colonnesTable = ETAT.doc.colonnes(ETAT.table).map(c => {
     const r = c.rapportee;
+    const reference = r && ETAT.doc.colonne(ETAT.table, r.colRef);
     return {
       colId:    c.colId,
       type:     c.type,
       label:    r ? `${r.via} › ${r.attribut}` : c.libelle,
       ref:      r ? r.colRef : null,     // référence dont elle est un attribut
       attribut: r ? r.attribut : null,   // libellé court de l'attribut
+      // Colonne d'origine ($Taches.statut → Taches.statut) : ses choix
+      // ordonnent les objets liés, ses couleurs colorent l'attribut (#184)
+      source:   reference ? ETAT.doc.colonne(reference.tableVisee, r.colSource) : null,
     };
   }).sort((a, b) => a.label.localeCompare(b.label, 'fr'));
   ETAT.colonnesFiltrables = ETAT.colonnesTable
@@ -1010,9 +1019,14 @@ function attributsDe(colId) {
   return ETAT.colonnesTable.filter(c => c.ref === colId);
 }
 
-/** Couleur Grist d'un choix ({ fond, texte }), ou null s'il n'en a pas. */
+/**
+ * Couleur Grist d'un choix ({ fond, texte }), ou null s'il n'en a pas.
+ * Une colonne rapportée ($Taches.statut) n'a pas de couleurs à elle : on
+ * prend celles de sa colonne d'origine (#184).
+ */
 function styleChoix(colId, texte) {
-  return info(colId).couleurs[texte] || null;
+  const source = (ETAT.colonnesTable.find(c => c.colId === colId) || {}).source;
+  return info(colId).couleurs[texte] || (source && source.couleurs[texte]) || null;
 }
 
 function creerPanneauFiltres(zone) {
@@ -1026,7 +1040,7 @@ function creerPanneauFiltres(zone) {
     styleChoix,
     attributsDe,
     // Attributs affichés (#223) : retenus par le navigateur, comme les vues perso
-    memoire:          Filtres.memoireAttributs(() => cleMemoire('attributs')),
+    memoire:          MEMOIRE_ATTRIBUTS,
     surChangement:    afficherGrille,
     // Résumés de la barre, à jour après chaque dessin des étiquettes
     surEtiquettes:    () => {
@@ -1209,23 +1223,16 @@ function remplirFiche(id) {
 
 /** En-tête d'une carte existante : objets liés, pastilles et contexte. */
 function remplirEntete(ligne, principal, encart, corps) {
-  // Objets liés : une ligne par colonne, « LIBELLÉ  [élément] [élément]… »
-  colonnesObjetsLies().forEach(colId => {
-    const ligneLies = document.createElement('div');
-    ligneLies.className = 'fiche-lies';
-    const lib = document.createElement('span');
-    lib.className = 'fiche-lies-libelle';
-    lib.textContent = libelle(colId);
-    const elements = valeurContexte(colId, ligne[colId]);
-    if (!elements.length) {
-      const vide = document.createElement('span');
-      vide.className = 'fiche-lies-vide';
-      vide.textContent = '—';
-      elements.push(vide);
-    }
-    ligneLies.append(lib, ...elements);
-    principal.appendChild(ligneLies);
-  });
+  // Objets liés (#184) : sous l'en-tête, sur toute la largeur de la fiche
+  // (plus dans la colonne du titre, que les pastilles rétrécissent) ; un
+  // bloc par colonne, voir ligneObjetsLies.
+  const objetsLiesColonnes = colonnesObjetsLies();
+  if (objetsLiesColonnes.length) {
+    const zone = document.createElement('div');
+    zone.className = 'fiche-lies-zone';
+    objetsLiesColonnes.forEach(colId => zone.appendChild(ligneObjetsLies(colId, ligne)));
+    corps.appendChild(zone);
+  }
 
   // Pastilles colorées, sans libellé (rappelé au survol), modifiables (#206)
   dessinerPastillesFiche(encart, ligne);
@@ -1268,13 +1275,245 @@ function dessinerPastillesFiche(encart, ligne) {
   });
 }
 
-/** Une ligne de l'en-tête de la fiche : libellé, puis les éléments donnés (ou « — »). */
+/**
+ * Une paire de l'encart Contexte : libellé, puis les éléments donnés (ou
+ * « — »). La paire est enveloppée pour prendre sa largeur naturelle (#184) :
+ * une valeur courte ou vide prend peu de place, une longue liste le reste.
+ */
 function ligneEntete(colId, elements) {
+  const paire = document.createElement('div');
+  paire.className = 'fiche-contexte-paire';
   const dt = document.createElement('dt');
   dt.textContent = libelle(colId);
   const dd = document.createElement('dd');
   if (elements.length) dd.append(...elements); else dd.textContent = '—';
-  return [dt, dd];
+  paire.append(dt, dd);
+  return [paire];
+}
+
+/* ── Objets liés de la fiche (#184) ──────────────────────────────
+   « TÂCHES  12                                      Afficher ▾ »
+   « [Relire le guide · En cours] [Rédiger… · Fait] [+ 9 autres ▾] »
+   Les objets d'abord (le nombre total, puis la liste), le réglage ensuite,
+   discret, à droite.
+   - à côté du nom : les attributs cochés dans « Afficher ▾ » (colonnes
+     rapportées, ex. $Taches.statut), même mémoire que les filtres ;
+   - objets triés selon ces attributs, dans l'ordre des choix de Grist ;
+   - au survol : tous les attributs de l'objet, avec leur libellé ;
+   - au-delà de 2 lignes : « + n autres ▾ » ouvre la liste complète ;
+   - objet de la même table que la Galerie : un clic ouvre sa fiche. */
+
+/** Ligne d'objets liés de la colonne `colId` pour la carte `ligne`. */
+function ligneObjetsLies(colId, ligne) {
+  const ligneLies = document.createElement('div');
+  ligneLies.className = 'fiche-lies';
+  // Ligne de titre : libellé, nombre d'objets, puis « Afficher ▾ » à droite
+  const tete = document.createElement('div');
+  tete.className = 'fiche-lies-tete';
+  const lib = document.createElement('span');
+  lib.className = 'fiche-lies-libelle';
+  lib.textContent = libelle(colId);
+  tete.appendChild(lib);
+  const nombre = objetsLies(colId, ligne).length;
+  if (nombre) {
+    const compte = document.createElement('span');
+    compte.className = 'fiche-lies-nombre';
+    compte.textContent = String(nombre);
+    tete.appendChild(compte);
+  }
+  ligneLies.appendChild(tete);
+
+  const bloc = document.createElement('div');
+  bloc.className = 'fiche-liste fiche-lies-liste';
+  const dessiner = () => dessinerObjetsLies(bloc, colId, ligne);
+
+  const possibles = attributsDe(colId);
+  if (possibles.length && nombre) {
+    const bouton = document.createElement('button');
+    bouton.type = 'button';
+    bouton.className = 'fiche-lies-afficher';
+    const majBouton = () => {
+      const n = MEMOIRE_ATTRIBUTS.affiches(colId, possibles.map(c => c.colId)).length;
+      bouton.textContent = n ? `Afficher (${n}) ▾` : 'Afficher ▾';
+      bouton.classList.toggle('actif', n > 0);
+    };
+    bouton.title = 'Attributs affichés à côté de chaque élément (retenu par ce navigateur, comme dans les filtres)';
+    bouton.addEventListener('click', () => Fiche.menuChoix(bouton, {
+      options:   possibles.map(c => ({ valeur: c.colId, libelle: c.attribut })),
+      selection: MEMOIRE_ATTRIBUTS.affiches(colId, possibles.map(c => c.colId)),
+      multiple:  true,
+      surChoix:  (choisis) => {
+        MEMOIRE_ATTRIBUTS.definir(colId, choisis, possibles.map(c => c.colId));
+        majBouton();
+        dessiner();
+      },
+    }));
+    majBouton();
+    tete.appendChild(bouton);
+  }
+  ligneLies.appendChild(bloc);
+  dessiner();
+  return ligneLies;
+}
+
+/**
+ * Objets de la colonne `colId` pour la carte `ligne`, triés :
+ * [{ nom, rang, morceaux, bulle }]. rang = place dans la cellule (avant le
+ * tri) ; morceaux = attributs cochés (format de Fiche.dessinerAttributs) ;
+ * bulle = tous les attributs, « Libellé : valeur », un par ligne.
+ */
+function objetsLies(colId, ligne) {
+  const valeur = ligne[colId];
+  if (estErreur(valeur)) return [{ nom: '⚠️ invalide', rang: 0, morceaux: [], bulle: '', textes: [] }];
+  const brute = decoderListe(valeur);
+  const noms = Array.isArray(brute) ? brute : (brute ? [brute] : []);
+  const tous = attributsDe(colId);
+  const affiches = MEMOIRE_ATTRIBUTS.affiches(colId, tous.map(c => c.colId))
+    .map(a => tous.find(c => c.colId === a));
+  // Attribut de l'objet n° k : la colonne rapportée donne une liste dans le
+  // même ordre que les objets. Longueurs différentes : on ne sait pas, on se tait.
+  const texte = (a, k) => {
+    const cellule = decoderListe(ligne[a.colId]);
+    if (!Array.isArray(cellule) || cellule.length !== noms.length) return '';
+    return Filtres.texteAttribut(cellule[k], a.type);
+  };
+  const objets = noms.map((nom, k) => {
+    const textes = affiches.map(a => texte(a, k));
+    return {
+      nom: valeurSimple(info(colId), nom),
+      rang: k,
+      textes,
+      morceaux: affiches.map((a, i) => textes[i] ? [{ texte: textes[i], style: styleChoix(a.colId, textes[i]) }] : null)
+        .filter(Boolean),
+      bulle: tous.map(a => `${a.attribut} : ${texte(a, k) || '—'}`).join('\n'),
+    };
+  }).filter(o => o.nom);
+  // Tri selon les attributs affichés, dans l'ordre de leurs choix dans Grist
+  // (« À faire », « En cours », « Fait »…) ; inconnus et vides à la fin ;
+  // à égalité, l'ordre de Grist.
+  const ordres = affiches.map(a => {
+    const source = (ETAT.colonnesTable.find(c => c.colId === a.colId) || {}).source;
+    return source ? source.choix : [];
+  });
+  const place = (i, t) => { const p = ordres[i].indexOf(t); return p === -1 ? Infinity : p; };
+  return objets.sort((x, y) => {
+    for (let i = 0; i < ordres.length; i++) {
+      if (!ordres[i].length) continue;
+      const d = place(i, x.textes[i]) - place(i, y.textes[i]);
+      if (d && !Number.isNaN(d)) return d;
+    }
+    return x.rang - y.rang;
+  });
+}
+
+/** (Re)dessine les objets liés dans `bloc`, limités à 2 lignes. */
+function dessinerObjetsLies(bloc, colId, ligne) {
+  const objets = objetsLies(colId, ligne);
+  bloc.replaceChildren();
+  if (!objets.length) {
+    const vide = document.createElement('span');
+    vide.className = 'fiche-lies-vide';
+    vide.textContent = '—';
+    bloc.appendChild(vide);
+    return;
+  }
+  const ouvrable = info(colId).tableVisee === ETAT.table;
+  const puces = objets.map(o => {
+    const puce = document.createElement(ouvrable ? 'button' : 'span');
+    puce.className = 'fiche-liste-element fiche-lie' + (ouvrable ? ' fiche-lie-ouvrable' : '');
+    if (ouvrable) {
+      puce.type = 'button';
+      puce.addEventListener('click', () => ouvrirObjetLie(ligne.id, colId, o.rang));
+    }
+    const nom = document.createElement('span');
+    nom.className = 'fiche-lie-nom';
+    nom.textContent = o.nom;
+    puce.appendChild(nom);
+    if (o.morceaux.length) {
+      const zone = document.createElement('span');
+      zone.className = 'fiche-lie-attributs';
+      Fiche.dessinerAttributs(zone, o.morceaux);
+      puce.appendChild(zone);
+    }
+    // Bulle : tous les attributs (le navigateur l'affiche au survol)
+    puce.title = o.bulle ? `${o.nom}\n${o.bulle}` : o.nom;
+    return puce;
+  });
+  bloc.append(...puces);
+
+  // « + n autres ▾ » : la liste complète, avec recherche
+  const plus = document.createElement('button');
+  plus.type = 'button';
+  plus.className = 'fiche-lies-plus';
+  plus.hidden = true;
+  plus.addEventListener('click', () => Fiche.menuRecherche(plus, {
+    options: objets.map(o => ({ valeur: o.rang, libelle: o.nom, detail: Filtres.texteMorceaux(o.morceaux) })),
+    placeholder: `Rechercher dans ${libelle(colId)}…`,
+    surChoix: (rang) => { if (ouvrable) ouvrirObjetLie(ligne.id, colId, rang); },
+  }));
+  bloc.appendChild(plus);
+  limiterADeuxLignes(bloc, puces, plus);
+}
+
+/**
+ * Ne garde visibles que les puces qui tiennent sur 2 lignes, le bouton
+ * « + n autres ▾ » compris. Mesuré après l'affichage, puis à chaque
+ * changement de largeur de la fiche (côté / centre, fenêtre redimensionnée).
+ */
+function limiterADeuxLignes(bloc, puces, plus) {
+  const ajuster = () => {
+    if (!bloc.isConnected || !bloc.offsetWidth) return;
+    puces.forEach(p => { p.hidden = false; });
+    plus.hidden = true;
+    const hauts = [...new Set(puces.map(p => p.offsetTop))].sort((a, b) => a - b);
+    if (hauts.length <= 2) return;
+    // Trop long : on masque depuis la fin jusqu'à ce que le bouton tienne en 2e ligne
+    plus.hidden = false;
+    let visibles = puces.length;
+    do {
+      puces[--visibles].hidden = true;
+      const n = puces.length - visibles;
+      plus.textContent = `+ ${n} autre${n > 1 ? 's' : ''} ▾`;
+    } while (visibles > 1 && plus.offsetTop > hauts[1]);
+  };
+  let largeur = null;
+  // Un seul observateur par bloc : celui d'un dessin précédent est arrêté
+  if (bloc._observateur) bloc._observateur.disconnect();
+  bloc._observateur = new ResizeObserver(() => {
+    if (bloc.offsetWidth === largeur) return;   // seule la largeur compte (masquer change la hauteur)
+    largeur = bloc.offsetWidth;
+    // Juste après : masquer des puces pendant que le navigateur mesure
+    // provoquerait l'erreur « ResizeObserver loop… »
+    setTimeout(ajuster, 0);
+  });
+  bloc._observateur.observe(bloc);
+  // Premier repli juste après l'affichage de la fiche (le bloc est alors dans
+  // la page). Pas requestAnimationFrame : il attend que le navigateur dessine
+  // une image, ce qui peut tarder ; lire les positions suffit à faire calculer
+  // la mise en page.
+  setTimeout(ajuster, 0);
+}
+
+/**
+ * Ouvre la fiche d'un objet lié de la même table que la Galerie (#184).
+ * Grist envoie les objets sous leur nom ; on relit la carte pour avoir leur
+ * NUMÉRO, au même rang : deux objets homonymes ne se confondent pas.
+ */
+async function ouvrirObjetLie(idCarte, colId, rang) {
+  try {
+    const table = await grist.docApi.fetchTable(ETAT.table);
+    const ids = decoderListe(table[colId][table.id.indexOf(idCarte)]);
+    const id = Array.isArray(ids) ? ids[rang] : null;
+    if (!id) return;
+    if (!ETAT.lignes.some(l => l.id === id)) {
+      afficherToast('Cette carte n\'est pas envoyée à la Galerie (« Sélectionner par » ou filtre de la vue Grist)', 4000);
+      return;
+    }
+    ouvrirFiche(id);
+  } catch (err) {
+    console.warn('Galerie – objet lié introuvable :', err);
+    afficherToast('⚠️ Impossible d\'ouvrir cet élément', 3000);
+  }
 }
 
 /**

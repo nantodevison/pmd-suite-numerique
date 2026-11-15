@@ -28,6 +28,11 @@
     choiceOptions: { Now: { fillColor: '#FECACA', textColor: '#7F1D1D' } },
   });
   const choixThemes = JSON.stringify({ choices: ['Guide', 'Site', 'Formation'] });
+  // Statut d'une tâche : ordre des choix = ordre de tri des objets liés (#184)
+  const choixStatut = JSON.stringify({
+    choices: ['À faire', 'En cours', 'Fait'],
+    choiceOptions: { Fait: { fillColor: '#C6F6D5', textColor: '#22543D' } },
+  });
   const colonnes = [
     [1,  1, 'Titre',       'Text',           'Titre',       '',                 false, '', 0],
     [2,  1, 'Description', 'Text',           'Description', '',                 false, '', 0],
@@ -51,9 +56,14 @@
     // displayCol 50 : colonne cachée où Grist range le nom affiché de la version (#239)
     [14, 1, 'Version',       'Ref:Versions',     'Version',       '',                 false, '', 40, 50],
     [50, 1, 'gristHelper_Display', 'Any',    'gristHelper_Display', '$Version.Nom', true, '', 0],
+    // Statut de chaque tâche, rapporté de la table Taches ($Taches.statut) : attribut des objets liés (#184)
+    [15, 1, 'Taches_statut', 'Any',          'Taches_statut', '$Taches.statut', true,  '', 0],
+    // Cartes liées de la MÊME table : un clic ouvre leur fiche (#184)
+    [16, 1, 'Voir_aussi',  'RefList:EPICs',  'Voir aussi',  '',                 false, '', 1],
     [20, 2, 'Nom',         'Text',           'Nom',         '',                 false, '', 0],
     [21, 2, 'Etat',        'Text',           'État',        '',                 false, '', 0],
     [30, 3, 'Nom',         'Text',           'Nom',         '',                 false, '', 0],
+    [31, 3, 'statut',      'Choice',         'Statut',      '',                 false, choixStatut, 0],
     [40, 4, 'Nom',         'Text',           'Nom',         '',                 false, '', 0],
     [41, 4, 'Projet',      'Ref:Projets',    'Projet',      '',                 false, '', 20],
   ];
@@ -66,7 +76,8 @@
   // Tables visées par les références
   const donnees = {
     Projets: { id: [1, 2], Nom: ['Atelier', 'Vitrine'], Etat: ['Ouvert', 'Fermé'] },
-    Taches:  { id: [1, 2, 3], Nom: ['Rédiger le guide', 'Relire le guide', 'Copier les pages'] },
+    Taches:  { id: [1, 2, 3], Nom: ['Rédiger le guide', 'Relire le guide', 'Copier les pages'],
+               statut: ['Fait', 'En cours', 'À faire'] },
     // Comme fetchTable : une référence sous son NUMÉRO (Version A → Atelier, Version B → Vitrine)
     Versions:  { id: [1, 2], Nom: ['Version A', 'Version B'], Projet: [1, 2] },
   };
@@ -81,17 +92,17 @@
     { id: 1, Titre: 'Écrire la documentation', Description: '- [ ] Plan\n- [x] Sommaire', Priorite: 'Now',
       Avancement: 0.67, Projet: 'Atelier', Taches: ['Rédiger le guide', 'Relire le guide'],
       Objectif: 'Guide publié', Echeance: JANVIER_2026, Code: 'E1', Projet_Etat: 'Ouvert', Urgent: true,
-      Themes: ['Guide'], Version: 'Version A' },
+      Themes: ['Guide'], Version: 'Version A', Taches_statut: ['Fait', 'En cours'], Voir_aussi: [] },
     { id: 2, Titre: 'Préparer la démonstration', Description: NOTEPAD, Priorite: 'Later',
       Avancement: 1, Projet: 'Atelier', Taches: [], Objectif: 'Démonstration jouée', Echeance: null, Code: 'E2',
-      Projet_Etat: 'Ouvert', Urgent: false, Themes: null, Version: '' },
+      Projet_Etat: 'Ouvert', Urgent: false, Themes: null, Version: '', Taches_statut: [], Voir_aussi: ['Carte en erreur'] },
     { id: 3, Titre: 'Archiver le site', Description: 'Texte simple', Priorite: null,
       Avancement: 0.1, Projet: 'Vitrine', Taches: ['Copier les pages'], Objectif: '', Echeance: null, Code: 'E3',
-      Projet_Etat: 'Fermé', Urgent: true, Themes: null, Version: 'Version B' },
+      Projet_Etat: 'Fermé', Urgent: true, Themes: null, Version: 'Version B', Taches_statut: ['À faire'], Voir_aussi: [] },
     // Référence vers une ligne qui n'existe pas : cellule en erreur
     { id: 4, Titre: 'Carte en erreur', Description: '', Priorite: null, Avancement: 0,
       Projet: ['E', 'InvalidTypedValue', 'Ref:Projets', 99], Taches: [], Objectif: '', Echeance: null, Code: 'E4',
-      Projet_Etat: null, Urgent: false, Themes: null, Version: '' },
+      Projet_Etat: null, Urgent: false, Themes: null, Version: '', Taches_statut: [], Voir_aussi: [] },
   ];
 
   // Association des colonnes faite dans le panneau de droite de Grist
@@ -120,6 +131,12 @@
     rappels.records(envoi.map(r => ({ ...r })), association);
   }
 
+  /** Lignes visées par une référence ({ id, Nom }) ; EPICs : les cartes elles-mêmes, nommées par leur titre. */
+  function tableVisee(nom) {
+    if (nom === 'EPICs') return { id: records.map(r => r.id), Nom: records.map(r => r.Titre) };
+    return donnees[nom];
+  }
+
   /**
    * Valeurs écrites par le widget → valeurs que Grist lui renverra :
    * une liste « encodée » ['L', a, b] revient [a, b] ; une référence écrite
@@ -131,7 +148,7 @@
       const ref = c && /^Ref(?:List)?:(.+)$/.exec(c[3]);
       if (Array.isArray(v) && v[0] === 'L') v = v.slice(1);
       if (ref) {
-        const t = donnees[ref[1]];
+        const t = tableVisee(ref[1]);
         const nom = (n) => { const i = t.id.indexOf(n); return i === -1 ? n : t.Nom[i]; };
         v = Array.isArray(v) ? v.map(nom) : (v ? nom(v) : '');
       }
@@ -182,7 +199,7 @@
     const c = colonnes.find(x => x[1] === 1 && x[2] === col);
     const ref = c && /^Ref(?:List)?:(.+)$/.exec(c[3]);
     if (ref) {
-      const t = donnees[ref[1]];
+      const t = tableVisee(ref[1]);
       const numero = (nom) => { const i = t.Nom.indexOf(nom); return i === -1 ? 0 : t.id[i]; };
       v = Array.isArray(v) ? v.map(numero) : (v ? numero(v) : 0);
     }
