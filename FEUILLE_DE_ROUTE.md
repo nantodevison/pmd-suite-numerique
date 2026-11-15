@@ -8,16 +8,18 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-15 03:36_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-15 22:03_
 
 ### 🖐️ À faire
+- [ ] #241 Augmenter la différenciation visuelle des cartes (Haute, EPIC « Améliorer l'Ux/Ui de la galerie »)
 - [ ] #235 Créer une page d'accueil vierge (Moyenne, échéance 2026-11-20, EPIC « Créer la page d'accueil de Marion »)
-- [ ] #186 Préremplir une nouvelle carte avec les valeurs des filtres de la vue active (Kanban et Galerie) (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
+- [ ] #242 Proposer un affichage de base commun (Moyenne, EPIC « Mutualiser les fonctions communes du Kanban et de la Galerie »)
 - [ ] #200 Kanban : filtrer sur n'importe quelle colonne (texte, nombre, date…) (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #227 Rechercher dans les menus de choix d'une référence quand la liste est longue (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #228 Proposer les colonnes natives de la table visée comme attributs d'une référence (façon Notion) (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #234 Relire la structure des colonnes (libellés, couleurs des choix, noms des références) quand le document change, au même moment dans le Kanban et la Galerie (_commun/colonnes.js) (Basse, EPIC « Mutualiser les fonctions communes du Kanban et de la Galerie »)
 - [ ] #240 Galerie : consulter un objet lié (tâche…) dans la fiche (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
+- [ ] #243 Préremplir une nouvelle carte avec la valeur de « Sélectionner par » de Grist (Galerie et Kanban liés) (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
 
 <!-- fin kanban -->
 
@@ -56,6 +58,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [x] #184 : fiche de la Galerie presque plein cadre au centre, objets liés sous l'en-tête avec leurs attributs (« Afficher ▾ »), 2 lignes puis « + n autres ▾ », encart Contexte souple (PR #54), 2026-11-15
 - [x] #237 : taille des cartes de la Galerie (compacte, moyenne, grande avec résumé et nombre d'objets liés) (PR #55), 2026-11-15
 - [x] #238 : condition de liste déroulante de Grist respectée dans les menus des pastilles, évaluateur _commun/condition.js (PR #56), 2026-11-15
+- [x] #186 : nouvelle carte préremplie d'après la vue (filtres « est » à une valeur, colonnes hors formulaire comprises), menus « Hors de la vue », avis avant création, Kanban et Galerie ; pastilles dans la nouvelle fiche de la Galerie (PR #57), 2026-11-15 ; testée dans le builder
 
 ## Prochaines étapes
 (Les étapes du projet sont désormais suivies dans Grist : voir « Kanban (Grist) » ci-dessus.)
@@ -88,6 +91,9 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - 2026-11-14 — avertir d'une incohérence entre références plutôt que bloquer ou annuler le regroupement — la donnée est fausse, pas l'affichage ; puis condition de liste déroulante respectée (#238)
 - 2026-11-15 — taille des cartes = préférence personnelle du navigateur, hors des vues — confort d'écran ; passage dans les vues possible plus tard (#237)
 - 2026-11-15 — consulter un objet lié dans la fiche (#240), sans l'ouvrir dans la fiche du Kanban — jugé trop lourd
+- 2026-11-15 — colonne fixée par un filtre « est » à une valeur mais absente du formulaire : préremplie sans rien demander, annoncée par « ℹ️ D'après la vue : … » — sinon la carte disparaît forcément
+- 2026-11-15 — menus rangés « Hors de la vue » seulement à la création d'une carte, pas dans la fiche d'une carte existante — périmètre de #186
+- 2026-11-15 — « Sélectionner par » de Grist sorti de #186 dans #243 — liaison de Grist, que le widget ne connaît pas : recherche à faire
 - 2026-09-23 — GitHub CLI (gh) installé en version portable dans %LOCALAPPDATA%\Programs\gh — pour que Claude puisse créer les PR
 - 2026-09-24 — Rémi crédité comme co-auteur du Kanban (adresse noreply GitHub) — reconnaissance de son travail sans publier d'adresse personnelle
 - 2026-10-02 — feuille de route branchée sur Grist (projet Kanban n° 15), identifiant du document lu dans le .env (env:GRIST_KANBAN_DOC_ID) — ne pas le publier dans le dépôt public
