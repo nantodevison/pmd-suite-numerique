@@ -18,6 +18,7 @@ EPICs, objectifs et résultats clés, projets… Les tâches restent gérées pa
 | [`../_commun/fiche.js`](../_commun/fiche.js), [`fiche.css`](../_commun/fiche.css) | Fiche partagée avec le Kanban : disposition côté / centre, Markdown |
 | [`../_commun/recherche.js`](../_commun/recherche.js) | Règle de recherche commune avec le Kanban |
 | [`../_commun/colonnes.js`](../_commun/colonnes.js) | Structure du document (libellés, types, formules, couleurs des choix), commune aux widgets |
+| [`../_commun/condition.js`](../_commun/condition.js) | Évaluation des conditions de liste déroulante de Grist (#238) |
 | [`../_commun/filtres.js`](../_commun/filtres.js), [`filtres.css`](../_commun/filtres.css) | Règle et panneau des filtres, communs avec le Kanban |
 | [`../_commun/tri.js`](../_commun/tri.js), [`tri.css`](../_commun/tri.css) | Comparaison des valeurs selon le type de leur colonne, et panneau du tri ⇅, communs avec le Kanban |
 | [`../_commun/vues.js`](../_commun/vues.js), [`vues.css`](../_commun/vues.css) | Vues enregistrées : barre des vues et fenêtre « Gérer la vue », communes avec le Kanban |
@@ -103,6 +104,17 @@ type de la colonne :
 - La table visée par une référence est **relue à chaque ouverture** du menu :
   un projet ajouté dans Grist est proposé tout de suite. Elle n'est jamais lue
   au chargement du widget.
+- **Condition de liste déroulante** (#238) : si la colonne en a une dans
+  Grist (par exemple `choice.Projet == $Projet` sur les objectifs), le menu
+  ne propose que les options qui la respectent, pour une Référence comme
+  pour un Choix. Dans la fiche, les choix pas encore sauvegardés comptent :
+  changer le projet, puis ouvrir les objectifs, propose ceux du nouveau
+  projet. La valeur actuelle reste toujours proposée, même si elle ne
+  respecte plus la condition. Le widget comprend « et », « ou », « non »,
+  les comparaisons et « in » ; pour une condition plus complexe (une chaîne
+  comme `$Projet.Statut`, une fonction…), il propose tout, comme avant.
+  La condition est lue avec la structure du document : une condition
+  ajoutée dans Grist compte après un rechargement du widget.
 - **Cohérence entre références** : si la carte a deux références dont l'une
   dépend de l'autre (un objectif appartient à un projet), changer l'une
   vérifie l'autre. Changer le projet sans changer l'objectif, ou choisir
