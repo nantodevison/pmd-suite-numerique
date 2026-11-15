@@ -212,6 +212,8 @@
     get records() { return records; },
     // Tables visées par les références : un scénario peut y ajouter des lignes
     donnees,
+    // Structure du document (_grist_Tables_column…) : un scénario peut y poser une condition de liste déroulante (#238)
+    meta,
     // Tables lues par le widget (fetchTable), dans l'ordre
     lectures: [],
     // Options passées à onRecords (ex. { includeColumns: 'normal' })

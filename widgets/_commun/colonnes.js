@@ -44,7 +44,11 @@
    * « widgetOptions » (texte JSON) :
    *   choix       : liste ordonnée des choix (colonnes Choix, Choix multiple) ;
    *   couleurs    : { choix: { fond, texte } }, '' quand Grist n'en a pas ;
-   *   pourcentage : true pour un nombre affiché en % dans Grist.
+   *   pourcentage : true pour un nombre affiché en % dans Grist ;
+   *   condition   : « condition de liste déroulante » d'une colonne Choix ou
+   *                 Référence (ex. choice.Projet == $Projet), sous la forme
+   *                 déjà analysée par Grist (un arbre, voir condition.js), ou
+   *                 null s'il n'y en a pas (#238).
    */
   function lireOptions(widgetOptions) {
     try {
@@ -57,9 +61,21 @@
         choix:       Array.isArray(options.choices) ? options.choices : [],
         couleurs,
         pourcentage: options.numMode === 'percent',
+        condition:   lireCondition(options.dropdownCondition),
       };
     } catch (_) {
-      return { choix: [], couleurs: {}, pourcentage: false };
+      return { choix: [], couleurs: {}, pourcentage: false, condition: null };
+    }
+  }
+
+  /** Arbre d'une condition de liste déroulante ({ text, parsed }), ou null. */
+  function lireCondition(condition) {
+    try {
+      const p = condition && condition.parsed;
+      const arbre = typeof p === 'string' ? JSON.parse(p) : p;
+      return Array.isArray(arbre) ? arbre : null;
+    } catch (_) {
+      return null;   // condition illisible : comme s'il n'y en avait pas
     }
   }
 

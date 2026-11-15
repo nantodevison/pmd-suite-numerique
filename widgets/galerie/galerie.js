@@ -511,14 +511,21 @@ function pastilleVide(colId) {
  *                référence, ['L', …] pour une liste, secondes pour une date) ;
  *     affichee → ce qu'il renverra ensuite au widget (nom de la référence…),
  *                pour afficher la pastille avant même la sauvegarde.
+ *   ligne    : { idLigne, enAttente } — la carte, et dans la fiche ses choix
+ *              pas encore sauvegardés (format d'écriture de Grist) : la
+ *              condition de liste déroulante en dépend (#238).
  */
-async function ouvrirMenuPastille(ancre, colId, valeur, surChoix) {
+async function ouvrirMenuPastille(ancre, colId, valeur, surChoix, ligne = {}) {
   const colonne = info(colId);
   const erreur = estErreur(valeur);
+  // Condition de liste déroulante (#238) : options à proposer, ou toutes
+  const garder = await filtreCondition(colonne, ligne);
+  if (!ancre.isConnected) return;   // grille redessinée pendant la lecture
 
   if (colonne.typeBase === 'Choice') {
-    // Une valeur absente de la liste des choix (choix retiré dans Grist) reste proposée
-    const choix = [...colonne.choix];
+    // Une valeur absente de la liste des choix (choix retiré dans Grist,
+    // ou exclu par la condition) reste proposée : c'est la valeur actuelle.
+    const choix = colonne.choix.filter(v => garder(v));
     if (!erreur && valeur && !choix.includes(valeur)) choix.push(valeur);
     Fiche.menuChoix(ancre, {
       options: choix.map(v => ({ valeur: v, libelle: v })),
@@ -529,7 +536,8 @@ async function ouvrirMenuPastille(ancre, colId, valeur, surChoix) {
   } else if (colonne.typeBase === 'ChoiceList') {
     // Grist peut envoyer la liste « encodée » : ['L', a, b…]
     const liste = Array.isArray(valeur) && !erreur ? (valeur[0] === 'L' ? valeur.slice(1) : valeur) : [];
-    const choix = [...colonne.choix, ...liste.filter(v => !colonne.choix.includes(v))];
+    const permis = colonne.choix.filter(v => garder(v));
+    const choix = [...permis, ...liste.filter(v => !permis.includes(v))];
     // Menu à cases : il reste ouvert, chaque case cochée ou décochée compte.
     Fiche.menuChoix(ancre, {
       options: choix.map(v => ({ valeur: v, libelle: v })),
@@ -555,7 +563,32 @@ async function ouvrirMenuPastille(ancre, colId, valeur, surChoix) {
     });
 
   } else if (colonne.typeBase === 'Ref') {
-    await ouvrirMenuReference(ancre, colId, valeur, surChoix);
+    await ouvrirMenuReference(ancre, colId, valeur, surChoix, garder);
+  }
+}
+
+/**
+ * Condition de liste déroulante de la colonne (#238) : renvoie une fonction
+ * (option) → faut-il la proposer ? Pour une référence, l'option est une
+ * ligne de la table visée ; pour un choix, son texte.
+ * La carte ($Projet) est relue telle que Grist la range (références sous
+ * leur numéro, comme l'option), complétée des choix en attente de la fiche.
+ * Sans condition, ou si la carte ne peut pas être relue : tout est proposé.
+ */
+async function filtreCondition(colonne, { idLigne, enAttente } = {}) {
+  const tout = () => true;
+  if (!colonne.condition || !idLigne) return tout;
+  try {
+    const table = await grist.docApi.fetchTable(ETAT.table);
+    const i = table.id.indexOf(idLigne);
+    if (i === -1) return tout;
+    const rec = {};
+    Object.keys(table).forEach(c => { rec[c] = table[c][i]; });
+    Object.assign(rec, enAttente || {});
+    return (choice) => Condition.garder(colonne.condition, { choice, rec });
+  } catch (err) {
+    console.warn('Galerie – condition de liste déroulante ignorée :', err);
+    return tout;
   }
 }
 
@@ -564,11 +597,15 @@ async function ouvrirMenuPastille(ancre, colId, valeur, surChoix) {
  * ligne ajoutée entre-temps dans Grist (un nouveau projet…) est proposée
  * tout de suite. Elle n'est jamais lue au chargement du widget (#188).
  */
-async function ouvrirMenuReference(ancre, colId, valeur, surChoix) {
-  let ref = null;
+async function ouvrirMenuReference(ancre, colId, valeur, surChoix, garder = () => true) {
+  let ref = null, lignes = null;
   try {
     // Structure relue elle aussi : elle dit quelle colonne la référence affiche.
-    ref = await Colonnes.lireReference(await Colonnes.lireDocument(), ETAT.table, colId);
+    const doc = await Colonnes.lireDocument();
+    ref = await Colonnes.lireReference(doc, ETAT.table, colId);
+    // Lignes de la table visée (déjà lues par lireReference) : la condition
+    // de liste déroulante porte sur elles (choice.Projet…, #238)
+    if (ref) lignes = await Colonnes.lireLignes(doc, ref.tableVisee);
   } catch (err) {
     console.error('Galerie – lecture de la table visée impossible :', err);
   }
@@ -577,11 +614,15 @@ async function ouvrirMenuReference(ancre, colId, valeur, surChoix) {
   // n'est plus à l'écran, et le menu n'aurait plus où s'accrocher.
   if (!ancre.isConnected) return;
 
-  const options = ref.options
-    .map(o => ({ valeur: o.id, libelle: o.nom || `n° ${o.id}` }))
-    .sort((a, b) => a.libelle.localeCompare(b.libelle, 'fr'));
   // Grist envoie la référence sous son nom : on retrouve son numéro.
   const actuel = estErreur(valeur) ? undefined : (valeur ? ref.id(valeur) : 0);
+  // Une ligne de la table visée, colonne par colonne (l'option « choice »)
+  const ligneVisee = (i) => Object.fromEntries(Object.keys(lignes).map(c => [c, lignes[c][i]]));
+  const options = ref.options
+    // Condition de liste déroulante ; la valeur actuelle reste toujours proposée
+    .filter((o, i) => o.id === actuel || garder(ligneVisee(i)))
+    .map(o => ({ valeur: o.id, libelle: o.nom || `n° ${o.id}` }))
+    .sort((a, b) => a.libelle.localeCompare(b.libelle, 'fr'));
   // Le nom renvoyé ensuite par Grist ('' pour une référence vide, numéro 0)
   const choisir = (id) => surChoix(id, id ? ref.nom(id) : '');
 
@@ -786,7 +827,8 @@ function construireCarte(ligne) {
     const elements = creerPastilles(colId, ligne[colId]);
     if (pastilleModifiable(colId)) {
       elements.forEach(p => rendreModifiable(p, colId, (ancre) =>
-        ouvrirMenuPastille(ancre, colId, ligne[colId], (ecrite) => ecrireCellule(ligne, colId, ecrite))));
+        ouvrirMenuPastille(ancre, colId, ligne[colId], (ecrite) => ecrireCellule(ligne, colId, ecrite),
+          { idLigne: ligne.id })));
     }
     pastilles.append(...elements);
   });
@@ -1357,7 +1399,7 @@ function dessinerPastillesFiche(encart, ligne) {
           // Choix en attente compris (les références y sont des numéros)
           alerteCoherence(ligne, colId, ETAT.fiche.modifs)
             .then(alerte => { if (alerte) afficherToast(alerte, 8000); });
-        })));
+        }, { idLigne: ligne.id, enAttente: ETAT.fiche.modifs })));   // condition : choix en attente compris (#238)
     }
     encart.append(...elements);
   });
