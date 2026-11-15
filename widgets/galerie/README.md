@@ -242,12 +242,22 @@ Galerie (document et table), elle ne change ni les vues ni le document.
   le document Grist (chaque Galerie a le sien ; rien dans le dépôt).
   « Reprendre le texte de … » copie le texte de la carte ouverte ou
   sélectionnée, pour en faire un squelette.
-- Les pastilles, objets liés et contexte ne se remplissent pas à la création :
-  les pastilles se choisissent une fois la carte créée (la fiche reste
-  ouverte), le reste dans Grist. La carte créée peut donc être aussitôt masquée, par
-  les filtres de la vue active ou par un filtre de Grist (« Sélectionner
-  par »…) ; un message le signale. Préremplir la carte d'après les filtres :
-  #186.
+- **Pastilles** : elles se choisissent dès la nouvelle fiche (« + Priorité »…)
+  et sont écrites avec la carte. Objets liés et contexte se remplissent une
+  fois la carte créée (la fiche reste ouverte) ou dans Grist.
+- **D'après la vue** (#186, règle commune avec le Kanban) :
+  - un filtre « **est** » qui ne coche qu'**une** valeur préremplit la
+    colonne, qu'elle soit en pastille ou non ; une colonne préremplie sans
+    pastille est annoncée sous l'en-tête (« ℹ️ D'après la vue : Thèmes = Site ») ;
+  - dans les menus des pastilles, les valeurs de la vue viennent d'abord,
+    puis les autres sous « **Hors de la vue** » (menu de recherche compris) ;
+  - un avis prévient, avant « ✓ Sauvegarder », si avec les valeurs choisies
+    la carte sera masquée par les filtres de la vue (« ⚠️ … masquée par la
+    vue (Projet) ») : filtre à plusieurs valeurs sur une colonne qui n'est pas
+    une pastille, valeur choisie hors de la vue…
+  - non couvert : les colonnes calculées (inconnues avant la création) et
+    « Sélectionner par » de Grist (#243) ; un message signale après coup une
+    carte créée mais masquée.
 
 ## Limites connues (v1)
 

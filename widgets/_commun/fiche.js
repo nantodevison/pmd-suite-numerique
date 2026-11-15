@@ -450,7 +450,8 @@
 
   /**
    * Menu de choix.
-   *   options   : [{ valeur, libelle }]
+   *   options   : [{ valeur, libelle }] ; un élément { separateur: 'texte' }
+   *               trace une ligne de séparation titrée, non cliquable (#186)
    *   selection : valeurs actuellement choisies (liste)
    *   multiple  : true → cases à cocher, le menu reste ouvert ;
    *               false → un clic choisit et ferme le menu
@@ -492,6 +493,7 @@
       menu.appendChild(Object.assign(document.createElement('div'), { className: 'fiche-menu-vide', textContent: 'Aucun choix possible' }));
     }
     lignes.forEach(o => {
+      if (o.separateur) { menu.appendChild(separateurMenu(o.separateur)); return; }
       const item = document.createElement(multiple ? 'label' : 'button');
       item.className = 'fiche-menu-item' + (o.estVide ? ' fiche-menu-item-vide' : '');
       // Libellé (coupé par « … » s'il est trop long), puis attributs en gris
@@ -506,7 +508,7 @@
         caseACocher.addEventListener('change', () => {
           if (caseACocher.checked) choisis.add(o.valeur); else choisis.delete(o.valeur);
           // On garde l'ordre des options, plus lisible que l'ordre des clics.
-          surChoix(options.map(x => x.valeur).filter(v => choisis.has(v)));
+          surChoix(options.filter(x => !x.separateur).map(x => x.valeur).filter(v => choisis.has(v)));
         });
         item.append(caseACocher, libelle);
       } else {
@@ -525,6 +527,20 @@
     });
     if (attributs) redessinerDetails();
     return menu;
+  }
+
+  /** Ligne de séparation titrée d'un menu (#186), ex. « Hors de la vue ». */
+  function separateurMenu(texte) {
+    return Object.assign(document.createElement('div'), { className: 'fiche-menu-separateur', textContent: texte });
+  }
+
+  /**
+   * Garde les séparateurs qui ont une option avant ET après eux : une
+   * recherche peut vider l'un des deux groupes, le séparateur n'a plus lieu d'être.
+   */
+  function separateursUtiles(lignes) {
+    return lignes.filter((o, i) => !o.separateur
+      || (lignes.slice(0, i).some(x => !x.separateur) && lignes.slice(i + 1).some(x => !x.separateur)));
   }
 
   /**
@@ -622,7 +638,8 @@
 
   /**
    * Menu de recherche : un champ de saisie filtre une liste d'options.
-   *   options     : [{ valeur, libelle, detail }] (detail : texte gris, facultatif)
+   *   options     : [{ valeur, libelle, detail }] (detail : texte gris, facultatif) ;
+   *                 { separateur: 'texte' } comme dans menuChoix (#186)
    *   placeholder : texte affiché dans le champ vide
    *   surChoix    : appelée avec la valeur choisie (le menu se ferme)
    *   creer       : facultatif, appelée avec le texte saisi pour créer un
@@ -648,13 +665,15 @@
 
     function afficher() {
       // Règle commune à toutes les recherches (../_commun/recherche.js)
-      const trouvees = options.filter(o =>
-        Recherche.correspond(saisie.value, Recherche.simplifier(o.libelle)));
+      // Les séparateurs (#186) restent, s'ils séparent encore des résultats
+      const trouvees = separateursUtiles(options.filter(o => o.separateur
+        || Recherche.correspond(saisie.value, Recherche.simplifier(o.libelle))));
       liste.replaceChildren();
       if (!trouvees.length) {
         liste.appendChild(Object.assign(document.createElement('div'), { className: 'fiche-menu-vide', textContent: 'Aucun résultat' }));
       }
       trouvees.slice(0, 50).forEach(o => {   // au-delà, mieux vaut préciser la recherche
+        if (o.separateur) { liste.appendChild(separateurMenu(o.separateur)); return; }
         const item = document.createElement('button');
         item.type = 'button';
         item.className = 'fiche-menu-item';

@@ -20,6 +20,10 @@
    filtres.css. Un choix coloré dans Grist s'y affiche en pastille, et les
    valeurs d'une colonne Choix suivent l'ordre des choix (#236).
 
+   Nouvelle carte (#186) : préremplissage d'après les filtres « est »,
+   menus rangés « dans la vue » / « hors de la vue », avis si la carte
+   sera masquée (section 2 bis).
+
    Ce module ne connaît AUCUN nom de table ni de colonne, et ne lit rien
    dans Grist. Les valeurs propres à un widget (« 👤 Moi » du Kanban) se
    branchent par le paramètre `remplacer` de ligneRespecte, et par les
@@ -216,6 +220,95 @@
         } catch (err) { /* le choix vaut pour la séance seulement */ }
       },
     };
+  }
+
+  /* ── 2 bis. Nouvelle carte d'après la vue (#186) ──────────────
+     Une carte créée dans une vue filtrée doit, autant que possible, rester
+     visible. Trois aides, communes au Kanban et à la Galerie :
+       - préremplir les colonnes qu'un filtre « est » fixe à une seule valeur ;
+       - ranger les menus : valeurs de la vue d'abord, puis « Hors de la vue » ;
+       - prévenir, avant la création, si la carte sera masquée.
+     Les valeurs sont celles qu'affiche Grist (nom d'une référence), comme
+     dans les filtres ; le widget les convertit pour l'écriture. */
+
+  /**
+   * Valeurs à préremplir dans une nouvelle carte : pour chaque filtre
+   * « est » qui ne coche qu'une valeur (autre que « (vide) »), cette valeur.
+   * Un filtre à plusieurs valeurs ne préremplit rien : on ne sait pas laquelle choisir.
+   * @param {(valeurs: string[]) => string[]} [remplacer] - valeurs spéciales
+   *   du widget (« 👤 Moi » → nom de la personne déclarée)
+   * @returns {Object<string, string>} { colId: valeur }
+   */
+  function valeursAPreremplir(filtres, remplacer = (v) => v) {
+    const resultat = {};
+    (filtres || []).forEach(f => {
+      if (f.op !== 'est' || f.col in resultat) return;
+      const valeurs = remplacer(f.valeurs);
+      if (valeurs.length === 1 && valeurs[0] !== VIDE) resultat[f.col] = valeurs[0];
+    });
+    return resultat;
+  }
+
+  /**
+   * Une carte qui porte `valeur` dans la colonne `colId` passerait-elle les
+   * filtres de cette colonne ? (Les filtres des autres colonnes ne comptent pas.)
+   */
+  function valeurDansLaVue(filtres, colId, valeur, remplacer = (v) => v) {
+    return (filtres || []).every(f => f.col !== colId || ligneRespecte({ [colId]: valeur }, f, remplacer));
+  }
+
+  /**
+   * Filtres qu'une carte en préparation ne respecte pas. Seuls sont jugés
+   * les filtres d'une colonne dont la carte donne la valeur (clé présente
+   * dans `carte`, '' si elle restera vide) : une colonne calculée par une
+   * formule, inconnue avant la création, est laissée de côté.
+   */
+  function filtresNonRespectes(carte, filtres, remplacer = (v) => v) {
+    return (filtres || []).filter(f =>
+      f.valeurs.length > 0 && (f.col in carte) && !ligneRespecte(carte, f, remplacer));
+  }
+
+  /** Libellé du séparateur des menus, entre les valeurs de la vue et les autres. */
+  const HORS_VUE = 'Hors de la vue';
+
+  /**
+   * Range les options d'un menu ([{ valeur, libelle }]) : d'abord celles qui
+   * gardent la carte dans la vue, puis un séparateur { separateur: 'Hors de
+   * la vue' }, puis les autres. Chaque groupe garde son ordre. Si toutes les
+   * options sont du même côté, la liste est rendue telle quelle (sans séparateur).
+   * @param {(option) => boolean} dansLaVue
+   */
+  function rangerSelonVue(options, dansLaVue) {
+    const dans = options.filter(o => dansLaVue(o));
+    const hors = options.filter(o => !dansLaVue(o));
+    if (!dans.length || !hors.length) return options;
+    return [...dans, { separateur: HORS_VUE }, ...hors];
+  }
+
+  /**
+   * Dessine dans `zone` l'avis d'une nouvelle carte (styles : filtres.css) :
+   *   - « ℹ️ D'après la vue : Type = Atelier » pour les colonnes préremplies
+   *     qui ne figurent pas dans le formulaire (sinon on ne le saurait pas) ;
+   *   - « ⚠️ Avec ces valeurs, la carte sera masquée par la vue (EPIC) ».
+   * La zone est masquée s'il n'y a rien à dire.
+   * @param {{ preremplies?: Array<{libelle, valeur}>, masqueePar?: string[] }} avis
+   */
+  function dessinerAvisVue(zone, { preremplies = [], masqueePar = [] } = {}) {
+    zone.replaceChildren();
+    zone.classList.add('avis-vue');
+    if (preremplies.length) {
+      zone.append(el('div', {
+        className: 'avis-vue-info',
+        textContent: 'ℹ️ D\'après la vue : ' + preremplies.map(p => `${p.libelle} = ${p.valeur}`).join(' · '),
+      }));
+    }
+    if (masqueePar.length) {
+      zone.append(el('div', {
+        className: 'avis-vue-alerte',
+        textContent: `⚠️ Avec ces valeurs, la carte sera masquée par la vue (${masqueePar.join(', ')})`,
+      }));
+    }
+    zone.hidden = !preremplies.length && !masqueePar.length;
   }
 
   /* ── 3. Le panneau des filtres (interface) ─────────────────── */
@@ -534,6 +627,7 @@
     VIDE, LIBELLE_VIDE,
     valeursCellule, ligneRespecte, valeursProposees, copier, signature,
     texteAttribut, morceauxParValeur, texteMorceaux, memoireAttributs,
+    valeursAPreremplir, valeurDansLaVue, filtresNonRespectes, rangerSelonVue, dessinerAvisVue, HORS_VUE,
     creerPanneau,
   };
 })();

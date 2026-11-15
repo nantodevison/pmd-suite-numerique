@@ -20,6 +20,7 @@
      - chaque table lue (fetchTable) dans FAUX_GRIST.lectures.
    Ce qu'un scénario peut changer :
      - FAUX_GRIST.donnees : contenu des tables visées (ajouter un EPIC…) ;
+     - FAUX_GRIST.meta : structure du document (ajouter une colonne…) ;
      - FAUX_GRIST.structureIllisible = true : la lecture de la structure échoue.
 
    ⚠️ Dépôt public : uniquement des données INVENTÉES (personnes, EPICs…).
@@ -99,7 +100,9 @@
 
   const rappels = {};
   let prochainNumero = 100;
-  window.FAUX_GRIST = { records, donnees, actions: [], options: {}, lectures: [], structureIllisible: false };
+  // meta : structure du document ; un scénario peut y ajouter une colonne
+  // (ex. une colonne absente du formulaire « Nouvelle carte », #186)
+  window.FAUX_GRIST = { records, donnees, meta, actions: [], options: {}, lectures: [], structureIllisible: false };
   window.grist = {
     ready() {},
     onRecords(f, options = {}) {

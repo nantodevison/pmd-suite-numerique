@@ -22,6 +22,7 @@
      const ref = await Colonnes.lireReference(doc, 'Taches', 'qui_');
        → { estListe: true, tableVisee: 'Contacts', options: [{ id, nom }…], nom(id), id(nom) }
      const lignes = await Colonnes.lireLignes(doc, 'EPICs');   // comme fetchTable, lu une fois
+     await Colonnes.valeurAEcrire(doc, 'Taches', 'EPIC', 'Refonte')  → 12 (numéro à écrire)
 
    FRAÎCHEUR : un `doc` est une photo du document à l'instant de sa lecture
    (structure, et tables lues ensuite par lireLignes / lireReference). Pour
@@ -208,6 +209,27 @@
     };
   }
 
+  /**
+   * Valeur à écrire dans Grist pour une valeur AFFICHÉE (celle d'un filtre :
+   * nom d'une référence, texte d'un choix), dans une colonne Choix, Choix
+   * multiple, Référence ou Liste de références (#186).
+   *   Choix → 'Atelier' ; Choix multiple → ['L', 'Atelier'] ;
+   *   Référence → numéro de la ligne qui porte ce nom ; Liste → ['L', numéro].
+   * @returns {Promise<*>} undefined si c'est impossible : colonne calculée,
+   *   autre type, ou nom introuvable dans la table visée.
+   */
+  async function valeurAEcrire(doc, tableId, colId, affichee) {
+    const c = doc.colonne(tableId, colId);
+    if (!c || c.formule) return undefined;
+    if (c.typeBase === 'Choice') return affichee;
+    if (c.typeBase === 'ChoiceList') return ['L', affichee];
+    if (c.typeBase !== 'Ref' && c.typeBase !== 'RefList') return undefined;
+    const ref = await lireReference(doc, tableId, colId);
+    const id = ref && ref.id(affichee);
+    if (!id) return undefined;
+    return c.estListe ? ['L', id] : id;
+  }
+
   // Seul objet rendu visible au reste de la page.
-  window.Colonnes = { lireDocument, lireLignes, lireReference };
+  window.Colonnes = { lireDocument, lireLignes, lireReference, valeurAEcrire };
 })();

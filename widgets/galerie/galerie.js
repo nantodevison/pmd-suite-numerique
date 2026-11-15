@@ -70,7 +70,9 @@ const ETAT = {
   // carte, pas encore créée dans Grist) et colonnes modifiées : modifs dans
   // le format qu'attend Grist (écrit par « ✓ Sauvegarder »), apercu dans
   // celui qu'il renvoie, pour afficher les pastilles choisies (#206).
-  fiche:      { id: null, nouvelle: false, modifs: {}, apercu: {} },
+  // vue : pour une nouvelle carte, ce que la vue active lui impose (#186),
+  // voir preparerVueNouvelleCarte ; null pour une carte existante.
+  fiche:      { id: null, nouvelle: false, modifs: {}, apercu: {}, vue: null },
   modele:     '',     // texte de départ des nouvelles cartes (réglage ⚙)
 };
 
@@ -511,9 +513,11 @@ function pastilleVide(colId) {
  *                référence, ['L', …] pour une liste, secondes pour une date) ;
  *     affichee → ce qu'il renverra ensuite au widget (nom de la référence…),
  *                pour afficher la pastille avant même la sauvegarde.
- *   ligne    : { idLigne, enAttente } — la carte, et dans la fiche ses choix
- *              pas encore sauvegardés (format d'écriture de Grist) : la
- *              condition de liste déroulante en dépend (#238).
+ *   ligne    : { idLigne, enAttente, selonVue } — la carte, et dans la fiche
+ *              ses choix pas encore sauvegardés (format d'écriture de
+ *              Grist) : la condition de liste déroulante en dépend (#238).
+ *              selonVue (nouvelle carte, #186) : les valeurs de la vue
+ *              d'abord, puis un séparateur « Hors de la vue ».
  */
 async function ouvrirMenuPastille(ancre, colId, valeur, surChoix, ligne = {}) {
   const colonne = info(colId);
@@ -521,6 +525,10 @@ async function ouvrirMenuPastille(ancre, colId, valeur, surChoix, ligne = {}) {
   // Condition de liste déroulante (#238) : options à proposer, ou toutes
   const garder = await filtreCondition(colonne, ligne);
   if (!ancre.isConnected) return;   // grille redessinée pendant la lecture
+  // Options rangées selon la vue (#186), ou laissées telles quelles
+  const ranger = (options) => ligne.selonVue
+    ? Filtres.rangerSelonVue(options, o => dansLaVue(colId, o.libelle))
+    : options;
 
   if (colonne.typeBase === 'Choice') {
     // Une valeur absente de la liste des choix (choix retiré dans Grist,
@@ -528,7 +536,7 @@ async function ouvrirMenuPastille(ancre, colId, valeur, surChoix, ligne = {}) {
     const choix = colonne.choix.filter(v => garder(v));
     if (!erreur && valeur && !choix.includes(valeur)) choix.push(valeur);
     Fiche.menuChoix(ancre, {
-      options: choix.map(v => ({ valeur: v, libelle: v })),
+      options: ranger(choix.map(v => ({ valeur: v, libelle: v }))),
       selection: [valeur || ''], vide: '— aucun —', valeurVide: '',
       surChoix: (v) => surChoix(v, v),
     });
@@ -540,7 +548,7 @@ async function ouvrirMenuPastille(ancre, colId, valeur, surChoix, ligne = {}) {
     const choix = [...permis, ...liste.filter(v => !permis.includes(v))];
     // Menu à cases : il reste ouvert, chaque case cochée ou décochée compte.
     Fiche.menuChoix(ancre, {
-      options: choix.map(v => ({ valeur: v, libelle: v })),
+      options: ranger(choix.map(v => ({ valeur: v, libelle: v }))),
       selection: liste, multiple: true,
       surChoix: (choisis) => surChoix(choisis.length ? ['L', ...choisis] : null, choisis),
     });
@@ -563,7 +571,7 @@ async function ouvrirMenuPastille(ancre, colId, valeur, surChoix, ligne = {}) {
     });
 
   } else if (colonne.typeBase === 'Ref') {
-    await ouvrirMenuReference(ancre, colId, valeur, surChoix, garder);
+    await ouvrirMenuReference(ancre, colId, valeur, surChoix, garder, ranger);
   }
 }
 
@@ -596,8 +604,9 @@ async function filtreCondition(colonne, { idLigne, enAttente } = {}) {
  * Menu d'une référence. La table visée est relue à CHAQUE ouverture : une
  * ligne ajoutée entre-temps dans Grist (un nouveau projet…) est proposée
  * tout de suite. Elle n'est jamais lue au chargement du widget (#188).
+ * ranger : range les options (selon la vue pour une nouvelle carte, #186).
  */
-async function ouvrirMenuReference(ancre, colId, valeur, surChoix, garder = () => true) {
+async function ouvrirMenuReference(ancre, colId, valeur, surChoix, garder = () => true, ranger = (o) => o) {
   let ref = null, lignes = null;
   try {
     // Structure relue elle aussi : elle dit quelle colonne la référence affiche.
@@ -618,11 +627,11 @@ async function ouvrirMenuReference(ancre, colId, valeur, surChoix, garder = () =
   const actuel = estErreur(valeur) ? undefined : (valeur ? ref.id(valeur) : 0);
   // Une ligne de la table visée, colonne par colonne (l'option « choice »)
   const ligneVisee = (i) => Object.fromEntries(Object.keys(lignes).map(c => [c, lignes[c][i]]));
-  const options = ref.options
+  const options = ranger(ref.options
     // Condition de liste déroulante ; la valeur actuelle reste toujours proposée
     .filter((o, i) => o.id === actuel || garder(ligneVisee(i)))
     .map(o => ({ valeur: o.id, libelle: o.nom || `n° ${o.id}` }))
-    .sort((a, b) => a.libelle.localeCompare(b.libelle, 'fr'));
+    .sort((a, b) => a.libelle.localeCompare(b.libelle, 'fr')));
   // Le nom renvoyé ensuite par Grist ('' pour une référence vide, numéro 0)
   const choisir = (id) => surChoix(id, id ? ref.nom(id) : '');
 
@@ -1269,26 +1278,108 @@ function ouvrirFiche(id) {
 }
 
 /**
- * Ouvre une fiche vide pour une nouvelle carte, avec le modèle de texte.
+ * Ouvre une fiche vide pour une nouvelle carte, avec le modèle de texte et
+ * les valeurs imposées par la vue (#186).
  * Rien n'est créé dans Grist avant « Sauvegarder » : fermer la fiche ne
  * laisse donc aucune ligne vide.
  */
-function ouvrirNouvelleFiche() {
+async function ouvrirNouvelleFiche() {
   if (ficheModifiee()) {
     if (!confirm('Des modifications non sauvegardées seront perdues. Continuer ?')) return;
   }
-  ETAT.fiche = { id: null, nouvelle: true, modifs: {} };
+  const vue = await preparerVueNouvelleCarte();
+  ETAT.fiche = { id: null, nouvelle: true, modifs: {}, vue };
   remplirFiche(null);
   Fiche.ouvrir(panneau());
   const titre = document.querySelector('#fiche-corps .fiche-titre');
   if (titre && !titre.readOnly) titre.focus();
 }
 
+/* ── Nouvelle carte d'après la vue (#186) ───────────────────────
+   Règles communes avec le Kanban dans ../_commun/filtres.js (section
+   2 bis) : la nouvelle carte reçoit les valeurs que les filtres « est » de
+   la vue imposent (une seule valeur cochée), y compris dans des colonnes
+   qui ne sont pas des pastilles ; les menus des pastilles montrent d'abord
+   les valeurs de la vue ; un avis prévient si la carte sera masquée. */
+
+/**
+ * Ce que la vue active impose à une nouvelle carte :
+ *   ecrites   : { colId: valeur au format d'écriture de Grist } ;
+ *   affichees : { colId: valeur au format d'onRecords } (nom d'une référence,
+ *               liste pour un choix multiple), pour les pastilles et l'avis ;
+ *   vides     : colonnes modifiables qui resteront vides (pour l'avis).
+ * Titre, texte principal et colonnes calculées ne sont pas concernés.
+ */
+async function preparerVueNouvelleCarte() {
+  const vue = { ecrites: {}, affichees: {}, vides: [] };
+  if (!ETAT.doc || !ETAT.colonnes) return vue;
+  const valeurs = Filtres.valeursAPreremplir(ETAT.filtres);
+  // Structure relue s'il faut retrouver des numéros de références : une
+  // ligne ajoutée entre-temps dans la table visée doit être trouvée.
+  let doc = ETAT.doc;
+  try {
+    if (Object.keys(valeurs).length) doc = await Colonnes.lireDocument();
+  } catch (err) {
+    console.warn('Galerie – structure non relue, celle du chargement sert :', err);
+  }
+  const exclues = [ETAT.colonnes.Titre, ETAT.colonnes.Description];
+  for (const c of doc.colonnes(ETAT.table)) {
+    if (c.formule || exclues.includes(c.colId)) continue;
+    let ecrite;
+    if (c.colId in valeurs) {
+      try {
+        ecrite = await Colonnes.valeurAEcrire(doc, ETAT.table, c.colId, valeurs[c.colId]);
+      } catch (err) {
+        console.warn(`Galerie – préremplissage de « ${c.colId} » impossible :`, err);
+      }
+    }
+    if (ecrite === undefined) { vue.vides.push(c.colId); continue; }
+    vue.ecrites[c.colId] = ecrite;
+    const estListe = c.typeBase === 'ChoiceList' || c.typeBase === 'RefList';
+    vue.affichees[c.colId] = estListe ? [valeurs[c.colId]] : valeurs[c.colId];
+  }
+  return vue;
+}
+
+/** Libellé d'une colonne, tel que l'affichent les filtres (« Projet › Statut »…). */
+function libelleFiltre(colId) {
+  return (ETAT.colonnesTable.find(c => c.colId === colId) || {}).label || libelle(colId);
+}
+
+/** La valeur affichée `valeur` de la colonne `colId` garde-t-elle la carte dans la vue ? */
+function dansLaVue(colId, valeur) {
+  return Filtres.valeurDansLaVue(ETAT.filtres, colId, valeur);
+}
+
+/**
+ * Avis de la nouvelle fiche (#186) : colonnes préremplies qu'on ne voit pas
+ * (pas en pastille), et alerte si, avec les valeurs choisies, la carte sera
+ * masquée par la vue. `ligne` : la ligne « vierge » de la fiche.
+ */
+function majAvisVue(ligne) {
+  const zone = document.getElementById('fiche-avis-vue');
+  const vue = ETAT.fiche.vue;
+  if (!zone || !vue) return;
+  // La carte telle qu'elle sera créée, en valeurs affichées
+  const carte = {};
+  vue.vides.forEach(colId => { carte[colId] = ''; });
+  Object.assign(carte, vue.affichees, ETAT.fiche.apercu);
+  const masquee = Filtres.filtresNonRespectes(carte, ETAT.filtres);
+  const pastilles = colonnesPastilles();
+  Filtres.dessinerAvisVue(zone, {
+    preremplies: Object.keys(vue.affichees)
+      .filter(colId => !pastilles.includes(colId))
+      .map(colId => ({ libelle: libelleFiltre(colId), valeur: elementsAffiches(colId, ligne[colId]).join(', ') })),
+    masqueePar: [...new Set(masquee.map(f => libelleFiltre(f.col)))],
+  });
+}
+
 function remplirFiche(id) {
   const nouvelle = ETAT.fiche.nouvelle;
-  // Nouvelle carte : une ligne « vierge », avec le modèle comme texte.
+  // Nouvelle carte : une ligne « vierge », avec le modèle comme texte et les
+  // valeurs imposées par la vue (#186).
   const ligne = nouvelle
-    ? { id: null, [ETAT.colonnes.Description]: ETAT.modele }
+    ? { id: null, [ETAT.colonnes.Description]: ETAT.modele, ...(ETAT.fiche.vue ? ETAT.fiche.vue.affichees : {}) }
     : ETAT.lignes.find(l => l.id === id);
   if (!ligne) { fermerFiche(true); return; }   // ligne supprimée ou filtrée entre-temps
   // Pastilles choisies mais pas encore sauvegardées (#206) : on repart de Grist
@@ -1326,9 +1417,18 @@ function remplirFiche(id) {
     principal.appendChild(note);
   }
 
-  // Une nouvelle carte n'a encore ni objets liés, ni pastilles, ni contexte
-  // (à remplir une fois la carte créée ; préremplissage : #186) : on passe au texte.
-  if (!nouvelle) remplirEntete(ligne, principal, encart, corps);
+  if (nouvelle) {
+    // Une nouvelle carte n'a encore ni objets liés ni contexte (à remplir une
+    // fois la carte créée), mais ses pastilles se choisissent déjà, préremplies
+    // d'après la vue, et un avis dit si la carte sera masquée (#186).
+    dessinerPastillesFiche(encart, ligne);
+    const avis = document.createElement('div');
+    avis.id = 'fiche-avis-vue';
+    corps.appendChild(avis);
+    majAvisVue(ligne);
+  } else {
+    remplirEntete(ligne, principal, encart, corps);
+  }
 
   // Texte principal en Markdown
   const colTexte = ETAT.colonnes.Description;
@@ -1396,13 +1496,27 @@ function dessinerPastillesFiche(encart, ligne) {
           ETAT.fiche.apercu[colId] = affichee;
           noterModif(colId, ecrite);
           dessinerPastillesFiche(encart, ligne);
+          majAvisVue(ligne);   // nouvelle carte : sera-t-elle masquée ? (#186)
           // Choix en attente compris (les références y sont des numéros)
-          alerteCoherence(ligne, colId, ETAT.fiche.modifs)
+          alerteCoherence(ligne, colId, choixEnAttente())
             .then(alerte => { if (alerte) afficherToast(alerte, 8000); });
-        }, { idLigne: ligne.id, enAttente: ETAT.fiche.modifs })));   // condition : choix en attente compris (#238)
+        }, {
+          idLigne: ligne.id,
+          enAttente: choixEnAttente(),         // condition : choix en attente compris (#238)
+          selonVue: ETAT.fiche.nouvelle,       // valeurs de la vue d'abord (#186)
+        })));
     }
     encart.append(...elements);
   });
+}
+
+/**
+ * Choix de la fiche pas encore écrits dans Grist, au format d'écriture : les
+ * valeurs préremplies d'une nouvelle carte (#186), puis les modifications,
+ * qui l'emportent.
+ */
+function choixEnAttente() {
+  return { ...(ETAT.fiche.vue ? ETAT.fiche.vue.ecrites : {}), ...ETAT.fiche.modifs };
 }
 
 /**
@@ -1699,8 +1813,9 @@ async function sauverFiche() {
 
 /**
  * Crée dans Grist la carte de la fiche « nouvelle carte » : titre saisi,
- * texte principal (le modèle, éventuellement modifié). La fiche reste
- * ouverte sur la carte créée.
+ * texte principal (le modèle, éventuellement modifié), pastilles choisies
+ * et valeurs imposées par la vue (#186). La fiche reste ouverte sur la
+ * carte créée.
  */
 async function creerCarte() {
   const colTitre = ETAT.colonnes.Titre;
@@ -1711,10 +1826,11 @@ async function creerCarte() {
     if (titre) titre.focus();
     return;
   }
-  // Le modèle d'abord, puis ce qui a été saisi (qui l'emporte).
+  // Le modèle d'abord, puis les valeurs imposées par la vue (#186), puis ce
+  // qui a été saisi ou choisi (qui l'emporte).
   const champs = {};
   if (colTexte && !estFormule(colTexte) && ETAT.modele) champs[colTexte] = ETAT.modele;
-  Object.assign(champs, ETAT.fiche.modifs);
+  Object.assign(champs, choixEnAttente());
 
   const bouton = document.getElementById('fiche-sauver');
   bouton.disabled = true;

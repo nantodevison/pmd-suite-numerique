@@ -23,7 +23,7 @@ combinables, recherche, tri sur n'importe quelle colonne, vues enregistrées
 | [`../_commun/fiche.js`](../_commun/fiche.js), [`fiche.css`](../_commun/fiche.css) | Fiche partagée avec la Galerie : disposition côté / centre, Markdown, menus |
 | [`../_commun/liens.js`](../_commun/liens.js), [`liens.css`](../_commun/liens.css) | Liens « Bloque / Bloquée par » entre cartes (bande « enchaînement », recherche, boucles) |
 | [`../_commun/recherche.js`](../_commun/recherche.js) | Règle de recherche commune avec la Galerie : 🔍, menus et panneaux de recherche |
-| [`../_commun/filtres.js`](../_commun/filtres.js), [`filtres.css`](../_commun/filtres.css) | Filtres : règle (« ou » entre les valeurs, « et » entre les filtres, `(vide)`), valeurs proposées (choix dans l'ordre de Grist et à leur couleur, #236), attributs d'une référence et leur mémoire, panneau (étiquettes, « ＋ Filtre », éditeur) ; « 👤 Moi » reste propre au Kanban |
+| [`../_commun/filtres.js`](../_commun/filtres.js), [`filtres.css`](../_commun/filtres.css) | Filtres : règle (« ou » entre les valeurs, « et » entre les filtres, `(vide)`), valeurs proposées (choix dans l'ordre de Grist et à leur couleur, #236), attributs d'une référence et leur mémoire, nouvelle carte d'après la vue (#186), panneau (étiquettes, « ＋ Filtre », éditeur) ; « 👤 Moi » reste propre au Kanban |
 | [`../_commun/colonnes.js`](../_commun/colonnes.js) | Structure du document (libellés, types, choix et couleurs, colonnes rapportées, noms des lignes visées), commune avec la Galerie |
 | [`../_commun/vues.js`](../_commun/vues.js), [`vues.css`](../_commun/vues.css) | Vues (#231) : registre (« Toutes les cartes », vues partagées et perso, vue active, rangement par projet) et interface (onglets ou sélecteur, menu ⋯, « ＋ Vue », fenêtre « Gérer la vue » : onglets Vue et Filtres) ; les onglets Tri et Colonnes, leurs boutons-résumés et « Mes tâches » restent propres au Kanban |
 | [`../_commun/tri.js`](../_commun/tri.js), [`tri.css`](../_commun/tri.css) | Comparaison de deux valeurs selon le type de leur colonne, et panneau du tri ⇅ (onglet Tri de « Gérer la vue »), communs avec la Galerie (#232) |
@@ -233,8 +233,24 @@ valeurs vides (cellule vide, liste vide…) sont regroupées sous « (vide) ». 
 valeurs d'une colonne Choix suivent l'ordre des choix de Grist, et un choix
 coloré dans Grist s'affiche à sa couleur (#236) ; les autres valeurs sont
 rangées de A à Z. Le panneau propose une recherche (même règle que 🔍, ci-dessous) et « Tout cocher » /
-« Aucun ». Une nouvelle carte reprend l'EPIC d'un filtre « EPIC est X » à une
-seule valeur.
+« Aucun ».
+
+### Nouvelle carte d'après la vue (#186)
+
+Règle commune avec la Galerie (`_commun/filtres.js`), pour qu'une carte créée
+dans une vue filtrée n'y disparaisse pas sans prévenir :
+
+- un filtre « **est** » qui ne coche qu'**une** valeur préremplit la colonne
+  dans « Nouvelle carte » (EPIC, Priorité, Assigné à…). Une colonne qui
+  n'est pas dans la fenêtre (ex. « Type ») est remplie sans rien demander,
+  et annoncée en bas de la fenêtre (« ℹ️ D'après la vue : Type = Atelier ») ;
+- dans les menus EPIC et Assigné à, les valeurs de la vue viennent d'abord,
+  puis les autres sous « **Hors de la vue** » ; dans les listes Priorité et
+  Statut, deux groupes « Dans la vue » / « Hors de la vue » ;
+- un avis prévient, à chaque choix, si la carte sera masquée par la vue
+  (« ⚠️ Avec ces valeurs, la carte sera masquée par la vue (EPIC) ») ;
+- non couvert : les colonnes calculées (ex. « EPIC › Priorite », inconnues
+  avant la création) et « Sélectionner par » de Grist (#243).
 
 ### Attributs d'une référence (Afficher ▾)
 

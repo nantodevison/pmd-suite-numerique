@@ -64,7 +64,8 @@ const STATE = {
   colDrag: { statut: null },
 
   editPanel: { recordId: null, dirty: false, fields: {} },
-  addModal:  { statut: null, refs: {} },
+  // Fenêtre « Nouvelle carte » ; vue : ce que la vue active impose à la carte (#186)
+  addModal:  { statut: null, refs: {}, vue: { valeurs: {}, cachees: [], vides: [] } },
 
   // ✅ Projet du Kanban : numéro de la ligne du projet choisi dans ⚙
   // (un Kanban = un projet). null tant qu'aucun projet n'est choisi.
@@ -1331,16 +1332,10 @@ function isAnyUserFilterActive() {
   return STATE.filters.some(f => f.valeurs.length > 0);
 }
 
-/** EPIC à préremplir dans une nouvelle carte : seulement si un filtre dit « EPIC est X » (une seule valeur). */
-function epicDuFiltre() {
-  const f = STATE.filters.find(f =>
-    f.col === STATE.mapping.epic && f.op === 'est' && f.valeurs.length === 1 && f.valeurs[0] !== VIDE);
-  return f ? f.valeurs[0] : '';
-}
-
 /**
  * Personne à préremplir dans « Assigné à » d'une nouvelle carte (#202) : la
- * personne déclarée, si un filtre dit « Assigné à est … 👤 Moi ». Sans cela,
+ * personne déclarée, si un filtre dit « Assigné à est … 👤 Moi » (même avec
+ * d'autres personnes cochées ; une seule valeur : voir #186). Sans cela,
  * une carte créée depuis « Mes tâches » disparaîtrait aussitôt de la vue.
  * @returns {number|null} numéro de ligne de la personne, ou null
  */
@@ -1830,6 +1825,7 @@ async function openAddCardModal(statut) {
   if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Créer la carte'; }
   await assurerReferences(); // ✅ Correctif : correspondances numéro ↔ nom à jour
   await chargerLiens();      // cartes proposées dans l'enchaînement (#183)
+  STATE.addModal.vue = await preparerVueNouvelleCarte();   // préremplissage d'après la vue (#186)
   buildModalForm(statut);
   document.getElementById('add-card-modal').classList.remove('hidden');
 }
@@ -1858,19 +1854,34 @@ function buildModalForm(statut) {
     f.appendChild(ta); body.appendChild(f);
   }
 
+  // Valeurs imposées par les filtres « est » de la vue (#186) : { colId: valeur affichée }
+  const vue = STATE.addModal.vue.valeurs;
+
   // Ligne 1 : Priorité + Statut
   const row1 = document.createElement('div'); row1.className = 'modal-row';
   if (STATE.mapping.priorite) {
     const f = makeModalField('priorite', 'Priorité', '🚦', false);
     const existing = getUniqueFieldValues('priorite');
-    f.appendChild(existing.length ? makeSelect(['', ...existing], ['— aucune —', ...existing], 'modal-priorite') : makeInput('text', 'modal-priorite', 'Haute / Moyenne / Basse…'));
+    const prerempli = vue[STATE.mapping.priorite];
+    if (prerempli && existing.length && !existing.includes(prerempli)) existing.push(prerempli);
+    if (existing.length) {
+      // Valeurs de la vue d'abord, puis « Hors de la vue » (#186)
+      const sel = makeSelectSelonVue(STATE.mapping.priorite, existing, '— aucune —', 'modal-priorite');
+      if (prerempli) sel.value = prerempli;
+      f.appendChild(sel);
+    } else {
+      const inp = makeInput('text', 'modal-priorite', 'Haute / Moyenne / Basse…');
+      inp.value = prerempli || '';
+      f.appendChild(inp);
+    }
     row1.appendChild(f);
   }
   if (STATE.mapping.statut) {
+    // Le statut est celui de la colonne où l'on a cliqué « + » : pas de préremplissage
     const f = makeModalField('statut', 'Statut', '📋', false);
     const statuts = getUniqueFieldValues('statut');
     const all = statuts.includes(statut) ? statuts : [statut, ...statuts];
-    const sel = makeSelect(all, all, 'modal-statut'); sel.value = statut;
+    const sel = makeSelectSelonVue(STATE.mapping.statut, all, null, 'modal-statut'); sel.value = statut;
     f.appendChild(sel); row1.appendChild(f);
   }
   if (row1.children.length) body.appendChild(row1);
@@ -1883,15 +1894,16 @@ function buildModalForm(statut) {
   if (STATE.mapping.epic) {
     const f = makeModalField('epic', 'EPIC', '🏷️', false);
     const epicOptions = getReferenceOptions('epic');
-    const epicFiltre = epicDuFiltre(); // pré-remplir si un filtre « EPIC est X » est actif
+    // Prérempli si un filtre « EPIC est X » (une seule valeur) est actif (#186)
+    const epicFiltre = vue[STATE.mapping.epic] || '';
 
     if (REFS.epic) {
       // Référence : pastille qui ouvre le menu de la fiche, avec les attributs (#226)
       const trouve = epicOptions.find(e => e.nom === epicFiltre || e.id === epicFiltre);
       f.appendChild(champReferenceModal('epic', trouve ? [trouve.id] : [], '— aucun —'));
     } else if (epicOptions.length > 0) {
-      // Colonne texte : liste des valeurs déjà utilisées
-      const sel = makeSelect(['', ...epicOptions.map(e => e.id)], ['— aucun —', ...epicOptions.map(e => e.nom)], 'modal-epic');
+      // Colonne texte : liste des valeurs déjà utilisées (valeur = nom)
+      const sel = makeSelectSelonVue(STATE.mapping.epic, epicOptions.map(e => e.nom), '— aucun —', 'modal-epic');
       if (epicOptions.some(e => e.id === epicFiltre)) sel.value = epicFiltre;
       f.appendChild(sel);
     } else {
@@ -1908,10 +1920,12 @@ function buildModalForm(statut) {
     const f = makeModalField('assigne', 'Assigné à', '👤', false);
     if (REFS.assigne) {
       // Référence : pastille qui ouvre le menu de la fiche, avec les attributs (#226).
-      // Pré-remplie avec la personne déclarée si un filtre « Assigné à est 👤 Moi » est actif
-      const moi = moiDuFiltre();
+      // Préremplie si un filtre « Assigné à est … » n'a qu'une valeur (#186), ou
+      // avec la personne déclarée si le filtre contient « 👤 Moi » (#202)
       const equipe = getReferenceOptions('assigne');
-      f.appendChild(champReferenceModal('assigne', moi && equipe.some(c => c.id === moi) ? [moi] : [], '— personne —'));
+      const filtre = vue[STATE.mapping.assigne];
+      const ids = filtre ? nomsVersIds('assigne', filtre) : [moiDuFiltre()];
+      f.appendChild(champReferenceModal('assigne', ids.filter(id => equipe.some(c => c.id === id)), '— personne —'));
     } else {
       // Fallback : champ texte
       f.appendChild(makeInput('text', 'modal-assigne', 'Nom…'));
@@ -1938,7 +1952,123 @@ function buildModalForm(statut) {
   }
   if (row3.children.length) body.appendChild(row3);
 
+  // Avis d'après la vue (#186) : colonnes préremplies hors du formulaire, et
+  // alerte si la carte sera masquée ; mis à jour à chaque choix
+  const avis = document.createElement('div');
+  avis.id = 'modal-avis-vue';
+  body.appendChild(avis);
+  ['modal-priorite', 'modal-statut', 'modal-epic', 'modal-assigne'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.tagName !== 'BUTTON') ['change', 'input'].forEach(evt => el.addEventListener(evt, majAvisVue));
+  });
+  majAvisVue();
+
   setTimeout(() => { const t = document.getElementById('modal-titre'); if (t) t.focus(); }, 80);
+}
+
+/* ── Nouvelle carte d'après la vue (#186) ───────────────────────
+   Règles communes dans ../_commun/filtres.js (section 2 bis). Une carte
+   créée dans une vue filtrée reçoit les valeurs que la vue impose ; les
+   menus montrent d'abord les valeurs de la vue ; un avis prévient, avant
+   la création, si la carte sera masquée. */
+
+/** Champs du Kanban remplis par la fenêtre « Nouvelle carte », ou par le Kanban lui-même (projet). */
+const CHAMPS_NOUVELLE_CARTE = ['titre', 'description', 'priorite', 'statut', 'epic', 'assigne', 'date', 'projet', 'bloque', 'bloqueePar'];
+
+/**
+ * Ce que la vue active impose à une nouvelle carte :
+ *   valeurs : { colId: valeur affichée } des filtres « est » à une seule valeur ;
+ *   cachees : colonnes hors du formulaire préremplies sans rien demander,
+ *             [{ colId, libelle, affichee, ecrite }] (écrites avec la carte) ;
+ *   vides   : colonnes hors du formulaire qui resteront vides (pour l'avis).
+ * Les colonnes calculées par une formule ne sont ni l'un ni l'autre :
+ * leur valeur n'est connue qu'après la création.
+ */
+async function preparerVueNouvelleCarte() {
+  const valeurs = Filtres.valeursAPreremplir(STATE.filters, remplacerMoi);
+  const cachees = [], vides = [];
+  if (!DOC) return { valeurs, cachees, vides };
+  const formulaire = CHAMPS_NOUVELLE_CARTE.map(k => STATE.mapping[k]).filter(Boolean);
+  for (const c of DOC.colonnes(getTableName())) {
+    if (c.formule || formulaire.includes(c.colId)) continue;
+    const affichee = valeurs[c.colId];
+    let ecrite;
+    try {
+      if (affichee !== undefined) ecrite = await Colonnes.valeurAEcrire(DOC, getTableName(), c.colId, affichee);
+    } catch (err) {
+      console.warn(`Kanban – préremplissage de « ${c.colId} » impossible :`, err);
+    }
+    if (ecrite !== undefined) cachees.push({ colId: c.colId, libelle: libelleColonne(c.colId), affichee, ecrite });
+    else vides.push(c.colId);
+  }
+  return { valeurs, cachees, vides };
+}
+
+/** Libellé d'une colonne, tel que l'affichent les filtres (« EPIC », « Assigné à »…). */
+function libelleColonne(colId) {
+  return (STATE.colonnesTriables.find(c => c.colId === colId) || {}).label || colId;
+}
+
+/** La valeur affichée `valeur` de la colonne `colId` garde-t-elle la carte dans la vue ? */
+function dansLaVue(colId, valeur) {
+  return Filtres.valeurDansLaVue(STATE.filters, colId, valeur, remplacerMoi);
+}
+
+/**
+ * Liste déroulante de « Nouvelle carte » dont les valeurs de la vue passent
+ * en tête, puis un groupe « Hors de la vue » (#186) ; sans groupe si toutes
+ * les valeurs sont du même côté. texteVide : option « aucune » (ou null).
+ */
+function makeSelectSelonVue(colId, valeurs, texteVide, id) {
+  const sel = makeSelect(texteVide === null ? [] : [''], texteVide === null ? [] : [texteVide], id);
+  const rangees = Filtres.rangerSelonVue(valeurs.map(v => ({ valeur: v, libelle: v })), o => dansLaVue(colId, o.valeur));
+  let groupe = sel;
+  if (rangees.some(o => o.separateur)) {
+    groupe = Object.assign(document.createElement('optgroup'), { label: 'Dans la vue' });
+    sel.appendChild(groupe);
+  }
+  rangees.forEach(o => {
+    if (o.separateur) {
+      groupe = Object.assign(document.createElement('optgroup'), { label: o.separateur });
+      sel.appendChild(groupe);
+      return;
+    }
+    groupe.appendChild(Object.assign(document.createElement('option'), { value: o.valeur, textContent: o.libelle }));
+  });
+  return sel;
+}
+
+/**
+ * La carte telle qu'elle sera créée, en valeurs affichées (noms des
+ * références), pour la comparer aux filtres : champs du formulaire,
+ * colonnes préremplies, et '' pour les colonnes qui resteront vides.
+ */
+function carteDuFormulaire() {
+  const m = STATE.mapping;
+  const { cachees, vides } = STATE.addModal.vue;
+  const carte = {};
+  vides.forEach(colId => { carte[colId] = ''; });
+  cachees.forEach(c => { carte[c.colId] = c.affichee; });
+  const valeurChamp = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
+  if (m.statut)   carte[m.statut]   = valeurChamp('modal-statut') || STATE.addModal.statut || '';
+  if (m.priorite) carte[m.priorite] = valeurChamp('modal-priorite');
+  ['epic', 'assigne'].forEach(key => {
+    if (!m[key]) return;
+    const ids = STATE.addModal.refs[key];
+    carte[m[key]] = ids ? ids.map(id => nomAffiche(key, id)) : valeurChamp('modal-' + key);
+  });
+  return carte;
+}
+
+/** Redessine l'avis de « Nouvelle carte » (#186) d'après les valeurs choisies. */
+function majAvisVue() {
+  const zone = document.getElementById('modal-avis-vue');
+  if (!zone) return;
+  const masquee = Filtres.filtresNonRespectes(carteDuFormulaire(), STATE.filters, remplacerMoi);
+  Filtres.dessinerAvisVue(zone, {
+    preremplies: STATE.addModal.vue.cachees.map(c => ({ libelle: c.libelle, valeur: c.affichee })),
+    masqueePar:  [...new Set(masquee.map(f => libelleColonne(f.col)))],
+  });
 }
 
 /**
@@ -1967,9 +2097,11 @@ function champReferenceModal(key, idsInitiaux, texteVide) {
       selection: ids,
       multiple: REFS[key].estListe,
       vide: texteVide, valeurVide: 0,
+      selonVue: true,   // valeurs de la vue d'abord, puis « Hors de la vue » (#186)
       surChoix: (v) => {
         STATE.addModal.refs[key] = (Array.isArray(v) ? v : [v]).filter(id => id > 0);
         majTexte();
+        majAvisVue();
       },
     });
   });
@@ -2023,6 +2155,9 @@ async function submitAddCardModal() {
   if (STATE.mapping.projet && STATE.projetKanban) {
     newRecord[STATE.mapping.projet] = STATE.projetKanban;
   }
+
+  // Colonnes hors du formulaire préremplies d'après la vue (#186)
+  STATE.addModal.vue.cachees.forEach(c => { newRecord[c.colId] = c.ecrite; });
 
   // ✨ Champs simples (texte, non-référence)
   const simpleTextFields = [
@@ -2270,10 +2405,13 @@ function optionsMenu(key, idsActuels) {
  * avec le bouton « Afficher ▾ » en tête du menu. Générique : vaut pour toute
  * colonne Référence ou Liste de références associée au champ `key`.
  *   reglages : selection, multiple, vide, valeurVide, surChoix (voir Fiche.menuChoix)
+ *   selonVue : true dans « Nouvelle carte » (#186) : valeurs de la vue
+ *              d'abord, puis un séparateur « Hors de la vue »
  */
-function menuChamp(ancre, key, idsActuels, reglages) {
-  const options = optionsMenu(key, idsActuels);
+function menuChamp(ancre, key, idsActuels, { selonVue = false, ...reglages }) {
+  let options = optionsMenu(key, idsActuels);
   const libelles = new Map(options.map(o => [o.valeur, o.libelle]));
+  if (selonVue) options = Filtres.rangerSelonVue(options, o => dansLaVue(STATE.mapping[key], o.libelle));
   return Fiche.menuChoix(ancre, {
     ...reglages,
     options,

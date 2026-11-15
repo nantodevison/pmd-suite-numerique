@@ -112,3 +112,12 @@
 .filtres-tete .filtres-actifs { flex: 1; min-width: 0; }
 #filtre-ajouter { flex-shrink: 0; }
 #filtre-popover { border-top: 1px solid var(--border); }
+
+/* ── Avis d'une nouvelle carte (#186, Filtres.dessinerAvisVue) ── */
+.avis-vue { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; font-size: 12px; line-height: 1.4; }
+.avis-vue[hidden] { display: none; }
+.avis-vue-info { color: var(--text-muted, #718096); }
+.avis-vue-alerte {
+  padding: 6px 10px; border-radius: 6px;
+  background: #fffaf0; border: 1px solid #fbd38d; color: #9c4221;
+}
