@@ -122,7 +122,8 @@
       const [, colRef, colSource] = m;
       const reference = doc.colonne(c.table, colRef);
       const source = reference && reference.tableVisee && doc.colonne(reference.tableVisee, colSource);
-      if (source) c.rapportee = { colRef, via: reference.libelle, attribut: source.libelle };
+      // colSource : la colonne d'origine (ses choix et leurs couleurs, #184)
+      if (source) c.rapportee = { colRef, via: reference.libelle, attribut: source.libelle, colSource };
     });
     return doc;
   }

@@ -168,14 +168,37 @@ s'appliquent ensuite.
 ## Fiche
 
 - Disposition **côté** ou **centre**, au choix (bouton ⤢ / ⇥), mémorisée dans
-  le navigateur ; Échap, ✕ ou un clic sur le fond assombri la ferment.
+  le navigateur ; Échap, ✕ ou un clic sur le fond assombri la ferment. Au
+  centre, la fiche occupe presque tout le cadre du widget (#184) ; les lignes
+  de la description restent d'une longueur lisible (~110 caractères).
 - Le **titre** et le **texte principal** sont modifiables, puis enregistrés avec
   « ✓ Sauvegarder ». Une colonne calculée par une formule reste en lecture seule.
-- En-tête : le titre, avec dessous les **objets liés** (« — » si aucun) ; les
-  **pastilles** dans un encart à droite (au centre) ou sous le titre (sur le
-  côté), libellé au survol, modifiables (voir plus haut) ; puis le
-  **contexte**, même vide (« — »). Références par leur nom affiché, dates au
+- En-tête : le titre ; les **pastilles** dans un encart à droite (au centre)
+  ou sous le titre (sur le côté), libellé au survol, modifiables (voir plus
+  haut) ; dessous, sur toute la largeur, les **objets liés** (« — » si
+  aucun) ; puis le **contexte**, même vide (« — »). Références par leur nom affiché, dates au
   format français. Objets liés et contexte sont en lecture seule.
+- **Contexte** (#184) : chaque paire « libellé : valeur » prend sa largeur
+  naturelle ; une valeur vide ou courte prend peu de place.
+- **Objets liés** (#184), par exemple les tâches d'un EPIC, sous une ligne de
+  titre « TÂCHES 38 » (libellé et nombre total) :
+  - **« Afficher ▾ »**, à droite de cette ligne : cocher des attributs de l'objet
+    (son statut, sa priorité…) pour les voir à côté de son nom. Ce sont les
+    colonnes « rapportées » de la table, de formule `$Taches.statut` (menu
+    de Grist « ajouter une colonne depuis la référence ») ; inutile de les
+    associer au widget. Le choix est **personnel**, retenu par le
+    navigateur, et commun avec « Afficher ▾ » des filtres ;
+  - les objets sont **triés** selon ces attributs, dans l'ordre de leurs
+    choix dans Grist (« À faire », « En cours », « Fait »…) : avec
+    Priorité et Statut cochés, d'abord par priorité. Couleurs des choix de
+    la colonne d'origine ;
+  - **au survol**, une bulle donne tous les attributs de l'objet, cochés
+    ou non ;
+  - **2 lignes au plus** : au-delà, le bouton coloré « + 9 autres ▾ » ouvre
+    la liste complète, avec recherche ; un nom est coupé à ~40 caractères
+    (en entier dans la bulle) ;
+  - un objet de la **même table** que la Galerie (une carte qui renvoie à
+    une autre) s'ouvre d'un clic dans sa fiche.
 - Les **cases à cocher** du texte principal (`- [ ] à faire`) se cochent d'un
   clic dans l'aperçu, puis s'enregistrent avec « ✓ Sauvegarder » ; elles
   restent grisées si la colonne est calculée par une formule.

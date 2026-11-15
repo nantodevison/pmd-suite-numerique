@@ -20,7 +20,7 @@ py tests/galerie/jouer.py --largeurs 1200 -v  # une largeur, toutes les lignes
 Le bilan s'affiche par scénario et par largeur (`BILAN 26 OK, 0 KO`), suivi des
 lignes en échec. Le code de sortie vaut 0 si tout est OK.
 
-## Ce qui est vérifié (310 vérifications par largeur)
+## Ce qui est vérifié (339 vérifications par largeur)
 
 | Scénario | Fonctions |
 |---|---|
@@ -33,6 +33,7 @@ lignes en échec. Le code de sortie vaut 0 si tout est OK.
 | `coherence` | Alerte de cohérence entre deux références (chaque version relève d'un projet) : projet changé sans la version, retour au bon projet, carte sans version, version d'un autre projet choisie (l'autre sens), aucune lecture pour un choix simple, choix en attente de la fiche pris en compte ; l'écriture a toujours lieu |
 | `colonnes-non-associees` | Colonnes non associées (#239) : Grist n'envoie que l'id et les colonnes associées ; cartes complétées par relecture de la table (case à cocher, formule, colonne rapportée, choix multiple décodé, référence sous son nom par la colonne cachée de Grist sans lire la table visée, ou par la table visée à défaut), cellule en erreur gardée, colonnes internes non ajoutées, tri sur une colonne non associée, valeurs fraîches après une écriture, envoi lent qui ne remplace pas un plus récent |
 | `fiche` | En-tête (objets liés, pastilles, contexte, date au format français), cases à cocher, modification et sauvegarde du titre, confirmation avant de perdre une modification, Échap, titre calculé en lecture seule |
+| `objets-lies` | En-tête de la fiche (#184) : fiche au centre sur presque tout le cadre, objets liés sous l'en-tête sur toute la largeur (libellé, nombre, « Afficher ▾ » à la fin), encart Contexte souple (une enveloppe par paire), objets liés dans l'ordre de Grist, « Afficher ▾ » (colonne rapportée non associée), bulle avec tous les attributs, statut à côté du nom aux couleurs de la colonne d'origine, tri selon l'ordre des choix, mémoire commune avec les filtres, aucune table lue pour les attributs, longue liste limitée à 2 lignes avec « + n autres ▾ » (liste complète et recherche), objet de la même table ouvert dans sa fiche (confirmation si la carte est modifiée, message si Grist ne l'envoie pas). Non vérifiable ici : le nouveau repli quand la fiche change de largeur (Chrome du banc ne dessine pas d'images) |
 | `nouvelle-carte` | « + Nouvelle carte » : modèle de texte, titre exigé, création, carte masquée par un filtre ; ⚙ : reprendre le texte d'une carte (Notepad compris) et l'enregistrer comme modèle |
 | `notepad` | Anciens textes Notepad : bandeau, texte affiché converti, conversion en une seule écriture après confirmation |
 
@@ -53,7 +54,7 @@ Propre à la Galerie :
 
 | Fichier | Rôle |
 |---|---|
-| `faux-grist.js` | Imite l'API Grist avec une table d'EPICs inventée (choix colorés, choix multiple, pourcentage, références (dont une vers des versions qui relèvent chacune d'un projet), liste de références, case à cocher, titre calculé, texte Notepad, cellule en erreur). Comme le vrai Grist, il renvoie les cartes au widget après chaque écriture, références sous leur nom et listes décodées, en n'envoyant que l'id et les colonnes associées (#239 ; `FAUX_GRIST.dernierEnvoi` garde le dernier envoi) ; `fetchTable` donne au contraire toutes les colonnes, références sous leur numéro, listes encodées `['L', …]` et la colonne cachée du nom de la version. `FAUX_GRIST.donnees` donne les tables visées (un scénario peut y ajouter des lignes). `FAUX_GRIST.associer({...})` change l'association des colonnes ; `FAUX_GRIST.masquerCreees` imite une vue filtrée ; `FAUX_GRIST.lectures` liste les tables lues ; `FAUX_GRIST.optionsRecords` garde les options passées à `onRecords` ; `FAUX_GRIST.renvoyerOptions(...)` rappelle `onOptions`, comme Grist après un `setOption`. |
+| `faux-grist.js` | Imite l'API Grist avec une table d'EPICs inventée (choix colorés, choix multiple, pourcentage, références (dont une vers des versions qui relèvent chacune d'un projet), liste de références (tâches avec un statut, rapporté dans `Taches_statut` ; « Voir aussi » vers d'autres cartes de la même table), case à cocher, titre calculé, texte Notepad, cellule en erreur). Comme le vrai Grist, il renvoie les cartes au widget après chaque écriture, références sous leur nom et listes décodées, en n'envoyant que l'id et les colonnes associées (#239 ; `FAUX_GRIST.dernierEnvoi` garde le dernier envoi) ; `fetchTable` donne au contraire toutes les colonnes, références sous leur numéro, listes encodées `['L', …]` et la colonne cachée du nom de la version. `FAUX_GRIST.donnees` donne les tables visées (un scénario peut y ajouter des lignes). `FAUX_GRIST.associer({...})` change l'association des colonnes ; `FAUX_GRIST.masquerCreees` imite une vue filtrée ; `FAUX_GRIST.lectures` liste les tables lues ; `FAUX_GRIST.optionsRecords` garde les options passées à `onRecords` ; `FAUX_GRIST.renvoyerOptions(...)` rappelle `onOptions`, comme Grist après un `setOption`. |
 | `scenarios/*.js` | Un scénario par fonction. |
 | `assembler.py`, `jouer.py` | Relais vers `../_commun/banc.py`. |
 
