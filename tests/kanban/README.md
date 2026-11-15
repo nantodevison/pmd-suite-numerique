@@ -21,7 +21,7 @@ py tests/kanban/jouer.py --largeurs 1200 -v   # une largeur, toutes les lignes
 Le bilan s'affiche par scénario et par largeur (`BILAN 42 OK, 0 KO`), suivi des
 lignes en échec. Le code de sortie vaut 0 si tout est OK.
 
-## Ce qui est vérifié (277 vérifications par largeur)
+## Ce qui est vérifié (306 vérifications par largeur)
 
 | Scénario | Fonctions |
 |---|---|
@@ -31,6 +31,7 @@ lignes en échec. Le code de sortie vaut 0 si tout est OK.
 | `fiche` | Numéro #id (#203), couleur de statut choisie dans ⚙ (#212), cases à cocher de l'aperçu (#208), sauvegarde et fermeture de la fiche, Échap |
 | `attributs-filtre` | Panneau des filtres compacté et bouton « Afficher ▾ » (#226, étape 1) |
 | `attributs-menus` | Attributs dans les menus de la fiche et de « Nouvelle carte », colonnes masquées reçues (#226, étape 2) |
+| `nouvelle-carte-vue` | « Nouvelle carte » d'après la vue (#186) : règles de `_commun/filtres.js` vérifiées sur le module (préremplissage, dans la vue, filtres non respectés, rangement, `Colonnes.valeurAEcrire`) ; dans le Kanban : sans filtre rien ne change, EPIC prérempli, colonne hors formulaire préremplie et annoncée, menu EPIC rangé avec « Hors de la vue », alerte qui suit les choix, valeurs écrites, filtre à plusieurs valeurs, listes Priorité en deux groupes, « n'est pas » |
 | `filtres` | Règle des filtres de `_commun/filtres.js` (#191), vérifiée directement sur le module : est / n'est pas, `(vide)`, listes, valeurs proposées et leur ordre, copie et signature des vues, attributs (listes de références, désaccords, couleurs), mémoire des attributs ; dans le Kanban, « 👤 Moi » (#202) ; panneau commun dans « Gérer la vue » : choix dans l'ordre de Grist et à leur couleur (#236), cocher, est / n'est pas, étiquette, supprimer |
 | `vues-interface` | Interface commune de `_commun/vues.js` (#231, étape 2), vérifiée sans le Kanban sur un mini-widget inventé : barre, « ＋ Vue » partagée, ⋯, « 🔽 n filtres », fenêtre (photographie, Annuler, 💾, nouvelle vue depuis « Toutes les cartes »), suppression en deux clics, Kanban non touché ; puis, dans le Kanban, barre construite par le module et onglets Tri et Colonnes ajoutés |
 | `vues-registre` | Registre des vues de `_commun/vues.js` (#231), vérifié directement sur le module : ouverture (partagées puis perso, vue active retenue ou ancien réglage), rangement par projet (vues d'un autre projet masquées mais toujours réécrites), création partagée ou perso, renommage, suppression, autre projet, mémoire indisponible, écriture refusée ; dans le Kanban, vues enregistrées par la version précédente relues telles quelles (mêmes clés du navigateur) |

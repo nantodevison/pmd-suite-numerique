@@ -20,7 +20,7 @@ py tests/galerie/jouer.py --largeurs 1200 -v  # une largeur, toutes les lignes
 Le bilan s'affiche par scénario et par largeur (`BILAN 26 OK, 0 KO`), suivi des
 lignes en échec. Le code de sortie vaut 0 si tout est OK.
 
-## Ce qui est vérifié (385 vérifications par largeur)
+## Ce qui est vérifié (407 vérifications par largeur)
 
 | Scénario | Fonctions |
 |---|---|
@@ -37,6 +37,7 @@ lignes en échec. Le code de sortie vaut 0 si tout est OK.
 | `fiche` | En-tête (objets liés, pastilles, contexte, date au format français), cases à cocher, modification et sauvegarde du titre, confirmation avant de perdre une modification, Échap, titre calculé en lecture seule |
 | `objets-lies` | En-tête de la fiche (#184) : fiche au centre sur presque tout le cadre, objets liés sous l'en-tête sur toute la largeur (libellé, nombre, « Afficher ▾ » à la fin), encart Contexte souple (une enveloppe par paire), objets liés dans l'ordre de Grist, « Afficher ▾ » (colonne rapportée non associée), bulle avec tous les attributs, statut à côté du nom aux couleurs de la colonne d'origine, tri selon l'ordre des choix, mémoire commune avec les filtres, aucune table lue pour les attributs, longue liste limitée à 2 lignes avec « + n autres ▾ » (liste complète et recherche), objet de la même table ouvert dans sa fiche (confirmation si la carte est modifiée, message si Grist ne l'envoie pas). Non vérifiable ici : le nouveau repli quand la fiche change de largeur (Chrome du banc ne dessine pas d'images) |
 | `nouvelle-carte` | « + Nouvelle carte » : modèle de texte, titre exigé, création, carte masquée par un filtre ; ⚙ : reprendre le texte d'une carte (Notepad compris) et l'enregistrer comme modèle |
+| `nouvelle-carte-vue` | Nouvelle carte d'après la vue (#186) : pastilles dans la nouvelle fiche (vides, calculée omise), préremplies par un filtre « est » à une valeur, colonne hors pastilles préremplie et annoncée, préremplissage qui n'est pas une modification, menus Choix et Référence rangés avec « Hors de la vue », alerte si la carte sera masquée, valeurs écrites (référence sous son numéro, choix multiple `['L', …]`), filtre à plusieurs valeurs, menu de recherche (séparateur, et retiré par la recherche), carte existante inchangée |
 | `notepad` | Anciens textes Notepad : bandeau, texte affiché converti, conversion en une seule écriture après confirmation |
 
 Pour obtenir la page à coller dans le Custom Widget Builder :
