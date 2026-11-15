@@ -27,7 +27,7 @@ Banc.lancer(async () => {
   // ── Sans tri : l'ordre de Grist ──
   ok('sans tri : ordre envoyé par Grist', cartes() === '1,2,3,4', cartes());
   ok('barre : « ⇅ Trier » après « 🔽 Filtres »',
-    [...$('#resumes-vue').children].map(b => b.textContent).join('|') === '🔽 Filtres|⇅ Trier|▤ Regrouper');
+    [...$('#resumes-vue').children].map(b => b.textContent).join('|') === '🔽 Filtres|⇅ Trier|▤ Regrouper|▦ Moyenne ▾');
   ok('bulle : ordre de Grist par défaut', $('#tri-bouton').title === 'Trier les cartes (par défaut : ordre de Grist)', $('#tri-bouton').title);
 
   // ── « ⇅ Trier » ouvre « Gérer la vue » sur l'onglet Tri ──

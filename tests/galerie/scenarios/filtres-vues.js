@@ -18,7 +18,10 @@ Banc.lancer(async () => {
   // ── Mise en place ──
   ok('toutes les colonnes demandées à Grist (includeColumns)', FAUX_GRIST.optionsRecords?.includeColumns === 'normal',
     JSON.stringify(FAUX_GRIST.optionsRecords));
-  ok('barre : « Toutes les cartes », « ＋ Vue », « 🔽 Filtres »', onglets().join('|') === 'Toutes les cartes'
+  // (sur un widget étroit, le sélecteur ▾ remplace les onglets : voir plus bas)
+  ok('barre : « Toutes les cartes » (ou le sélecteur), « ＋ Vue », « 🔽 Filtres »',
+    (selecteur() ? selecteur().querySelector('.vue-selecteur-nom').textContent === 'Toutes les cartes'
+                 : onglets().join('|') === 'Toutes les cartes')
     && $('#view-tabs #vue-ajouter') && $('#resumes-vue').firstElementChild?.textContent === '🔽 Filtres', onglets().join('|'));
   const filtrables = ETAT.colonnesFiltrables.map(c => c.label).join('|');
   ok('colonnes filtrables : Choix et Références de la table, par libellé', filtrables === 'Priorité|Projet|Tâches|Thèmes|Version|Voir aussi', filtrables);

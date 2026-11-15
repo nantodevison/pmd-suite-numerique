@@ -35,6 +35,8 @@
    Regroupement (#233) : les cartes sont réparties en zones repliables, une
    par valeur d'une colonne Choix, Référence ou Case à cocher ; la colonne
    est enregistrée dans la vue, les zones repliées par le navigateur.
+   Taille des cartes (#237) : compacte, moyenne ou grande (avec le début du
+   texte et le nombre d'objets liés), au choix de chacun (navigateur).
    ══════════════════════════════════════════════════════════════ */
 
 'use strict';
@@ -50,6 +52,8 @@ const ETAT = {
   tri:        [],
   // Colonne de regroupement affichée (#233), ou null : cartes non regroupées
   groupe:     null,
+  // Taille des cartes affichée (#237) : 'compacte', 'moyenne' ou 'grande'
+  taille:     null,
   // Colonnes de la table, d'après la structure du document (#204) :
   // toutes (pour le tri et les attributs d'une référence), celles qu'on
   // peut filtrer, et celles qui peuvent regrouper les cartes (#233)
@@ -699,6 +703,9 @@ function afficherGrille() {
   const grille = document.getElementById('grille');
   grille.innerHTML = '';
   document.getElementById('titre-table').textContent = '🖼️ ' + (ETAT.table || 'Galerie');
+  // Taille des cartes (#237) : la grille la porte, le CSS règle la largeur
+  grille.dataset.taille = ETAT.taille = tailleCartes();
+  majBoutonTaille();
 
   if (!ETAT.colonnes || !ETAT.colonnes.Titre) {
     grille.appendChild(message('Associez au moins la colonne « Titre » dans le panneau de droite de Grist '
@@ -761,6 +768,7 @@ function correspondRecherche(ligne) {
 }
 
 function construireCarte(ligne) {
+  const taille = ETAT.taille || 'moyenne';   // #237, lue par afficherGrille
   const carte = document.createElement('article');
   carte.className = 'carte' + (ligne.id === ETAT.selection ? ' selectionnee' : '');
   carte.dataset.id = ligne.id;
@@ -782,13 +790,93 @@ function construireCarte(ligne) {
     }
     pastilles.append(...elements);
   });
-  if (pastilles.children.length) carte.appendChild(pastilles);
-  // Pas d'aperçu du texte principal : la carte reste concise (titre et
-  // pastilles) ; le texte se lit dans la fiche. La place libre en bas de
-  // carte pourra accueillir une image plus tard.
+  if (pastilles.children.length && taille !== 'compacte') carte.appendChild(pastilles);
+  // Grande carte (#237) : le début du texte principal et le nombre d'objets liés
+  if (taille === 'grande') ajouterApercu(carte, ligne);
 
   carte.addEventListener('click', () => ouvrirFiche(ligne.id));
   return carte;
+}
+
+/* ── Taille des cartes (#237) ────────────────────────────────────
+   compacte : le titre seul, cartes plus étroites ;
+   moyenne  : titre et pastilles (par défaut) ;
+   grande   : en plus, le début du texte principal et le nombre d'objets liés.
+   Préférence de chacun, retenue par le navigateur pour chaque Galerie
+   (document et table), comme la disposition de la fiche. */
+const TAILLES = {
+  compacte: { nom: 'Compacte', aide: 'le titre seul' },
+  moyenne:  { nom: 'Moyenne',  aide: 'titre et pastilles' },
+  grande:   { nom: 'Grande',   aide: 'avec le début du texte et les objets liés' },
+};
+
+let _tailleSeance = null;   // choix de la séance, si le navigateur ne peut pas le retenir
+
+/** Taille choisie ('compacte', 'moyenne' ou 'grande'), « moyenne » à défaut. */
+function tailleCartes() {
+  try {
+    const cle = cleMemoire('taille');
+    const t = cle && localStorage.getItem(cle);
+    if (TAILLES[t]) return t;
+  } catch (_) { /* stockage bloqué (navigation privée…) */ }
+  return _tailleSeance || 'moyenne';
+}
+
+function changerTaille(t) {
+  _tailleSeance = t;
+  try {
+    const cle = cleMemoire('taille');
+    if (cle) localStorage.setItem(cle, t);
+  } catch (_) { /* vaut pour cette séance seulement */ }
+  afficherGrille();
+}
+
+/** Bouton « ▦ Moyenne ▾ » de la barre. */
+function majBoutonTaille() {
+  const bouton = document.getElementById('taille-bouton');
+  if (bouton) bouton.textContent = `▦ ${TAILLES[ETAT.taille || 'moyenne'].nom} ▾`;
+}
+
+/** Menu des trois tailles, sous le bouton. */
+function ouvrirMenuTaille() {
+  const actuelle = ETAT.taille || tailleCartes();
+  Fiche.menuChoix(document.getElementById('taille-bouton'), {
+    options: Object.entries(TAILLES).map(([valeur, t]) => ({ valeur, libelle: `${t.nom} : ${t.aide}` })),
+    selection: [actuelle],
+    surChoix: changerTaille,
+  });
+}
+
+/**
+ * Grande carte : le début du texte principal, en texte simple (sans les
+ * symboles du Markdown), coupé à 4 lignes ; puis « Tâches 38 » pour chaque
+ * colonne d'objets liés non vide.
+ */
+function ajouterApercu(carte, ligne) {
+  const colTexte = ETAT.colonnes.Description;
+  const brut = colTexte ? String(ligne[colTexte] || '') : '';
+  // Début du texte seulement : convertir un très long texte coûterait pour rien
+  const texte = brut ? Fiche.markdownVersTexte(Fiche.notepadVersMarkdown(brut).slice(0, 1500)) : '';
+  if (texte) {
+    const resume = document.createElement('div');
+    resume.className = 'carte-resume';
+    resume.textContent = texte;
+    carte.appendChild(resume);
+  }
+  const nombres = colonnesObjetsLies()
+    .map(colId => ({ colId, n: elementsAffiches(colId, ligne[colId]).length }))
+    .filter(o => o.n);
+  if (nombres.length) {
+    const zone = document.createElement('div');
+    zone.className = 'carte-lies';
+    nombres.forEach(({ colId, n }) => {
+      const compte = document.createElement('span');
+      compte.className = 'carte-lies-compte';
+      compte.textContent = `${libelle(colId)} ${n}`;
+      zone.appendChild(compte);
+    });
+    carte.appendChild(zone);
+  }
 }
 
 function message(texte) {
@@ -1779,6 +1867,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // « ▤ Regrouper » (#233) : ouvre « Gérer la vue » sur l'onglet Regrouper
   document.getElementById('groupe-bouton').addEventListener('click', () => UI_VUES.ouvrirFenetre('groupes'));
   document.getElementById('groupe-colonne').addEventListener('change', (e) => changerGroupe(e.target.value));
+  // « ▦ Moyenne ▾ » (#237) : taille des cartes
+  document.getElementById('taille-bouton').addEventListener('click', ouvrirMenuTaille);
   // Un clic ailleurs ferme les panneaux des vues et des filtres (sauf sur ce qui en ouvre un)
   document.addEventListener('mousedown', (e) => {
     if (e.target.closest('.fenetre, .filtre-popover, #vue-ajouter, .vue-menu-btn, .vue-selecteur, .fiche-menu')) return;

@@ -165,6 +165,19 @@ Le filtrage natif de Grist (« Sélectionner par », filtres de la vue Grist)
 reste possible : il choisit les lignes envoyées au widget, et nos filtres
 s'appliquent ensuite.
 
+## Taille des cartes (#237)
+
+Bouton **« ▦ Moyenne ▾ »** de la barre, trois tailles :
+
+| Taille | La carte montre |
+|---|---|
+| Compacte | le titre seul ; cartes plus étroites, donc plus nombreuses par ligne |
+| Moyenne (par défaut) | le titre et les pastilles |
+| Grande | en plus, le début du texte principal (texte simple, 4 lignes au plus) et le nombre d'objets liés (« Tâches 38 ») |
+
+C'est une **préférence personnelle** : retenue par le navigateur pour cette
+Galerie (document et table), elle ne change ni les vues ni le document.
+
 ## Fiche
 
 - Disposition **côté** ou **centre**, au choix (bouton ⤢ / ⇥), mémorisée dans
