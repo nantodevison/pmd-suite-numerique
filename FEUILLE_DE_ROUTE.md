@@ -8,12 +8,16 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-15 22:03_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-17 22:52_
 
 ### 🖐️ À faire
 - [ ] #241 Augmenter la différenciation visuelle des cartes (Haute, EPIC « Améliorer l'Ux/Ui de la galerie »)
-- [ ] #235 Créer une page d'accueil vierge (Moyenne, échéance 2026-11-20, EPIC « Créer la page d'accueil de Marion »)
+- [ ] #245 Modifier le modèle de données pour le MVP d'Andrea (Haute, échéance 2026-11-20, EPIC « Créer un MVP pour Andrea »)
+- [ ] #235 Créer le widget page version 0 (Moyenne, échéance 2026-11-20, EPIC « Créer un MVP pour Andrea »)
 - [ ] #242 Proposer un affichage de base commun (Moyenne, EPIC « Mutualiser les fonctions communes du Kanban et de la Galerie »)
+- [ ] #244 Galerie : Afficher l'identifiant comme dans le Kanban (Moyenne, EPIC « Améliorer la qualité du code du kanban »)
+- [ ] #246 Créer le widget interactions version 0 (Moyenne, EPIC « Créer un MVP pour Andrea »)
+- [ ] #247 Structurer les pages Grist dédiées à Andrea (Moyenne, EPIC « Créer un MVP pour Andrea »)
 - [ ] #200 Kanban : filtrer sur n'importe quelle colonne (texte, nombre, date…) (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #227 Rechercher dans les menus de choix d'une référence quand la liste est longue (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #228 Proposer les colonnes natives de la table visée comme attributs d'une référence (façon Notion) (Basse, EPIC « Améliorer l'interface du kanban »)
@@ -26,6 +30,8 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 ## ⚠️ Prochaine séance
 - [ ] Prévenir Vincent et Elisa des changements de la barre (#214), de la création de carte liée (#222), des attributs dans les filtres (#223, colonnes « EPIC › … ») et de #226 (panneau des filtres compacté, « Afficher ▾ » dans les menus, EPIC / Assigné en pastilles dans « Nouvelle carte »), et recueillir leur avis
 - [ ] Essayer taches.py voir sur un vrai projet Notion (testé sur faux serveur seulement)
+- [ ] Poser à la main dans Grist les liens Bloque : #245 bloque #235, #246 et #247 (taches.py ne sait pas les écrire)
+- [ ] MVP Andrea : Martin modifie le modèle de données (#245) et transmet le nouveau schéma ; en attendant, cadrer #235 (ce que la fiche de la Galerie et _commun/ offrent déjà)
 
 ## En cours
 - [x] Fiche dense du Kanban fusionnée sur master (PR #15, feat/fiche-centrale), 2026-10-24 = mise en production du Kanban, vérifiée dans le document de l'Observatoire
@@ -186,3 +192,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - 2026-11-13 — Galerie : filtrable sur toute colonne Choix ou Référence de la table, associée ou non ; onRecords avec includeColumns 'normal' ; tri (#232) et préremplissage (#186) hors périmètre de #204 — même règle que le Kanban
 - 2026-11-13 — Galerie : mémoire du navigateur sous galerie.<nom>.<document>.<table>, sans contexte ; deux Galeries sur la même table partagent vues perso et vue active — accepté, les vues partagées restent propres à chaque widget
 - 2026-11-13 — #186 : dans « Nouvelle carte », valeurs de la vue en tête puis les autres sous un séparateur, message si la carte sera masquée (piste B), plutôt qu'une liste limitée — liste complète conservée, cas « n'est pas » sans ambiguïté
+- 2026-11-17 — MVP pour Andrea (EPIC 36) : widgets page et interactions séparés, « zone blanche » façon Notion (Markdown + blocs d'autres tables) reportée — commencer simple et faire tester
+- 2026-11-17 — Grist pour centraliser, Docs pour la prise de notes en réunion ; une réunion = une ligne d'Interactions avec son url (+ colonne Titre) ; liens Box et Docs dans une future table Documents — centraliser sans multiplier les outils
+- 2026-11-17 — une page Grist par projet (widget page filtré sur une ligne de Projets2, sous-pages Rendez-vous et Kanban), dupliquée depuis un projet modèle — la duplication de page conserve les filtres (testé sur la page EPICs)
+- 2026-11-17 — Kanban et Galerie inchangés pour Andrea tant qu'elle n'a pas testé et fait ses retours (table Retour_U)
