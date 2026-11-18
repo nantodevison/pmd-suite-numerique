@@ -8,15 +8,12 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-17 22:52_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-18 17:46_
 
 ### 🖐️ À faire
 - [ ] #241 Augmenter la différenciation visuelle des cartes (Haute, EPIC « Améliorer l'Ux/Ui de la galerie »)
-- [ ] #245 Modifier le modèle de données pour le MVP d'Andrea (Haute, échéance 2026-11-20, EPIC « Créer un MVP pour Andrea »)
-- [ ] #235 Créer le widget page version 0 (Moyenne, échéance 2026-11-20, EPIC « Créer un MVP pour Andrea »)
 - [ ] #242 Proposer un affichage de base commun (Moyenne, EPIC « Mutualiser les fonctions communes du Kanban et de la Galerie »)
 - [ ] #244 Galerie : Afficher l'identifiant comme dans le Kanban (Moyenne, EPIC « Améliorer la qualité du code du kanban »)
-- [ ] #246 Créer le widget interactions version 0 (Moyenne, EPIC « Créer un MVP pour Andrea »)
 - [ ] #247 Structurer les pages Grist dédiées à Andrea (Moyenne, EPIC « Créer un MVP pour Andrea »)
 - [ ] #200 Kanban : filtrer sur n'importe quelle colonne (texte, nombre, date…) (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #227 Rechercher dans les menus de choix d'une référence quand la liste est longue (Basse, EPIC « Améliorer l'interface du kanban »)
@@ -24,14 +21,16 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [ ] #234 Relire la structure des colonnes (libellés, couleurs des choix, noms des références) quand le document change, au même moment dans le Kanban et la Galerie (_commun/colonnes.js) (Basse, EPIC « Mutualiser les fonctions communes du Kanban et de la Galerie »)
 - [ ] #240 Galerie : consulter un objet lié (tâche…) dans la fiche (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
 - [ ] #243 Préremplir une nouvelle carte avec la valeur de « Sélectionner par » de Grist (Galerie et Kanban liés) (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
+- [ ] #248 Kanban : articuler le choix du projet (⚙) et « Sélectionner par » une Page (Basse, EPIC « Améliorer l'interface du kanban »)
+- [ ] #249 Uniformiser l'Ux des widgets (Basse, EPIC « Mutualiser les fonctions communes du Kanban et de la Galerie »)
 
 <!-- fin kanban -->
 
 ## ⚠️ Prochaine séance
 - [ ] Prévenir Vincent et Elisa des changements de la barre (#214), de la création de carte liée (#222), des attributs dans les filtres (#223, colonnes « EPIC › … ») et de #226 (panneau des filtres compacté, « Afficher ▾ » dans les menus, EPIC / Assigné en pastilles dans « Nouvelle carte »), et recueillir leur avis
 - [ ] Essayer taches.py voir sur un vrai projet Notion (testé sur faux serveur seulement)
-- [ ] Poser à la main dans Grist les liens Bloque : #245 bloque #235, #246 et #247 (taches.py ne sait pas les écrire)
-- [ ] MVP Andrea : Martin modifie le modèle de données (#245) et transmet le nouveau schéma ; en attendant, cadrer #235 (ce que la fiche de la Galerie et _commun/ offrent déjà)
+- [ ] MVP Andrea (#247) : structurer les pages Grist d'Andrea avec la Page et les Interactions (par URL) ; la Page peut servir de source « Sélectionner par » pour la Galerie ; passer Page et Interactions « en test » au catalogue une fois branchées
+- [ ] Réexporter espaces/gestion-projets/grist_schema.py depuis Grist (Interactions.url est devenue une colonne de données)
 
 ## En cours
 - [x] Fiche dense du Kanban fusionnée sur master (PR #15, feat/fiche-centrale), 2026-10-24 = mise en production du Kanban, vérifiée dans le document de l'Observatoire
@@ -65,6 +64,8 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [x] #237 : taille des cartes de la Galerie (compacte, moyenne, grande avec résumé et nombre d'objets liés) (PR #55), 2026-11-15
 - [x] #238 : condition de liste déroulante de Grist respectée dans les menus des pastilles, évaluateur _commun/condition.js (PR #56), 2026-11-15
 - [x] #186 : nouvelle carte préremplie d'après la vue (filtres « est » à une valeur, colonnes hors formulaire comprises), menus « Hors de la vue », avis avant création, Kanban et Galerie ; pastilles dans la nouvelle fiche de la Galerie (PR #57), 2026-11-15 ; testée dans le builder
+- [x] #235 : widget Page, une ligne affichée comme une page Notion, source possible de « Sélectionner par » (PR #58), 2026-11-18 ; testée dans le builder
+- [x] #246 : widget Interactions, journal des échanges d'un projet, projet choisi dans ⚙, fiche de création et de modification (PR #59), 2026-11-18 ; testé dans le builder
 
 ## Prochaines étapes
 (Les étapes du projet sont désormais suivies dans Grist : voir « Kanban (Grist) » ci-dessus.)
