@@ -16,6 +16,7 @@ EPICs, objectifs et résultats clés, projets… Les tâches restent gérées pa
 | `index.html` | Structure HTML et styles ; charge `galerie.js` |
 | `galerie.js` | Logique Grist : réception des données, grille, fiche, écriture |
 | [`../_commun/fiche.js`](../_commun/fiche.js), [`fiche.css`](../_commun/fiche.css) | Fiche partagée avec le Kanban : disposition côté / centre, Markdown |
+| [`../_commun/pastilles.js`](../_commun/pastilles.js), [`pastilles.css`](../_commun/pastilles.css) | Dessin des pastilles en lecture seule (texte affiché, couleur), commun avec le widget [Page](../page/) ; la modification d'un clic reste dans `galerie.js` |
 | [`../_commun/recherche.js`](../_commun/recherche.js) | Règle de recherche commune avec le Kanban |
 | [`../_commun/colonnes.js`](../_commun/colonnes.js) | Structure du document (libellés, types, formules, couleurs des choix), commune aux widgets |
 | [`../_commun/condition.js`](../_commun/condition.js) | Évaluation des conditions de liste déroulante de Grist (#238) |

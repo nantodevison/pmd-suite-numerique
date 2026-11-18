@@ -1,0 +1,9 @@
+/* Pastilles en lecture seule, dessinées par ../_commun/pastilles.js.
+   Les couleurs par défaut reprennent la palette des widgets (variables
+   --col-bg et --text-muted, si la page les définit). */
+.pastille {
+  font-size: 11px; padding: 2px 8px; border-radius: 999px;
+  background: var(--col-bg, #eef0f5); color: var(--text-muted, #718096);
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pastille-erreur { background: #fff5f5; color: #c53030; }
