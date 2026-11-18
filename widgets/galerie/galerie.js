@@ -329,122 +329,28 @@ function libelle(colId) { return info(colId).libelle; }
 
 function estFormule(colId) { return info(colId).formule; }
 
-/**
- * Valeur d'une cellule sous forme d'une liste de textes : un seul élément
- * en général, plusieurs pour une liste (références multiples, choix
- * multiples). Les éléments vides sont retirés.
- */
-function elementsAffiches(colId, valeur) {
-  const colonne = info(colId);
-  if (estErreur(valeur)) return ['⚠️ invalide'];
-  if (Array.isArray(valeur)) {
-    // Une liste peut arriver « encodée » : ['L', a, b…]
-    const liste = valeur[0] === 'L' ? valeur.slice(1) : valeur;
-    return liste.map(v => valeurSimple(colonne, v)).filter(Boolean);
-  }
-  const texte = valeurSimple(colonne, valeur);
-  return texte ? [texte] : [];
-}
-
-/**
- * Une cellule en erreur (par exemple une référence vers une ligne qui
- * n'existe pas : « InvalidTypedValue ») arrive soit comme un objet
- * { name, message, details }, soit « encodée » : ['E', nom, …].
- */
-function estErreur(v) {
-  if (Array.isArray(v)) return v[0] === 'E';
-  return Boolean(v) && typeof v === 'object' && !(v instanceof Date)
-    && typeof v.name === 'string' && 'message' in v;
-}
-
-/**
- * Texte affiché d'une valeur simple, selon la description de sa colonne
- * (`colonne`, donnée par info()).
- */
-function valeurSimple(colonne, v) {
-  if (estErreur(v)) return '⚠️ invalide';
-  if (v === null || v === undefined || v === '') return '';
-  // Grist envoie une référence sous son nom affiché ; un numéro n'arrive que
-  // si la référence n'affiche aucune colonne : on montre alors ce numéro.
-  if (/^(Ref|RefList):/.test(colonne.type) && typeof v === 'number') {
-    return v === 0 ? '' : String(v);   // 0 = référence vide
-  }
-  if (v instanceof Date) return v.toLocaleDateString('fr-FR');
-  // Grist stocke les dates en secondes depuis le 1er janvier 1970
-  if (colonne.type === 'Date' && typeof v === 'number') {
-    return new Date(v * 1000).toLocaleDateString('fr-FR', { timeZone: 'UTC' });
-  }
-  if (colonne.type.startsWith('DateTime') && typeof v === 'number') {
-    return new Date(v * 1000).toLocaleString('fr-FR');
-  }
-  if (typeof v === 'boolean') return v ? '✓ oui' : '✗ non';
-  // Nombre affiché en pourcentage dans Grist : 0.67 → « 67 % »
-  if (colonne.pourcentage && typeof v === 'number') return `${Math.round(v * 100)} %`;
-  if (typeof v === 'object') return JSON.stringify(v);   // cas rares (pièces jointes…)
-  // Un texte peut contenir du Markdown : on en retire les symboles.
-  return colonne.type === 'Text' ? Fiche.markdownVersTexte(String(v)) : String(v);
-}
-
 /* ══════════════════════════════════════════════════════════════
    3. PASTILLES ET COULEURS
+   Le dessin des pastilles (texte affiché, couleur) est commun avec le
+   widget Page : voir ../_commun/pastilles.js. Ces relais lui passent la
+   description de la colonne, pour que le reste de la Galerie continue de
+   ne manipuler que des identifiants de colonnes (colId).
    ══════════════════════════════════════════════════════════════ */
 
-// Pourcentages : du rouge (peu avancé) au vert (terminé)
-const COULEURS_POURCENTAGE = [
-  { jusqua: 33,  fond: '#fed7d7', texte: '#9b2c2c' },   // rouge
-  { jusqua: 66,  fond: '#feebc8', texte: '#9c4221' },   // orange
-  { jusqua: 99,  fond: '#ecf5c6', texte: '#4a6115' },   // jaune-vert
-  { jusqua: 100, fond: '#c6f6d5', texte: '#22543d' },   // vert
-];
+/** Cellule en erreur (['E', …] ou objet d'erreur) ? */
+const estErreur = (v) => Pastilles.estErreur(v);
 
-/**
- * Couleur d'une pastille d'après son texte affiché, ou null (gris neutre).
- *   - choix coloré dans Grist → cette couleur ;
- *   - « 67 % »                → échelle COULEURS_POURCENTAGE ;
- *   - choix sans couleur, ou référence → pastel fixe propre à la valeur.
- */
-function couleurPastille(colId, texte) {
-  const colonne = info(colId);
-  // Couleur de fond réglée dans Grist (texte noir si Grist n'en précise pas)
-  const choix = colonne.couleurs[texte];
-  if (choix && choix.fond) return { fond: choix.fond, texte: choix.texte || '#000000' };
+/** Texte affiché d'une valeur simple, selon la description de sa colonne. */
+const valeurSimple = (colonne, v) => Pastilles.valeurSimple(colonne, v);
 
-  const pourcent = /^\s*(-?\d+(?:[.,]\d+)?)\s*%\s*$/.exec(texte);
-  if (pourcent) {
-    const n = parseFloat(pourcent[1].replace(',', '.'));
-    return COULEURS_POURCENTAGE.find(c => n <= c.jusqua) || COULEURS_POURCENTAGE[COULEURS_POURCENTAGE.length - 1];
-  }
+/** Valeur d'une cellule en liste de textes (plusieurs pour une liste). */
+function elementsAffiches(colId, valeur) { return Pastilles.elements(info(colId), valeur); }
 
-  if (/^(Choice|ChoiceList|Ref|RefList)\b/.test(colonne.type)) return couleurPastel(texte);
-  return null;
-}
+/** Couleur { fond, texte } d'une pastille d'après son texte, ou null (gris). */
+function couleurPastille(colId, texte) { return Pastilles.couleur(info(colId), texte); }
 
-/**
- * Pastel calculé à partir du texte : la même valeur a toujours la même
- * couleur (d'une carte à l'autre, d'une séance à l'autre).
- */
-function couleurPastel(texte) {
-  let somme = 0;
-  for (const caractere of texte) somme = (somme * 31 + caractere.codePointAt(0)) % 360;
-  return { fond: `hsl(${somme}, 70%, 91%)`, texte: `hsl(${somme}, 45%, 28%)` };
-}
-
-/**
- * Pastilles d'une cellule : une par élément (une liste de choix en donne
- * plusieurs). Renvoie un tableau d'éléments <span>, vide si la cellule l'est.
- */
-function creerPastilles(colId, valeur) {
-  const erreur = estErreur(valeur);
-  return elementsAffiches(colId, valeur).map(texte => {
-    const p = document.createElement('span');
-    p.className = 'pastille' + (erreur ? ' pastille-erreur' : '');
-    p.textContent = texte;
-    p.title = `${libelle(colId)} : ${texte}`;
-    const couleur = erreur ? null : couleurPastille(colId, texte);
-    if (couleur) { p.style.background = couleur.fond; p.style.color = couleur.texte; }
-    return p;
-  });
-}
+/** Pastilles <span> d'une cellule, vide si la cellule l'est. */
+function creerPastilles(colId, valeur) { return Pastilles.creer(info(colId), valeur); }
 
 /* ══════════════════════════════════════════════════════════════
    3 bis. MODIFIER UNE PASTILLE (#205 sur la carte, #206 dans la fiche)

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Page Grist</title>
+  <!-- API Grist servie par l'instance de la DINUM (même version que notre Grist) -->
+  <script src="https://grist.numerique.gouv.fr/grist-plugin-api.js"></script>
+  <!-- Markdown du texte : marked (Markdown → HTML) et DOMPurify (nettoyage
+       du HTML). « integrity » garantit que le fichier reçu du CDN est
+       exactement celui prévu ; sinon le navigateur refuse de l'exécuter. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"
+          integrity="sha512-xeUh+KxNyTufZOje++oQHstlMQ8/rpyzPuM+gjMFYK3z5ILJGE7l2NvYL+XfliKURMpBIKKp1XoPN/qswlSMFA=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"
+          integrity="sha512-jB0TkTBeQC9ZSkBqDhdmfTv1qdfbWpGE72yJ/01Srq6hEzZIz2xkz1e57p9ai7IeHMwEG7HpzG6NdptChif5Pg=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <!-- Briques communes (mode URL uniquement) : champ Markdown, pastilles,
+       fenêtre de réglages -->
+  <link rel="stylesheet" href="../_commun/fiche.css" />
+  <link rel="stylesheet" href="../_commun/pastilles.css" />
+  <link rel="stylesheet" href="../_commun/fenetre.css" />
+  <style>
+/* ══════════════════════════════════════════════════════════════
+   PAGE GRIST — styles (même palette que le Kanban et la Galerie)
+   Mise en page « façon Notion » : une colonne de lecture, sans cadre.
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  --bg:         #ffffff;
+  --surface:    #ffffff;
+  --col-bg:     #eef0f5;
+  --text:       #2d3748;
+  --text-muted: #718096;
+  --accent:     #667eea;
+  --border:     #e2e8f0;
+  --font:       'Segoe UI', system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var(--text); background: var(--bg); }
+body { overflow-y: auto; }
+
+/* Bouton ⚙, discret en haut à droite */
+.bouton-reglages {
+  position: fixed; top: 8px; right: 10px; z-index: 10;
+  border: none; background: none; cursor: pointer;
+  font-size: 16px; padding: 4px 6px; border-radius: 6px; opacity: .45;
+}
+.bouton-reglages:hover, .bouton-reglages:focus-visible { opacity: 1; background: var(--col-bg); outline: none; }
+
+/* La page : une colonne de lecture centrée */
+.page {
+  max-width: 860px; margin: 0 auto; padding: 28px 24px 90px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.page-titre { font-size: 28px; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; padding-right: 28px; }
+.page-sans-titre { color: var(--text-muted); font-style: italic; }
+.page-pastilles { display: flex; flex-wrap: wrap; gap: 6px; }
+.page-pastilles .pastille { font-size: 12px; padding: 3px 10px; }
+.page-note { font-size: 11.5px; color: var(--text-muted); }
+.page .fiche-md-rendu { font-size: 14px; }
+
+/* Message à la place de la page (rien à afficher, critère à revoir…) */
+.page-message {
+  max-width: 560px; margin: 60px auto; padding: 0 20px;
+  text-align: center; color: var(--text-muted); line-height: 1.6;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.page-message strong { color: var(--text); }
+
+/* Barre de sauvegarde, en bas, visible seulement si le texte est modifié */
+.barre-sauver {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 14px rgba(9, 30, 66, .08);
+}
+.barre-sauver[hidden] { display: none; }
+.barre-sauver-texte { margin-right: auto; color: #b7791f; font-weight: 600; }
+
+/* Boutons */
+.btn-primary {
+  background: var(--accent); color: #fff; border: none; border-radius: 8px;
+  padding: 8px 18px; font-size: 13px; font-weight: 600; font-family: var(--font); cursor: pointer;
+}
+.btn-primary:hover { background: #5a6fd6; }
+.btn-primary:disabled { opacity: .5; cursor: default; }
+.btn-ghost {
+  background: none; color: var(--text-muted); border: 1.5px solid var(--border);
+  border-radius: 8px; padding: 8px 16px; font-size: 13px; font-family: var(--font); cursor: pointer;
+}
+.btn-ghost:hover { background: var(--col-bg); color: var(--text); }
+
+/* Fenêtre ⚙ « Ligne affichée » */
+.config-etape { font-size: 15px; font-weight: 700; margin: 0 0 6px; }
+.config-aide { font-size: 12px; color: var(--text-muted); margin: 0 0 12px; line-height: 1.5; }
+.criteres { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.critere { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.critere-et { width: 22px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-align: right; }
+.critere select {
+  padding: 5px 8px; border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 12.5px; font-family: var(--font); color: var(--text); background: var(--surface);
+  min-width: 140px; max-width: 280px;
+}
+.critere select:focus { outline: none; border-color: var(--accent); }
+.critere-retirer {
+  border: none; background: none; cursor: pointer; color: var(--text-muted);
+  font-size: 14px; padding: 2px 6px; border-radius: 6px;
+}
+.critere-retirer:hover { background: var(--col-bg); color: var(--text); }
+.critere-ajouter {
+  align-self: flex-start; border: 1.5px dashed var(--border); background: none; cursor: pointer;
+  border-radius: 8px; padding: 5px 12px; font-size: 12.5px; font-family: var(--font); color: var(--text-muted);
+}
+.critere-ajouter:hover { border-color: var(--accent); color: var(--text); }
+.criteres-resultat { margin: 12px 0; padding: 8px 12px; border-radius: 8px; font-size: 13px; background: var(--col-bg); }
+.criteres-resultat.ok { background: #e6fffa; color: #22543d; }
+.criteres-resultat.alerte { background: #fffaf0; color: #9c4221; }
+
+/* Petit message temporaire en bas de l'écran */
+.toast {
+  position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%);
+  background: #2d3748; color: #fff; padding: 8px 16px; border-radius: 8px;
+  font-size: 13px; z-index: 2000; opacity: 0; transition: opacity .2s; pointer-events: none;
+  max-width: calc(100vw - 32px);
+}
+.toast.visible { opacity: 1; }
+
+@media (max-width: 480px) {
+  .page { padding: 20px 16px 90px; }
+  .page-titre { font-size: 22px; }
+}
+  </style>
+</head>
+<body>
+  <button type="button" class="bouton-reglages" id="bouton-reglages"
+          title="Choisir la ligne affichée" aria-label="Choisir la ligne affichée">⚙</button>
+
+  <!-- Contenu dessiné par page.js : la page, ou un message -->
+  <main id="contenu"></main>
+
+  <!-- Barre de sauvegarde du texte -->
+  <div class="barre-sauver" id="barre-sauver" hidden>
+    <span class="barre-sauver-texte">• Texte modifié, pas encore sauvegardé</span>
+    <button type="button" class="btn-ghost" id="bouton-annuler">Annuler</button>
+    <button type="button" class="btn-primary" id="bouton-sauver">✓ Sauvegarder</button>
+  </div>
+
+  <!-- Contenu de la fenêtre ⚙ (déplacé dans la fenêtre par fenetre.js) -->
+  <section id="reglages-ligne" hidden>
+    <h3 class="config-etape">Ligne affichée</h3>
+    <p class="config-aide" id="reglages-aide"></p>
+    <div class="criteres" id="criteres"></div>
+    <button type="button" class="critere-ajouter" id="critere-ajouter">＋ Ajouter un critère</button>
+    <div class="criteres-resultat" id="criteres-resultat"></div>
+    <p class="config-aide">Après « Appliquer », cliquez sur <strong>Enregistrer</strong> dans
+      Grist (en haut du widget) pour garder ce choix dans le document.</p>
+  </section>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Règle de recherche commune, avant fiche.js qui s'en sert -->
+  <script src="../_commun/recherche.js"></script>
+  <script src="../_commun/fiche.js"></script>
+  <!-- Dessin des pastilles, commun avec la Galerie (après fiche.js qui lui sert) -->
+  <script src="../_commun/pastilles.js"></script>
+  <!-- Structure du document (libellés, types, couleurs des choix) -->
+  <script src="../_commun/colonnes.js"></script>
+  <!-- Fenêtre de réglages à onglets -->
+  <script src="../_commun/fenetre.js"></script>
+  <script src="page.js"></script>
+</body>
+</html>

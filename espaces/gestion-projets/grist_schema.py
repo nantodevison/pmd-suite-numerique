@@ -104,14 +104,25 @@ class Departements:
 
 
 @grist.UserTable
+class Documents:
+  Titre = grist.Text()
+  Projet = grist.ReferenceList('Projets2', reverse_of='Documents')
+  Type = grist.ChoiceList()
+
+  @grist.formulaType(grist.Text())
+  def url(rec, table):
+    return ''
+
+
+@grist.UserTable
 class EPICs:
   Projet = grist.Reference('Projets2', reverse_of='EPICs')
   Titre = grist.Text()
   Taches = grist.ReferenceList('Taches', reverse_of='EPIC')
+  Description = grist.Text()
   Retour_U = grist.ReferenceList('Retour_U', reverse_of='EPIC')
   objectifs_resultats_cle = grist.Reference('Objectifs_resultats_cles', reverse_of='EPICs')
   Priorite = grist.Choice()
-  Description = grist.Text()
 
   def Avancement(rec, table):
     cnt=0
@@ -130,6 +141,15 @@ class EPICs:
       cnt = cnt_tot
 
     return f"{round((cnt/cnt_tot)*100)} %"
+
+  def identifiant(rec, table):
+    return rec.id
+
+  def Taches_statut(rec, table):
+    return rec.Taches.statut
+
+  def Taches_Priorite(rec, table):
+    return rec.Taches.Priorite
 
 
 @grist.UserTable
@@ -211,6 +231,11 @@ class Interactions:
   Type = grist.Choice()
   Description = grist.Text()
   Projets = grist.ReferenceList('Projets2')
+  Titre = grist.Text()
+
+  @grist.formulaType(grist.Text())
+  def url(rec, table):
+    return ''
 
   class _Summary:
 
@@ -327,9 +352,19 @@ class Projets2:
   Objectifs_resultats_cles = grist.ReferenceList('Objectifs_resultats_cles', reverse_of='Projet')
   Contacts_Projets = grist.ReferenceList('Contacts', reverse_of='Projets')
   Structures = grist.ReferenceList('Structures', reverse_of='Projets')
+  Documents = grist.ReferenceList('Documents', reverse_of='Projet')
+  Type = grist.Choice()
 
   def Contacts_Email(rec, table):
     return rec.Contacts.Email
+
+  @grist.formulaType(grist.Text())
+  def Presentation(rec, table):
+    return ''
+
+  @grist.formulaType(grist.Reference('Contacts'))
+  def Chef_de_projet(rec, table):
+    return 0
 
 
 @grist.UserTable
@@ -431,3 +466,7 @@ class Taches:
 
   def Id2(rec, table):
     return rec.id
+
+  @grist.formulaType(grist.Choice())
+  def EPIC_Priorite(rec, table):
+    return rec.EPIC.Priorite

@@ -13,8 +13,9 @@ référence pour les noms de tables et de colonnes utilisés par les widgets.
 
 | Module | Tables ou colonnes |
 |---|---|
-| Gestion de projet | `Projets2` → `Objectifs_resultats_cles` → `EPICs` → `Taches` |
-| CRM | `Contacts`, `Structures`, `Interactions` |
+| Gestion de projet | `Projets2` → `Objectifs_resultats_cles` → `EPICs` → `Taches` ; colonnes `Presentation` (texte Markdown de la page du projet, sans limite de longueur), `Chef_de_projet` (→ `Contacts`) et `Type` de `Projets2` |
+| Documents | `Documents` : `Titre`, `Projet` (liste de références : un document peut servir plusieurs projets), `Type`, `url` (Box, Docs…) |
+| CRM | `Contacts`, `Structures`, `Interactions` (dont `Titre` et `url` : lien vers la note Docs d'une réunion) |
 | Retours utilisateurs | `Retour_U` et ses tables `Enum_…` (`Enum_Type_retourU`, `Enum_Tags_retourU`, `Enum_Opportunite_retourU`) |
 | Valorisation | colonnes de `Projets2` : `Plus_value_Cerema`, `Exemple_de_resultat`, `Duplicable`, `image`, `Latitude`/`Longitude`… ; table `Info_valorisation_projet` |
 | Écoute client | colonnes `ect_client_*` de `Projets2` ; table `Rex_ecoute_client` |
@@ -26,6 +27,15 @@ référence pour les noms de tables et de colonnes utilisés par les widgets.
   que `EPICs.Avancement` et le Kanban de l'Observatoire en utilisent d'autres
   (`📧Demande envoyée`, `💾Data non transmises`, `🆙Disponible`…). Un widget ne
   doit pas dépendre de cette colonne.
+- **Longueurs limitées dans `Projets2`** : des formules d'initialisation
+  remplacent un `Titre` de plus de 30 caractères (`Sous_Titre` : 50) par un
+  message d'erreur, et mettent probablement en erreur `Description`, `Exemple_de_resultat` (250),
+  `Plus_value_Cerema` et `ect_client_probleme` (150) trop longs. Le texte long
+  d'un projet va dans `Presentation`, sans limite. Un widget ne doit pas
+  écrire le titre sans vérifier sa longueur.
+- **Colonnes vides** : une colonne créée mais jamais remplie apparaît dans
+  l'export comme une formule vide (`return ''`, `return 0`). La convertir en
+  colonne de données dans Grist avant qu'un widget n'y écrive.
 - **`Taches.qui_`** est une liste de références (`ReferenceList`) vers `Contacts`,
   pas une référence simple.
 
