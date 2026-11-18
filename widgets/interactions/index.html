@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interactions Grist</title>
+  <!-- API Grist servie par l'instance de la DINUM (même version que notre Grist) -->
+  <script src="https://grist.numerique.gouv.fr/grist-plugin-api.js"></script>
+  <!-- Markdown de la description : marked (Markdown → HTML) et DOMPurify
+       (nettoyage du HTML). « integrity » garantit que le fichier reçu du CDN
+       est exactement celui prévu ; sinon le navigateur refuse de l'exécuter. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"
+          integrity="sha512-xeUh+KxNyTufZOje++oQHstlMQ8/rpyzPuM+gjMFYK3z5ILJGE7l2NvYL+XfliKURMpBIKKp1XoPN/qswlSMFA=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"
+          integrity="sha512-jB0TkTBeQC9ZSkBqDhdmfTv1qdfbWpGE72yJ/01Srq6hEzZIz2xkz1e57p9ai7IeHMwEG7HpzG6NdptChif5Pg=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <!-- Briques communes (mode URL uniquement) : fiche, pastilles, fenêtre ⚙ -->
+  <link rel="stylesheet" href="../_commun/fiche.css" />
+  <link rel="stylesheet" href="../_commun/pastilles.css" />
+  <link rel="stylesheet" href="../_commun/fenetre.css" />
+  <style>
+/* ══════════════════════════════════════════════════════════════
+   INTERACTIONS GRIST — styles (même palette que la Page et la Galerie)
+   Une liste ligne à ligne, du plus récent au plus ancien.
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  --bg:         #ffffff;
+  --surface:    #ffffff;
+  --col-bg:     #eef0f5;
+  --text:       #2d3748;
+  --text-muted: #718096;
+  --accent:     #667eea;
+  --border:     #e2e8f0;
+  --font:       'Segoe UI', system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var(--text); background: var(--bg); }
+body { overflow-y: auto; }
+
+/* Bouton ⚙, discret en haut à droite (comme la Page) */
+.bouton-reglages {
+  position: fixed; top: 8px; right: 10px; z-index: 10;
+  border: none; background: none; cursor: pointer;
+  font-size: 16px; padding: 4px 6px; border-radius: 6px; opacity: .45;
+}
+.bouton-reglages:hover, .bouton-reglages:focus-visible { opacity: 1; background: var(--col-bg); outline: none; }
+
+/* Colonne de lecture centrée */
+.journal { max-width: 860px; margin: 0 auto; padding: 14px 20px 40px; }
+.journal-entete {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 0 34px 12px 0; border-bottom: 1px solid var(--border); margin-bottom: 4px;
+}
+.journal-projet { font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
+.journal-compte { color: var(--text-muted); font-size: 12px; }
+.journal-entete .btn-primary { margin-left: auto; }
+
+/* Une interaction = une ligne cliquable */
+.interaction {
+  display: grid; grid-template-columns: 9.5em 1fr auto; align-items: baseline; gap: 4px 14px;
+  width: 100%; padding: 10px 8px; border: none; border-bottom: 1px solid var(--border);
+  background: none; text-align: left; font-family: var(--font); font-size: 13px; color: var(--text);
+  cursor: pointer; border-radius: 6px;
+}
+.interaction:hover, .interaction:focus-visible { background: var(--col-bg); outline: none; }
+.interaction-date { color: var(--text-muted); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.interaction-corps { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; min-width: 0; }
+.interaction-titre { font-weight: 600; overflow-wrap: anywhere; }
+.interaction-sans-titre { color: var(--text-muted); font-style: italic; font-weight: 400; }
+.interaction-personnes { color: var(--text-muted); font-size: 12px; }
+.interaction-lien {
+  text-decoration: none; font-size: 15px; padding: 0 6px; border-radius: 6px;
+}
+.interaction-lien:hover, .interaction-lien:focus-visible { background: #fff; outline: 1px solid var(--accent); }
+
+/* Message à la place de la liste (rien à afficher, réglage à faire…) */
+.message {
+  max-width: 560px; margin: 50px auto; padding: 0 20px;
+  text-align: center; color: var(--text-muted); line-height: 1.6;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.message strong { color: var(--text); }
+
+/* Fiche : champs « libellé : valeur » */
+/* Le corps de la fiche est une colonne flexible qui défile : quand une longue
+   description la fait déborder, le navigateur comprime ses éléments, et le
+   titre (zone de texte) pourrait être écrasé jusqu'à disparaître. On l'interdit. */
+#fiche-corps > * { flex-shrink: 0; }
+.champs { display: grid; grid-template-columns: max-content 1fr; gap: 10px 14px; align-items: center; }
+.champ-libelle {
+  font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: var(--text-muted);
+}
+.champ-valeur { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; min-width: 0; }
+.champ-saisie {
+  width: 100%; padding: 6px 9px; border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 13px; font-family: var(--font); color: var(--text); background: var(--surface);
+}
+.champ-saisie:focus { outline: none; border-color: var(--accent); }
+.champ-saisie:disabled { background: var(--col-bg); color: var(--text-muted); }
+input[type="date"].champ-saisie, input[type="datetime-local"].champ-saisie { width: auto; }
+.champ-aide { flex-basis: 100%; font-size: 11.5px; color: var(--text-muted); }
+.champ-aide a { color: var(--accent); }
+.personne-retirer {
+  border: none; background: none; cursor: pointer; color: var(--text-muted);
+  font-size: 12px; margin-left: 2px; padding: 0 2px; border-radius: 4px;
+}
+.personne-retirer:hover { color: var(--text); background: rgba(0, 0, 0, .06); }
+.description-ancienne { border-top: 1px solid var(--border); padding-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+
+/* Boutons */
+.btn-primary {
+  background: var(--accent); color: #fff; border: none; border-radius: 8px;
+  padding: 7px 16px; font-size: 13px; font-weight: 600; font-family: var(--font); cursor: pointer;
+}
+.btn-primary:hover { background: #5a6fd6; }
+.btn-primary:disabled { opacity: .5; cursor: default; }
+.btn-ghost {
+  background: none; color: var(--text-muted); border: 1.5px solid var(--border);
+  border-radius: 8px; padding: 7px 14px; font-size: 13px; font-family: var(--font); cursor: pointer;
+}
+.btn-ghost:hover { background: var(--col-bg); color: var(--text); }
+
+/* Fenêtre ⚙ */
+.config-etape { font-size: 15px; font-weight: 700; margin: 0 0 6px; }
+.config-aide { font-size: 12px; color: var(--text-muted); margin: 0 0 12px; line-height: 1.5; }
+.config-champ { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; max-width: 420px; }
+.config-champ label { font-size: 12px; font-weight: 600; }
+
+/* Petit message temporaire en bas de l'écran */
+.toast {
+  position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%);
+  background: #2d3748; color: #fff; padding: 8px 16px; border-radius: 8px;
+  font-size: 13px; z-index: 2000; opacity: 0; transition: opacity .2s; pointer-events: none;
+  max-width: calc(100vw - 32px);
+}
+.toast.visible { opacity: 1; }
+
+@media (max-width: 520px) {
+  .journal { padding: 12px 12px 40px; }
+  .interaction { grid-template-columns: 1fr auto; }
+  .interaction-date { grid-column: 1 / -1; }
+  .champs { grid-template-columns: 1fr; gap: 4px; }
+  .champ-libelle { margin-top: 8px; }
+}
+  </style>
+</head>
+<body>
+  <button type="button" class="bouton-reglages" id="bouton-reglages"
+          title="Réglages : projet affiché" aria-label="Réglages : projet affiché">⚙</button>
+
+  <!-- Contenu dessiné par interactions.js : la liste, ou un message -->
+  <main id="contenu"></main>
+
+  <!-- Fiche d'une interaction (création ou modification) -->
+  <aside id="fiche" class="fiche-panneau" role="dialog" aria-label="Fiche">
+    <div class="fiche-panneau-entete">
+      <span class="fiche-panneau-libelle" id="fiche-libelle">Interaction</span>
+      <div class="fiche-panneau-actions" id="fiche-actions">
+        <span class="fiche-modifie" id="fiche-modifie" title="Modifications non sauvegardées"></span>
+        <button type="button" class="fiche-fermer" id="fiche-fermer" title="Fermer">✕</button>
+      </div>
+    </div>
+    <div class="fiche-panneau-corps" id="fiche-corps"></div>
+    <div class="fiche-panneau-pied">
+      <button type="button" class="fiche-btn-principal" id="fiche-sauver" disabled>✓ Sauvegarder</button>
+      <button type="button" class="fiche-btn-secondaire" id="fiche-annuler">Annuler</button>
+    </div>
+  </aside>
+
+  <!-- Contenu de la fenêtre ⚙ (déplacé dans la fenêtre par fenetre.js) -->
+  <section id="reglages-projet" hidden>
+    <h3 class="config-etape">Projet affiché</h3>
+    <p class="config-aide" id="reglages-aide"></p>
+    <div class="config-champ">
+      <label for="reglages-choix-projet">Projet</label>
+      <select class="champ-saisie" id="reglages-choix-projet"></select>
+    </div>
+    <div class="config-champ">
+      <label for="reglages-libelle">Libellé du bouton de création</label>
+      <input type="text" class="champ-saisie" id="reglages-libelle" maxlength="40" />
+      <span class="config-aide">Affiché « ＋ … » au-dessus de la liste.</span>
+    </div>
+    <p class="config-aide">Après « Appliquer », cliquez sur <strong>Enregistrer</strong> dans
+      Grist (en haut du widget) pour garder ce choix dans le document.</p>
+  </section>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Règle de recherche commune, avant fiche.js qui s'en sert -->
+  <script src="../_commun/recherche.js"></script>
+  <script src="../_commun/fiche.js"></script>
+  <!-- Dessin des pastilles (après fiche.js qui lui sert) -->
+  <script src="../_commun/pastilles.js"></script>
+  <!-- Structure du document (libellés, types, couleurs, noms des références) -->
+  <script src="../_commun/colonnes.js"></script>
+  <!-- Fenêtre de réglages à onglets -->
+  <script src="../_commun/fenetre.js"></script>
+  <script src="interactions.js"></script>
+</body>
+</html>
