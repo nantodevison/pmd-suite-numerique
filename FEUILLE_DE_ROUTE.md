@@ -8,11 +8,10 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-19 17:48_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-19 23:47_
 
 ### 🖐️ À faire
 - [ ] #242 Proposer un affichage de base commun (Moyenne, EPIC « Mutualiser les fonctions communes du Kanban et de la Galerie »)
-- [ ] #244 Galerie : Afficher l'identifiant comme dans le Kanban (Moyenne, EPIC « Améliorer la qualité du code du kanban »)
 - [ ] #200 Kanban : filtrer sur n'importe quelle colonne (texte, nombre, date…) (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #227 Rechercher dans les menus de choix d'une référence quand la liste est longue (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #228 Proposer les colonnes natives de la table visée comme attributs d'une référence (façon Notion) (Basse, EPIC « Améliorer l'interface du kanban »)
@@ -30,7 +29,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 ## ⚠️ Prochaine séance
 - [ ] Prévenir Vincent et Elisa des changements de la barre (#214), de la création de carte liée (#222), des attributs dans les filtres (#223, colonnes « EPIC › … ») et de #226 (panneau des filtres compacté, « Afficher ▾ » dans les menus, EPIC / Assigné en pastilles dans « Nouvelle carte »), et recueillir leur avis
 - [ ] Essayer taches.py voir sur un vrai projet Notion (testé sur faux serveur seulement)
-- [ ] MVP Andrea (#247) : structurer les pages Grist d'Andrea avec la Page et les Interactions (par URL) ; la Page peut servir de source « Sélectionner par » pour la Galerie ; passer Page et Interactions « en test » au catalogue une fois branchées
+- [ ] MVP Andrea (#247) : structurer les pages Grist d'Andrea avec la Page et les Interactions (par URL) ; la Page peut servir de source « Sélectionner par » pour la Galerie ; passer Page et Interactions « en test » au catalogue une fois branchées ; donner un nom spécifique à chaque Galerie dans ⚙ (#264), y compris sur les pages dupliquées, puis « Enregistrer » ; retirer la pastille `identifiant` des Galeries d'EPICs (doublon du numéro, #244)
 - [ ] Installer gitleaks sur ce poste (absent de %LOCALAPPDATA%\Programs le 2026-11-19 : contrôle manuel des secrets à la place)
 
 ## En cours
@@ -68,6 +67,8 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [x] #235 : widget Page, une ligne affichée comme une page Notion, source possible de « Sélectionner par » (PR #58), 2026-11-18 ; testée dans le builder
 - [x] #246 : widget Interactions, journal des échanges d'un projet, projet choisi dans ⚙, fiche de création et de modification (PR #59), 2026-11-18 ; testé dans le builder
 - [x] #241 close : couleur des cartes de la Galerie (PR #60), puis image en haut des cartes depuis une colonne pièce jointe (PR #61), 2026-11-19 ; banc 464 vérifications, testée dans le builder
+- [x] #264 : nom propre à chaque Galerie dans ⚙, ajouté aux clés de mémoire du navigateur (PR #62), 2026-11-19 ; testée dans le builder
+- [x] #244 : numéro des cartes de la Galerie en bas à droite et « Fiche · #N » (PR #63), 2026-11-19 ; banc 508 vérifications, testée dans le builder
 
 ## Prochaines étapes
 (Les étapes du projet sont désormais suivies dans Grist : voir « Kanban (Grist) » ci-dessus.)
@@ -202,3 +203,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - 2026-11-19 — image des cartes de la Galerie en couverture en haut de la carte (moyenne 80 px, grande 140 px, rien en compacte ni dans la fiche), première image de la cellule, pas de bande vide sans image — titre lisible, comme Notion ; « image en fond » écartée
 - 2026-11-19 — images lues avec un jeton Grist en lecture seule ; une pièce jointe illisible même avec un jeton neuf n'est plus retentée jusqu'à la relecture de _grist_Attachments — sinon un jeton demandé à chaque redessin (recherche)
 - 2026-11-19 — CLAUDE.md global : valider un commit vaut accord pour son push, et sur une branche de travail pour la PR, la fusion, le retour sur la branche principale et la suppression de la branche — enchaîner sans redemander ; confirme la décision du 2026-10-29
+- 2026-11-19 — Galerie : nom de Galerie saisi dans ⚙ et ajouté aux clés de mémoire du navigateur ; sans nom, clés inchangées ; changer de nom repart de zéro — le widget ne peut pas lire le numéro de sa page (cadre d'un autre site, rien dans l'API Grist) et un identifiant généré serait copié par la duplication de page (#264)
+- 2026-11-19 — Page et Interactions gardent leurs réglages dans les options du widget, sans mémoire du navigateur : pas de partage entre pages ; une harmonisation éventuelle relève de #249
+- 2026-11-19 — numéro des cartes de la Galerie dans un pied poussé en bas (ou à droite des objets liés en grande taille), pas en taille compacte — à droite des pastilles, il restait au milieu d'une carte étirée (retour de test)
+- 2026-11-19 — CLAUDE.md global : section « Tâches suivies » (statut accepté sans simulation ; « En cours » au démarrage et « Fait » après fusion testée sans demander) et petits détails tranchés sans question ; mémoires locales correspondantes supprimées — règles communes aux deux postes
