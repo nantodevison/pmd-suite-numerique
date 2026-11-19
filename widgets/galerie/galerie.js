@@ -82,6 +82,9 @@ const ETAT = {
   // voir preparerVueNouvelleCarte ; null pour une carte existante.
   fiche:      { id: null, nouvelle: false, modifs: {}, apercu: {}, vue: null },
   modele:     '',     // texte de départ des nouvelles cartes (réglage ⚙)
+  // Nom de cette Galerie (réglage ⚙, #264), '' si aucun : il entre dans les
+  // clés de mémoire du navigateur (voir cleMemoire)
+  nomGalerie: '',
 };
 
 /* Registre des vues enregistrées (#204), commun avec le Kanban : voir
@@ -103,13 +106,21 @@ const MEMOIRE_ATTRIBUTS = Filtres.memoireAttributs(() => cleMemoire('attributs')
  * Clé de mémoire du navigateur pour la donnée `nom` ('vueActive',
  * 'vuesPerso', 'attributs', 'groupesReplies'), ou null si le document est encore inconnu.
  * Tous les widgets publiés sur nantodevison.github.io partagent cette
- * mémoire : la clé contient donc le document et la table. Deux Galeries
- * sur la même table partagent ainsi leurs vues perso (accepté, #204).
+ * mémoire : la clé contient donc le document et la table, et le nom de
+ * cette Galerie s'il est réglé dans ⚙ (#264).
+ *
+ * Pourquoi un nom saisi par l'utilisateur ? Sans lui, deux Galeries sur la
+ * même table (une page par projet, par exemple) partagent vue active, vues
+ * perso, taille des cartes… Le widget ne peut pas se distinguer seul : il ne
+ * voit pas l'adresse de sa page (cadre d'un autre site) et l'API Grist ne la
+ * donne pas ; un identifiant tiré au hasard serait copié avec la page
+ * dupliquée. Sans nom, la clé reste celle d'avant #264.
  * NE PAS CHANGER le format de ces clés : chacun perdrait ses vues perso.
  */
 function cleMemoire(nom) {
   if (!ETAT.docNom || !ETAT.table) return null;
-  return `galerie.${nom}.${ETAT.docNom}.${ETAT.table}`;
+  const cle = `galerie.${nom}.${ETAT.docNom}.${ETAT.table}`;
+  return ETAT.nomGalerie ? `${cle}.${ETAT.nomGalerie}` : cle;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -190,6 +201,9 @@ grist.onOptions(async (options) => {
   // étant seul à les écrire, sa copie en mémoire fait foi.
   if (ETAT.optionsChargees) return;
   ETAT.optionsChargees = true;   // tout de suite : onOptions peut revenir pendant l'attente
+  // Nom de la Galerie (#264), lu lui aussi à l'ouverture seulement : il
+  // change les clés de mémoire, un rappel tardif ne doit pas les déplacer.
+  ETAT.nomGalerie = nettoyerNomGalerie(options && options.nom);
   await _identitePrete;           // les clés de mémoire en dépendent
   VUES.charger(options && options.vues);
   appliquerVue();
@@ -668,12 +682,29 @@ async function ecrireCellule(ligne, colId, valeur) {
    4. GRILLE DE CARTES
    ══════════════════════════════════════════════════════════════ */
 
+/**
+ * Titre de la barre : nom de la table, suivi en gris du nom de la Galerie
+ * s'il est réglé (#264). Une page dupliquée qui porte encore le nom du
+ * modèle se repère ainsi d'un coup d'œil. textContent : le nom est saisi
+ * par l'utilisateur, il ne doit jamais être lu comme du HTML.
+ */
+function majTitre() {
+  const titre = document.getElementById('titre-table');
+  titre.textContent = '🖼️ ' + (ETAT.table || 'Galerie');
+  if (ETAT.nomGalerie) {
+    const nom = document.createElement('span');
+    nom.className = 'barre-nom';
+    nom.textContent = ' · ' + ETAT.nomGalerie;
+    titre.appendChild(nom);
+  }
+}
+
 function afficherGrille() {
   // Barre des vues (onglets, « 🔽 Filtres ») et bas de « Gérer la vue »
   majBarreVues();
   const grille = document.getElementById('grille');
   grille.innerHTML = '';
-  document.getElementById('titre-table').textContent = '🖼️ ' + (ETAT.table || 'Galerie');
+  majTitre();
   // Taille des cartes (#237) : la grille la porte, le CSS règle la largeur
   grille.dataset.taille = ETAT.taille = tailleCartes();
   majBoutonTaille();
@@ -2031,8 +2062,33 @@ function afficherToast(texte, duree = 2200) {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   6. RÉGLAGES (bouton ⚙) : MODÈLE DES NOUVELLES CARTES
+   6. RÉGLAGES (bouton ⚙) : NOM DE LA GALERIE, MODÈLE DES NOUVELLES CARTES
    ══════════════════════════════════════════════════════════════ */
+
+const LONGUEUR_NOM_GALERIE = 60;   // assez pour « EPICs Observatoire des trafics »
+
+/** Nom de Galerie tel qu'on le range : texte, sans espaces autour, 60 caractères au plus. */
+function nettoyerNomGalerie(nom) {
+  return typeof nom === 'string' ? nom.trim().slice(0, LONGUEUR_NOM_GALERIE) : '';
+}
+
+/**
+ * Le nom de la Galerie a changé (#264) : les clés de mémoire du navigateur
+ * aussi. On relit tout sous les nouvelles clés, comme à l'ouverture : vues
+ * perso et vue active (à défaut, « Toutes les cartes »), zones repliées,
+ * taille des cartes ; les attributs affichés se relisent d'eux-mêmes
+ * (Filtres.memoireAttributs suit la clé). Rien n'est repris de l'ancien
+ * nom : on repart de zéro (choix du 2026-11-19). Les vues 👥 partagées,
+ * rangées dans le document, ne changent pas.
+ */
+function changerNomGalerie(nom) {
+  ETAT.nomGalerie = nom;
+  _repliees = null;
+  _tailleSeance = null;
+  VUES.charger(VUES.toutes().filter(v => !v.perso));
+  appliquerVue();
+  afficherGrille();
+}
 
 const fenetreReglages = () => document.getElementById('reglages');
 
@@ -2043,6 +2099,7 @@ function carteSource() {
 }
 
 function ouvrirReglages() {
+  document.getElementById('reglages-nom').value = ETAT.nomGalerie;
   document.getElementById('reglages-modele').value = ETAT.modele;
   const bouton = document.getElementById('reglages-reprendre');
   const source = carteSource();
@@ -2064,11 +2121,16 @@ function reprendreTexteCarte() {
 
 async function enregistrerReglages() {
   const modele = document.getElementById('reglages-modele').value;
+  const nom = nettoyerNomGalerie(document.getElementById('reglages-nom').value);
   try {
     await grist.setOption('modele', modele);
     ETAT.modele = modele;
+    if (nom !== ETAT.nomGalerie) {
+      await grist.setOption('nom', nom);
+      changerNomGalerie(nom);
+    }
     fenetreReglages().close();
-    afficherToast('✓ Modèle enregistré');
+    afficherToast('✓ Réglages enregistrés (pensez à « Enregistrer » dans Grist)', 3500);
   } catch (err) {
     afficherToast(`⚠️ Erreur : ${err.message || err}`, 4000);
     console.error('Galerie – enregistrement des réglages impossible :', err);
