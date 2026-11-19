@@ -207,7 +207,7 @@ Bouton **« ▦ Moyenne ▾ »** de la barre, trois tailles :
 | Taille | La carte montre |
 |---|---|
 | Compacte | le titre seul ; cartes plus étroites, donc plus nombreuses par ligne |
-| Moyenne (par défaut) | le titre et les pastilles (et l'image, si une colonne Image est associée) |
+| Moyenne (par défaut) | le titre, les pastilles et le numéro de la carte (et l'image, si une colonne Image est associée) |
 | Grande | en plus, une image plus haute, le début du texte principal (texte simple, 4 lignes au plus) et le nombre d'objets liés (« Tâches 38 ») |
 
 C'est une **préférence personnelle** : retenue par le navigateur pour cette
@@ -267,6 +267,10 @@ Associer une colonne **pièce jointe** (par exemple `Image`) au champ
 
 ## Fiche
 
+- **Numéro** (#244) : « Fiche · #12 » dans la barre de la fiche, et « #12 »
+  en petit gris en bas à droite des cartes (sauf en taille compacte), comme
+  dans le Kanban. C'est le numéro de ligne Grist ; la recherche « #12 » le
+  retrouve.
 - Disposition **côté** ou **centre**, au choix (bouton ⤢ / ⇥), mémorisée dans
   le navigateur ; Échap, ✕ ou un clic sur le fond assombri la ferment. Au
   centre, la fiche occupe presque tout le cadre du widget (#184) ; les lignes

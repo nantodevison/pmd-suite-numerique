@@ -796,11 +796,36 @@ function construireCarte(ligne) {
   if (pastilles.children.length && taille !== 'compacte') carte.appendChild(pastilles);
   // Grande carte (#237) : le début du texte principal et le nombre d'objets liés
   if (taille === 'grande') ajouterApercu(carte, ligne);
+  if (taille !== 'compacte') ajouterNumero(carte, ligne);
   colorerCarte(carte, ligne);
   if (taille !== 'compacte') ajouterImage(carte, ligne);
 
   carte.addEventListener('click', () => ouvrirFiche(ligne.id));
   return carte;
+}
+
+/**
+ * Numéro de la carte (#244), comme dans le Kanban (#203) : « #12 » en petit
+ * gris, toujours en bas à droite de la carte. C'est le numéro de ligne Grist,
+ * celui qu'on cite dans les échanges et que la recherche « #12 » retrouve.
+ * - Grande carte avec objets liés : à droite de leur rangée, déjà collée en
+ *   bas de la carte (pas de ligne en plus) ;
+ * - sinon : dans un pied de carte à lui, poussé en bas (CSS .carte-pied).
+ *   Le mettre à droite des pastilles ne suffit pas : une carte étirée à la
+ *   hauteur de sa voisine le laisserait au milieu (constaté au test).
+ * Pas en taille compacte : elle promet « le titre seul ».
+ */
+function ajouterNumero(carte, ligne) {
+  let rangee = carte.querySelector('.carte-lies');
+  if (!rangee) {
+    rangee = document.createElement('div');
+    rangee.className = 'carte-pied';
+    carte.appendChild(rangee);
+  }
+  const numero = document.createElement('span');
+  numero.className = 'carte-id';
+  numero.textContent = '#' + ligne.id;
+  rangee.appendChild(numero);
 }
 
 /* ── Couleur des cartes (#241) ───────────────────────────────────
@@ -1554,7 +1579,16 @@ function remplirFiche(id) {
   // Pastilles choisies mais pas encore sauvegardées (#206) : on repart de Grist
   ETAT.fiche.apercu = {};
 
-  document.getElementById('fiche-libelle').textContent = nouvelle ? 'Nouvelle carte' : 'Fiche';
+  // (« enteteFiche » et non « libelle » : ce nom désigne déjà une fonction)
+  const enteteFiche = document.getElementById('fiche-libelle');
+  enteteFiche.textContent = nouvelle ? 'Nouvelle carte' : 'Fiche';
+  // Numéro de la carte (#244), comme dans la barre de la fiche du Kanban
+  if (!nouvelle) {
+    const numero = document.createElement('span');
+    numero.className = 'fiche-numero';
+    numero.textContent = '· #' + ligne.id;
+    enteteFiche.appendChild(numero);
+  }
   const corps = document.getElementById('fiche-corps');
   corps.innerHTML = '';
 
