@@ -50,6 +50,8 @@ body { display: flex; flex-direction: column; overflow: hidden; }
   padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
 }
 .barre-titre { font-size: 15px; font-weight: 700; }
+/* Nom de la Galerie (#264), discret à côté du nom de la table */
+.barre-nom { font-weight: 400; color: var(--text-muted); }
 .barre-compte {
   font-size: 11px; font-weight: 700; color: var(--text-muted);
   background: var(--col-bg); padding: 2px 9px; border-radius: 999px;
@@ -113,6 +115,12 @@ body { display: flex; flex-direction: column; overflow: hidden; }
 .reglages-titre { font-size: 15px; }
 .reglages-libelle { font-size: 12px; font-weight: 600; color: var(--text-muted); }
 .reglages .reglages-modele { display: block; min-height: 40vh; }
+.reglages-nom {
+  font: inherit; font-size: 13px; padding: 6px 10px;
+  border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+}
+.reglages-aide { font-size: 12px; color: var(--text-muted); margin: 0; }
+.reglages-separation { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
 .reglages #reglages-reprendre { align-self: flex-start; }
 .reglages #reglages-reprendre:disabled { opacity: .5; cursor: default; }
 .reglages-pied { display: flex; gap: 8px; margin-top: 6px; }
@@ -341,10 +349,20 @@ button.fiche-lie-ouvrable:hover, button.fiche-lie-ouvrable:focus-visible { borde
     </section>
   </div>
 
-  <!-- Réglages : modèle de texte des nouvelles cartes, enregistré dans le
-       document Grist (propre à chaque Galerie). -->
+  <!-- Réglages : nom de la Galerie (#264) et modèle de texte des nouvelles
+       cartes, enregistrés dans le document Grist (propres à chaque Galerie). -->
   <dialog class="reglages" id="reglages">
     <h2 class="reglages-titre">Réglages de la Galerie</h2>
+    <label class="reglages-libelle" for="reglages-nom">Nom de cette Galerie</label>
+    <input type="text" class="reglages-nom" id="reglages-nom" maxlength="60"
+           placeholder="ex. EPICs Observatoire" />
+    <p class="reglages-aide">Les Galeries d'un même document qui affichent la même table et portent
+      le même nom partagent leurs réglages (vue active, vues 🔒…).</p>
+    <p class="reglages-aide">⚠️ <strong>Choisissez un nom spécifique, sinon vos réglages se mélangeront
+      avec ceux d'une autre Galerie.</strong></p>
+    <p class="reglages-aide">Exemple : évitez « EPICs » ou « Galerie » ; préférez « EPICs Observatoire »
+      ou « Galerie de Camille ».</p>
+    <hr class="reglages-separation" />
     <label class="reglages-libelle" for="reglages-modele">Modèle de texte des nouvelles cartes (Markdown)</label>
     <textarea class="fiche-md-saisie reglages-modele" id="reglages-modele"
               placeholder="## 1- Source de l'idée&#10;&#10;## 2- …"></textarea>

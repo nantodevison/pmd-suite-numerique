@@ -174,12 +174,31 @@ la place manque), « ＋ Vue », « 🔽 Filtres », « ⇅ Trier » et « ▤ R
   Annuler rétablit la vue telle qu'elle était.
 - La recherche 🔍 s'ajoute aux filtres de la vue ; elle n'est jamais enregistrée.
 - Le navigateur retient la vue active, les vues perso, les attributs
-  affichés et les zones repliées, par document et par table : deux Galeries sur la **même table**
-  partagent donc ces réglages-là (leurs vues partagées restent distinctes).
+  affichés, les zones repliées et la taille des cartes, par document, par
+  table et par **nom de Galerie** (voir ci-dessous). Deux Galeries sur la
+  même table et sans nom (ou de même nom) partagent donc ces réglages-là ;
+  leurs vues partagées restent distinctes.
 
 Le filtrage natif de Grist (« Sélectionner par », filtres de la vue Grist)
 reste possible : il choisit les lignes envoyées au widget, et nos filtres
 s'appliquent ensuite.
+
+### Nom de la Galerie (#264)
+
+Plusieurs Galeries sur la **même table** (par exemple une page par projet,
+dupliquée depuis un modèle) partageraient, dans le navigateur de chacun, vue
+active, vues 🔒, taille des cartes… Pour les séparer, donner à chacune un
+**nom spécifique** dans ⚙ (« EPICs Observatoire » plutôt que « EPICs »),
+puis « Enregistrer » dans Grist. Le nom s'affiche en gris à côté du titre.
+
+- **Page dupliquée** : la copie hérite du nom ; le changer.
+- **Changer de nom** repart de zéro : vues 🔒, vue active, taille et zones
+  repliées de l'ancien nom ne sont pas reprises (elles restent retrouvables
+  en revenant à l'ancien nom). Les vues 👥 partagées ne changent pas.
+- **Sans nom**, rien ne change par rapport aux versions précédentes.
+- Pourquoi un nom à saisir ? Le widget ne peut pas lire le numéro de sa
+  page (il tourne dans un cadre d'un autre site, et l'API Grist ne le donne
+  pas), et un identifiant tiré au hasard serait copié avec la page dupliquée.
 
 ## Taille des cartes (#237)
 
@@ -192,7 +211,7 @@ Bouton **« ▦ Moyenne ▾ »** de la barre, trois tailles :
 | Grande | en plus, une image plus haute, le début du texte principal (texte simple, 4 lignes au plus) et le nombre d'objets liés (« Tâches 38 ») |
 
 C'est une **préférence personnelle** : retenue par le navigateur pour cette
-Galerie (document et table), elle ne change ni les vues ni le document.
+Galerie (document, table et nom de la Galerie), elle ne change ni les vues ni le document.
 
 ## Couleur des cartes (#241)
 
@@ -294,7 +313,8 @@ Associer une colonne **pièce jointe** (par exemple `Image`) au champ
   principal prérempli avec le modèle. Rien n'est créé dans Grist avant
   « ✓ Sauvegarder » (un titre est alors exigé) ; fermer la fiche ne laisse
   aucune ligne vide. La fiche reste ensuite ouverte sur la carte créée.
-- **⚙** : modèle de texte des nouvelles cartes, en Markdown, enregistré dans
+- **⚙** : nom de la Galerie (voir « Nom de la Galerie » plus haut) et
+  modèle de texte des nouvelles cartes, en Markdown, enregistré dans
   le document Grist (chaque Galerie a le sien ; rien dans le dépôt).
   « Reprendre le texte de … » copie le texte de la carte ouverte ou
   sélectionnée, pour en faire un squelette.
