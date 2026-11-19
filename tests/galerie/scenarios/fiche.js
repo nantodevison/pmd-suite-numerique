@@ -9,7 +9,7 @@ Banc.lancer(async () => {
   ouvrirFiche(1);
   await Banc.attendre(100);
   ok('fiche ouverte', ouverte());
-  ok('libellé « Fiche »', $('#fiche-libelle').textContent === 'Fiche');
+  ok('libellé « Fiche · #1 » (numéro de la carte, #244)', $('#fiche-libelle').textContent === 'Fiche· #1', $('#fiche-libelle').textContent);
   const titre = $('#fiche-corps .fiche-titre');
   ok('titre modifiable', titre && titre.value === 'Écrire la documentation' && !titre.readOnly);
 

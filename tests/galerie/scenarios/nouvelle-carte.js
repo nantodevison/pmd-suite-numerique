@@ -34,7 +34,7 @@ Banc.lancer(async () => {
   ok('création : AddRecord avec le titre et le modèle', JSON.stringify(action) === JSON.stringify(
     ['AddRecord', 'EPICs', null, { Description: MODELE, Titre: 'Carte inventée' }]), JSON.stringify(action));
   ok('création : carte n° 100 affichée', Banc.cartes().includes(100), Banc.cartes().join());
-  ok('création : la fiche montre la carte créée', $('#fiche-libelle').textContent === 'Fiche'
+  ok('création : la fiche montre la carte créée, avec son numéro', $('#fiche-libelle').textContent === 'Fiche· #100'
     && $('#fiche-corps .fiche-titre').value === 'Carte inventée');
   ok('création : curseur de Grist sur la carte', FAUX_GRIST.curseur?.rowId === 100);
   ok('création : message', $('#toast').textContent.includes('Carte créée'), $('#toast').textContent);

@@ -143,6 +143,15 @@ body { display: flex; flex-direction: column; overflow: hidden; }
 .carte.selectionnee { outline: 2px solid var(--accent); outline-offset: 1px; }
 .carte-titre { font-size: 14px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
 .carte-contexte { display: flex; flex-wrap: wrap; gap: 4px; }
+/* Numéro de la carte (#244) : discret, en bas à droite, comme dans le Kanban.
+   Le pied est poussé en bas de la carte (margin-top: auto), même quand la
+   carte est étirée à la hauteur de sa voisine. */
+.carte-pied { display: flex; margin-top: auto; }
+.carte-id {
+  margin-left: auto; align-self: center;
+  font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums;
+}
+.fiche-numero { margin-left: 4px; font-weight: 600; letter-spacing: 0; }
 /* Couleur des cartes (#241) : bandeau du haut plus épais et fond pâle, aux
    teintes de la couleur de la carte (../_commun/palette.js) ; galerie.js
    les pose dans les variables --carte-trait et --carte-fond. */
