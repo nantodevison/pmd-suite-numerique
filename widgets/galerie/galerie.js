@@ -42,6 +42,9 @@
    (../_commun/palette.js) : celle écrite dans la cellule (« bleu »…), ou à
    défaut une couleur automatique tirée de son numéro. La pastille ● de la
    carte ouvre le menu des couleurs, qui écrit le nom choisi dans la cellule.
+   Image des cartes (#241, étape B) : si une colonne « pièce jointe » est
+   associée, la première image qu'elle contient s'affiche en haut des cartes
+   moyennes et grandes (pas en compacte, ni dans la fiche).
    ══════════════════════════════════════════════════════════════ */
 
 'use strict';
@@ -131,6 +134,9 @@ grist.ready({
     // Couleur des cartes (#241) : la cellule contient le nom d'une couleur
     // (« bleu », « vert »…) ; vide = couleur automatique.
     { name: 'Couleur',     title: 'Couleur des cartes (bleu, vert…)', optional: true, type: 'Text,Choice' },
+    // Image des cartes (#241, étape B) : colonne « pièce jointe » ; la
+    // première image s'affiche en haut des cartes moyennes et grandes.
+    { name: 'Image',       title: 'Image (pièce jointe, en haut de la carte)', optional: true, type: 'Attachments' },
   ],
 });
 
@@ -165,6 +171,7 @@ grist.onRecords(async (lignes, colonnes) => {
     console.error('Galerie – lecture de la structure impossible :', err);
   }
   const completes = await completerLignes(lignes);
+  await preparerImages(completes);       // jeton d'accès et types des pièces jointes (#241)
   if (envoi !== _dernierEnvoi) return;   // un envoi plus récent est arrivé entre-temps
   ETAT.lignes = completes;
   afficherGrille();
@@ -759,6 +766,7 @@ function construireCarte(ligne) {
   // Grande carte (#237) : le début du texte principal et le nombre d'objets liés
   if (taille === 'grande') ajouterApercu(carte, ligne);
   colorerCarte(carte, ligne);
+  if (taille !== 'compacte') ajouterImage(carte, ligne);
 
   carte.addEventListener('click', () => ouvrirFiche(ligne.id));
   return carte;
@@ -808,6 +816,147 @@ function colorerCarte(carte, ligne) {
     rond.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); });
   }
   carte.appendChild(rond);
+}
+
+/* ── Image des cartes (#241, étape B) ────────────────────────────
+   Une cellule « pièce jointe » ne contient pas l'image, seulement des
+   numéros de fichiers : ['L', 12, 15] (ou [12, 15] tel qu'onRecords
+   l'envoie). Pour afficher le fichier n° 12, le navigateur doit le
+   télécharger sur le serveur Grist avec un JETON d'accès temporaire :
+       <baseUrl>/attachments/12/download?auth=<jeton>
+   - le jeton est demandé à Grist (getAccessToken, en LECTURE SEULE) et
+     renouvelé avant qu'il n'expire ; il ne quitte jamais le navigateur :
+     ni journalisé, ni écrit dans le document ;
+   - la table système _grist_Attachments donne l'extension de chaque fichier :
+     un PDF joint est ignoré, on montre la première IMAGE de la cellule ;
+   - l'image est posée par img.src (jamais par innerHTML) : un fichier
+     piégé ne peut pas exécuter de code dans une balise <img>.
+   Si l'image ne se charge pas (jeton expiré entre deux envois de Grist), on
+   redemande un jeton et on réessaie une fois ; sinon l'image est retirée,
+   plutôt que d'afficher une icône d'image cassée. */
+
+// Extensions affichées comme images (en minuscules, sans le point)
+const EXTENSIONS_IMAGES = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif']);
+// On renouvelle le jeton s'il lui reste moins d'une minute
+const MARGE_JETON_MS = 60 * 1000;
+
+const PIECES = {
+  jeton:    null,       // jeton d'accès en cours
+  baseUrl:  null,       // adresse du document sur le serveur Grist
+  expire:   0,          // date d'expiration du jeton (millisecondes)
+  demande:  null,       // demande de jeton en cours (pour ne pas en lancer deux)
+  fichiers: new Map(),  // numéro de pièce jointe → extension ('png', 'pdf'…)
+  // Pièces jointes illisibles même avec un jeton neuf : plus tentées (sinon
+  // chaque redessin, à chaque lettre de la recherche, redemanderait un jeton),
+  // jusqu'à la prochaine relecture de la liste des pièces jointes
+  echecs:   new Set(),
+};
+
+/** Colonne associée à « Image », ou null. */
+function colonneImage() {
+  return (ETAT.colonnes && ETAT.colonnes.Image) || null;
+}
+
+/** Numéros des pièces jointes d'une cellule ([] si vide ou mal formée). */
+function numerosPieces(valeur) {
+  const liste = decoderListe(valeur);
+  return Array.isArray(liste) ? liste.filter(n => Number.isInteger(n) && n > 0) : [];
+}
+
+/**
+ * Appelée à chaque envoi de Grist, avant le dessin : relit la liste des
+ * pièces jointes si une carte en contient une inconnue, et s'assure que le
+ * jeton est valide. Ne fait rien sans colonne Image ou sans pièce jointe.
+ * En cas d'échec, les cartes s'affichent simplement sans image.
+ */
+async function preparerImages(lignes) {
+  const colId = colonneImage();
+  if (!colId) return;
+  const numeros = lignes.flatMap(l => numerosPieces(l[colId]));
+  if (!numeros.length) return;
+  if (numeros.some(n => !PIECES.fichiers.has(n))) {
+    try { await lireFichiers(); }
+    catch (err) { console.warn('Galerie – liste des pièces jointes illisible :', err); }
+  }
+  try { await obtenirJeton(false); }
+  catch (err) { console.warn('Galerie – accès aux pièces jointes refusé :', err); }
+}
+
+/** Lit l'extension de chaque pièce jointe du document (_grist_Attachments). */
+async function lireFichiers() {
+  const t = await grist.docApi.fetchTable('_grist_Attachments');
+  PIECES.fichiers = new Map(t.id.map((id, i) => {
+    // fileExt vaut « .png » ; à défaut, on prend la fin du nom du fichier
+    const ext = (t.fileExt && t.fileExt[i]) || String((t.fileName && t.fileName[i]) || '').split('.').pop();
+    return [id, String(ext || '').replace(/^\./, '').toLowerCase()];
+  }));
+  PIECES.echecs.clear();   // liste à jour : on retente les fichiers en échec
+}
+
+/**
+ * Demande un jeton à Grist s'il n'y en a pas, s'il expire bientôt, ou si
+ * `forcer` est vrai (le précédent a été refusé). Deux appels simultanés
+ * partagent la même demande.
+ */
+function obtenirJeton(forcer) {
+  if (!forcer && PIECES.jeton && Date.now() < PIECES.expire - MARGE_JETON_MS) return Promise.resolve();
+  if (!PIECES.demande) {
+    PIECES.demande = grist.docApi.getAccessToken({ readOnly: true })
+      .then((r) => {
+        PIECES.jeton = r.token;
+        PIECES.baseUrl = String(r.baseUrl).replace(/\/+$/, '');
+        PIECES.expire = Date.now() + (r.ttlMsecs || 0);
+      })
+      .finally(() => { PIECES.demande = null; });
+  }
+  return PIECES.demande;
+}
+
+/**
+ * Première image d'une cellule, ou null. Un fichier d'extension inconnue
+ * (liste des pièces jointes illisible) est tenté quand même : s'il ne
+ * s'affiche pas, l'image est retirée.
+ */
+function premiereImage(valeur) {
+  return numerosPieces(valeur).find((n) => {
+    if (PIECES.echecs.has(n)) return false;
+    const ext = PIECES.fichiers.get(n);
+    return ext === undefined || EXTENSIONS_IMAGES.has(ext);
+  }) || null;
+}
+
+/** Adresse de téléchargement de la pièce jointe n° `n`, avec le jeton actuel. */
+function adressePiece(n) {
+  return `${PIECES.baseUrl}/attachments/${n}/download?auth=${encodeURIComponent(PIECES.jeton)}`;
+}
+
+/** Ajoute en haut de la carte la première image de la colonne Image, s'il y en a une. */
+function ajouterImage(carte, ligne) {
+  const colId = colonneImage();
+  if (!colId || !PIECES.jeton) return;
+  const n = premiereImage(ligne[colId]);
+  if (!n) return;
+  const img = document.createElement('img');
+  img.className = 'carte-image';
+  img.alt = '';               // image décorative : le titre de la carte suit
+  img.loading = 'lazy';       // téléchargée seulement quand la carte devient visible
+  img.draggable = false;
+  let jetonEssaye = PIECES.jeton;
+  let reessayee = false;
+  img.addEventListener('error', async () => {
+    if (reessayee) { PIECES.echecs.add(n); img.remove(); return; }
+    reessayee = true;
+    try {
+      // Nouveau jeton, sauf si une autre image vient déjà d'en obtenir un
+      if (PIECES.jeton === jetonEssaye) await obtenirJeton(true);
+      jetonEssaye = PIECES.jeton;
+      img.src = adressePiece(n);
+    } catch (err) {
+      img.remove();
+    }
+  });
+  img.src = adressePiece(n);
+  carte.prepend(img);
 }
 
 /**

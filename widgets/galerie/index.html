@@ -154,6 +154,17 @@ span.carte-couleur { cursor: default; }   /* colonne calculée : simple témoin 
 button.carte-couleur:hover, button.carte-couleur:focus-visible {
   outline: none; box-shadow: 0 0 0 2px var(--accent);
 }
+/* Image des cartes (#241, étape B) : couverture en haut de la carte, collée
+   aux bords (marges négatives = la marge intérieure de la carte), recadrée
+   pour remplir la bande (object-fit: cover) ; plus haute en grande taille.
+   Jamais en taille compacte (galerie.js ne l'ajoute pas). */
+.carte-image {
+  display: block; flex-shrink: 0; max-width: none;
+  width: calc(100% + 32px); height: 80px; margin: -14px -16px 0;
+  object-fit: cover; background: var(--border);
+  border-radius: 6px 6px 0 0;
+}
+.grille[data-taille="grande"] .carte-image { height: 140px; }
 /* Rond de couleur devant chaque choix du menu */
 .palette-rond {
   display: inline-block; width: 12px; height: 12px; margin-right: 8px;
