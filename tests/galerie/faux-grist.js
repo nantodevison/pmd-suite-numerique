@@ -63,6 +63,8 @@
     // Couleur des cartes (#241) : nom d'une couleur de la palette, et la même calculée par une formule
     [17, 1, 'Couleur',       'Text',         'Couleur',       '',                 false, '', 0],
     [18, 1, 'Couleur_calc',  'Any',          'Couleur calculée', '"vert"',        true,  '', 0],
+    // Image des cartes (#241, étape B) : numéros de pièces jointes (_grist_Attachments)
+    [19, 1, 'Image',         'Attachments',  'Image',         '',                 false, '', 0],
     [20, 2, 'Nom',         'Text',           'Nom',         '',                 false, '', 0],
     [21, 2, 'Etat',        'Text',           'État',        '',                 false, '', 0],
     [30, 3, 'Nom',         'Text',           'Nom',         '',                 false, '', 0],
@@ -75,6 +77,13 @@
     // displayCol (10e champ) : 0 si absent, comme une référence sans colonne cachée
     _grist_Tables_column: ['id', 'parentId', 'colId', 'type', 'label', 'formula', 'isFormula', 'widgetOptions', 'visibleCol', 'displayCol']
       .reduce((o, k, i) => (o[k] = colonnes.map(c => c[i] ?? 0), o), {}),
+    // Pièces jointes du document (#241) : un PDF, deux images présentes dans
+    // ../pieces-jointes, et une image dont le fichier manque (téléchargement en échec)
+    _grist_Attachments: {
+      id: [1, 2, 3, 4],
+      fileName: ['compte-rendu.pdf', 'schema.png', 'photo.jpg', 'perdue.png'],
+      fileExt: ['.pdf', '.png', '.jpg', '.png'],
+    },
   };
   // Tables visées par les références
   const donnees = {
@@ -96,15 +105,15 @@
       Avancement: 0.67, Projet: 'Atelier', Taches: ['Rédiger le guide', 'Relire le guide'],
       Objectif: 'Guide publié', Echeance: JANVIER_2026, Code: 'E1', Projet_Etat: 'Ouvert', Urgent: true,
       Themes: ['Guide'], Version: 'Version A', Taches_statut: ['Fait', 'En cours'], Voir_aussi: [],
-      Couleur: ' Rose ', Couleur_calc: 'vert' },
+      Couleur: ' Rose ', Couleur_calc: 'vert', Image: [1, 2] },
     { id: 2, Titre: 'Préparer la démonstration', Description: NOTEPAD, Priorite: 'Later',
       Avancement: 1, Projet: 'Atelier', Taches: [], Objectif: 'Démonstration jouée', Echeance: null, Code: 'E2',
       Projet_Etat: 'Ouvert', Urgent: false, Themes: null, Version: '', Taches_statut: [], Voir_aussi: ['Carte en erreur'],
-      Couleur: '', Couleur_calc: 'vert' },
+      Couleur: '', Couleur_calc: 'vert', Image: [3] },
     { id: 3, Titre: 'Archiver le site', Description: 'Texte simple', Priorite: null,
       Avancement: 0.1, Projet: 'Vitrine', Taches: ['Copier les pages'], Objectif: '', Echeance: null, Code: 'E3',
       Projet_Etat: 'Fermé', Urgent: true, Themes: null, Version: 'Version B', Taches_statut: ['À faire'], Voir_aussi: [],
-      Couleur: 'pourpre', Couleur_calc: 'vert' },
+      Couleur: 'pourpre', Couleur_calc: 'vert', Image: [4] },
     // Référence vers une ligne qui n'existe pas : cellule en erreur
     { id: 4, Titre: 'Carte en erreur', Description: '', Priorite: null, Avancement: 0,
       Projet: ['E', 'InvalidTypedValue', 'Ref:Projets', 99], Taches: [], Objectif: '', Echeance: null, Code: 'E4',
@@ -224,6 +233,10 @@
     lectures: [],
     // Options passées à onRecords (ex. { includeColumns: 'normal' })
     optionsRecords: null,
+    // Jetons d'accès aux pièces jointes (#241) : options de chaque demande,
+    // et durée de vie des prochains jetons (un scénario peut la raccourcir)
+    jetons: [],
+    dureeJeton: 5 * 60 * 1000,
   };
   window.grist = {
     ready() {},
@@ -235,6 +248,16 @@
     getTable() { return { getTableId: async () => 'EPICs' }; },
     docApi: {
       getDocName: async () => 'doc-invente',
+      // Comme Grist : un jeton temporaire et l'adresse du document ; ici, le
+      // dossier ../pieces-jointes, où attachments/<n>/download sont de vrais fichiers
+      getAccessToken: async (options) => {
+        window.FAUX_GRIST.jetons.push(options || {});
+        return {
+          token: 'jeton-' + window.FAUX_GRIST.jetons.length,
+          baseUrl: new URL('../pieces-jointes/', location.href).href,
+          ttlMsecs: window.FAUX_GRIST.dureeJeton,
+        };
+      },
       fetchTable: async (t) => {
         window.FAUX_GRIST.lectures.push(t);
         if (t === 'EPICs') return tableEnColonnes();

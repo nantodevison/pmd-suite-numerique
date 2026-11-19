@@ -58,6 +58,7 @@ section **Colonnes** du widget, associer :
 | **Objets liés (sous le titre de la fiche)** | non, plusieurs colonnes possibles (listes de références seulement) | une ligne par colonne sous le titre de la fiche, un élément par pastille blanche | `Taches`, `Retour_U` |
 | **Contexte (fiche seulement)** | non, plusieurs colonnes possibles | encart « libellé : valeur » sous l'en-tête de la fiche | `objectifs_resultats_cle` |
 | **Couleur des cartes (bleu, vert…)** | non (texte ou choix) | couleur de chaque carte, voir « Couleur des cartes » | `Couleur` |
+| **Image (pièce jointe, en haut de la carte)** | non (pièce jointe) | première image de la cellule, en haut des cartes moyennes et grandes, voir « Image des cartes » | `Image` |
 
 Grist ne propose dans chaque champ que les colonnes de type compatible ; une
 colonne calculée sans type déclaré (comme `Avancement`) est proposée partout.
@@ -187,8 +188,8 @@ Bouton **« ▦ Moyenne ▾ »** de la barre, trois tailles :
 | Taille | La carte montre |
 |---|---|
 | Compacte | le titre seul ; cartes plus étroites, donc plus nombreuses par ligne |
-| Moyenne (par défaut) | le titre et les pastilles |
-| Grande | en plus, le début du texte principal (texte simple, 4 lignes au plus) et le nombre d'objets liés (« Tâches 38 ») |
+| Moyenne (par défaut) | le titre et les pastilles (et l'image, si une colonne Image est associée) |
+| Grande | en plus, une image plus haute, le début du texte principal (texte simple, 4 lignes au plus) et le nombre d'objets liés (« Tâches 38 ») |
 
 C'est une **préférence personnelle** : retenue par le navigateur pour cette
 Galerie (document et table), elle ne change ni les vues ni le document.
@@ -219,6 +220,31 @@ violet habituel.
   formule, la pastille ● n'ouvre pas de menu.
 - La couleur appartient à la ligne : deux Galeries de la même table
   montrent la même couleur.
+
+## Image des cartes (#241, étape B)
+
+Associer une colonne **pièce jointe** (par exemple `Image`) au champ
+**« Image »**. Sans elle, rien ne change.
+
+- La **première image** de la cellule s'affiche en haut de la carte, sur
+  toute sa largeur, recadrée pour remplir la bande : 80 px de haut en taille
+  moyenne, 140 px en grande, **jamais en compacte**. Les autres fichiers
+  (un PDF joint, une seconde image) sont ignorés sur la carte.
+- Une carte sans image n'a pas de bande vide : les cartes d'une même rangée
+  peuvent donc avoir des hauteurs différentes (comme dans Notion).
+- La fiche ne montre pas l'image.
+- **Comment c'est lu** : une cellule pièce jointe ne contient que des
+  numéros de fichiers. Le widget demande à Grist un **jeton d'accès
+  temporaire, en lecture seule** (`getAccessToken`), et télécharge l'image
+  sur le serveur Grist du document. Le jeton est renouvelé avant d'expirer ;
+  il reste dans le navigateur (jamais écrit dans le document). L'extension
+  de chaque fichier est lue dans la table système `_grist_Attachments`, une
+  fois, puis seulement quand une pièce jointe nouvelle apparaît.
+- Une image illisible (fichier supprimé…) est retirée de la carte, sans
+  icône cassée, après un essai avec un jeton neuf ; elle n'est plus
+  retentée tant que la liste des pièces jointes n'est pas relue.
+- Sécurité : l'image passe par une balise `<img>` (un fichier piégé ne peut
+  pas y exécuter de code), et ne vient que du serveur Grist du document.
 
 ## Fiche
 
