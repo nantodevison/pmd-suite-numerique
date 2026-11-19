@@ -8,13 +8,11 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-18 17:46_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-19 10:43_
 
 ### 🖐️ À faire
-- [ ] #241 Augmenter la différenciation visuelle des cartes (Haute, EPIC « Améliorer l'Ux/Ui de la galerie »)
 - [ ] #242 Proposer un affichage de base commun (Moyenne, EPIC « Mutualiser les fonctions communes du Kanban et de la Galerie »)
 - [ ] #244 Galerie : Afficher l'identifiant comme dans le Kanban (Moyenne, EPIC « Améliorer la qualité du code du kanban »)
-- [ ] #247 Structurer les pages Grist dédiées à Andrea (Moyenne, EPIC « Créer un MVP pour Andrea »)
 - [ ] #200 Kanban : filtrer sur n'importe quelle colonne (texte, nombre, date…) (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #227 Rechercher dans les menus de choix d'une référence quand la liste est longue (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #228 Proposer les colonnes natives de la table visée comme attributs d'une référence (façon Notion) (Basse, EPIC « Améliorer l'interface du kanban »)
@@ -24,13 +22,17 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [ ] #248 Kanban : articuler le choix du projet (⚙) et « Sélectionner par » une Page (Basse, EPIC « Améliorer l'interface du kanban »)
 - [ ] #249 Uniformiser l'Ux des widgets (Basse, EPIC « Mutualiser les fonctions communes du Kanban et de la Galerie »)
 
+### ♻️ En cours
+- [ ] #241 Augmenter la différenciation visuelle des cartes (Haute, EPIC « Améliorer l'Ux/Ui de la galerie »)
+- [ ] #247 Structurer les pages Grist dédiées à Andrea (Moyenne, EPIC « Créer un MVP pour Andrea »)
+
 <!-- fin kanban -->
 
 ## ⚠️ Prochaine séance
 - [ ] Prévenir Vincent et Elisa des changements de la barre (#214), de la création de carte liée (#222), des attributs dans les filtres (#223, colonnes « EPIC › … ») et de #226 (panneau des filtres compacté, « Afficher ▾ » dans les menus, EPIC / Assigné en pastilles dans « Nouvelle carte »), et recueillir leur avis
 - [ ] Essayer taches.py voir sur un vrai projet Notion (testé sur faux serveur seulement)
 - [ ] MVP Andrea (#247) : structurer les pages Grist d'Andrea avec la Page et les Interactions (par URL) ; la Page peut servir de source « Sélectionner par » pour la Galerie ; passer Page et Interactions « en test » au catalogue une fois branchées
-- [ ] Réexporter espaces/gestion-projets/grist_schema.py depuis Grist (Interactions.url est devenue une colonne de données)
+- [ ] #241 étape B : afficher l'image de la colonne Image (pièce jointe Grist) sur les cartes de la Galerie
 
 ## En cours
 - [x] Fiche dense du Kanban fusionnée sur master (PR #15, feat/fiche-centrale), 2026-10-24 = mise en production du Kanban, vérifiée dans le document de l'Observatoire
