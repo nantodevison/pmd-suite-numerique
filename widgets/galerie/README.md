@@ -20,6 +20,7 @@ EPICs, objectifs et résultats clés, projets… Les tâches restent gérées pa
 | [`../_commun/recherche.js`](../_commun/recherche.js) | Règle de recherche commune avec le Kanban |
 | [`../_commun/colonnes.js`](../_commun/colonnes.js) | Structure du document (libellés, types, formules, couleurs des choix), commune aux widgets |
 | [`../_commun/condition.js`](../_commun/condition.js) | Évaluation des conditions de liste déroulante de Grist (#238) |
+| [`../_commun/palette.js`](../_commun/palette.js) | Palette des huit couleurs nommées des cartes (#241) |
 | [`../_commun/filtres.js`](../_commun/filtres.js), [`filtres.css`](../_commun/filtres.css) | Règle et panneau des filtres, communs avec le Kanban |
 | [`../_commun/tri.js`](../_commun/tri.js), [`tri.css`](../_commun/tri.css) | Comparaison des valeurs selon le type de leur colonne, et panneau du tri ⇅, communs avec le Kanban |
 | [`../_commun/vues.js`](../_commun/vues.js), [`vues.css`](../_commun/vues.css) | Vues enregistrées : barre des vues et fenêtre « Gérer la vue », communes avec le Kanban |
@@ -56,6 +57,7 @@ section **Colonnes** du widget, associer :
 | **Pastilles (carte et fiche)** | non, plusieurs colonnes possibles (pas de liste de références) | pastilles colorées sur la carte ; dans la fiche, sans libellé, à droite du titre (au centre) ou dessous (sur le côté) | `Avancement`, `Priorite`, `Projet` |
 | **Objets liés (sous le titre de la fiche)** | non, plusieurs colonnes possibles (listes de références seulement) | une ligne par colonne sous le titre de la fiche, un élément par pastille blanche | `Taches`, `Retour_U` |
 | **Contexte (fiche seulement)** | non, plusieurs colonnes possibles | encart « libellé : valeur » sous l'en-tête de la fiche | `objectifs_resultats_cle` |
+| **Couleur des cartes (bleu, vert…)** | non (texte ou choix) | couleur de chaque carte, voir « Couleur des cartes » | `Couleur` |
 
 Grist ne propose dans chaque champ que les colonnes de type compatible ; une
 colonne calculée sans type déclaré (comme `Avancement`) est proposée partout.
@@ -190,6 +192,33 @@ Bouton **« ▦ Moyenne ▾ »** de la barre, trois tailles :
 
 C'est une **préférence personnelle** : retenue par le navigateur pour cette
 Galerie (document et table), elle ne change ni les vues ni le document.
+
+## Couleur des cartes (#241)
+
+Pour distinguer les cartes d'un coup d'œil. Il faut une colonne **Texte**
+(ou Choix) dans la table, par exemple `Couleur`, associée au champ
+**« Couleur des cartes »**. Sans elle, les cartes gardent leur bandeau
+violet habituel.
+
+- Chaque carte prend un **bandeau** plus épais à sa couleur et un **fond
+  pâle** (la même couleur à 20 % d'opacité, réglable dans `galerie.js` :
+  `OPACITE_FOND_CARTE`), parmi huit : bleu, vert, rose, jaune, violet, cyan, orange, gris
+  (palette commune, [`../_commun/palette.js`](../_commun/palette.js), celle
+  des statuts du Kanban).
+- **Couleur automatique** : une carte dont la cellule est vide reçoit une
+  couleur tirée de son numéro de ligne (n° 1 bleu, n° 2 vert…). Rien n'est
+  écrit dans Grist ; deux cartes qui se suivent n'ont jamais la même
+  couleur ; le gris n'est jamais tiré au hasard.
+- **Changer la couleur** : la pastille ● en haut à droite de la carte ouvre
+  le menu des couleurs. Le choix est écrit tout de suite dans la cellule,
+  sous son nom (« bleu »), lisible dans Grist ; « Automatique » vide la
+  cellule. On peut aussi taper le nom dans Grist (majuscules acceptées).
+- Une valeur qui n'est pas une couleur connue est ignorée (couleur
+  automatique), et signalée dans l'infobulle de la pastille ●.
+- Colonne calculée par une formule : les cartes prennent la couleur de la
+  formule, la pastille ● n'ouvre pas de menu.
+- La couleur appartient à la ligne : deux Galeries de la même table
+  montrent la même couleur.
 
 ## Fiche
 

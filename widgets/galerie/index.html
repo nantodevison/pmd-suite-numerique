@@ -135,6 +135,30 @@ body { display: flex; flex-direction: column; overflow: hidden; }
 .carte.selectionnee { outline: 2px solid var(--accent); outline-offset: 1px; }
 .carte-titre { font-size: 14px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
 .carte-contexte { display: flex; flex-wrap: wrap; gap: 4px; }
+/* Couleur des cartes (#241) : bandeau du haut plus épais et fond pâle, aux
+   teintes de la couleur de la carte (../_commun/palette.js) ; galerie.js
+   les pose dans les variables --carte-trait et --carte-fond. */
+.carte { position: relative; }
+.carte.carte-coloree {
+  background: var(--carte-fond); border-top: 6px solid var(--carte-trait);
+}
+.carte.carte-coloree .carte-titre { padding-right: 22px; }   /* place de la pastille ● */
+/* Pastille ● en haut à droite : couleur de la carte ; un clic la change */
+.carte-couleur {
+  position: absolute; top: 8px; right: 10px;
+  width: 16px; height: 16px; padding: 0; border-radius: 50%;
+  background: var(--carte-trait); border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(9, 30, 66, .2); cursor: pointer;
+}
+span.carte-couleur { cursor: default; }   /* colonne calculée : simple témoin */
+button.carte-couleur:hover, button.carte-couleur:focus-visible {
+  outline: none; box-shadow: 0 0 0 2px var(--accent);
+}
+/* Rond de couleur devant chaque choix du menu */
+.palette-rond {
+  display: inline-block; width: 12px; height: 12px; margin-right: 8px;
+  border-radius: 50%; vertical-align: -1px; border: 1px solid rgba(9, 30, 66, .15);
+}
 /* .pastille et .pastille-erreur : ../_commun/pastilles.css */
 /* Pastille modifiable d'un clic (#205, #206) : un liseré au survol */
 .pastille-modifiable { cursor: pointer; }
@@ -355,6 +379,8 @@ button.fiche-lie-ouvrable:hover, button.fiche-lie-ouvrable:focus-visible { borde
   <script src="../_commun/colonnes.js"></script>
   <!-- Condition de liste déroulante de Grist (#238) -->
   <script src="../_commun/condition.js"></script>
+  <!-- Couleurs nommées des cartes (#241) -->
+  <script src="../_commun/palette.js"></script>
   <!-- Fenêtre à onglets, règle et panneau des filtres, vues enregistrées (#204),
        comparaison des valeurs et panneau du tri (#232) -->
   <script src="../_commun/fenetre.js"></script>
