@@ -37,6 +37,11 @@
    est enregistrée dans la vue, les zones repliées par le navigateur.
    Taille des cartes (#237) : compacte, moyenne ou grande (avec le début du
    texte et le nombre d'objets liés), au choix de chacun (navigateur).
+   Couleur des cartes (#241) : si une colonne « Couleur » (texte) est
+   associée, chaque carte prend une couleur de la palette commune
+   (../_commun/palette.js) : celle écrite dans la cellule (« bleu »…), ou à
+   défaut une couleur automatique tirée de son numéro. La pastille ● de la
+   carte ouvre le menu des couleurs, qui écrit le nom choisi dans la cellule.
    ══════════════════════════════════════════════════════════════ */
 
 'use strict';
@@ -123,6 +128,9 @@ grist.ready({
     { name: 'ObjetsLies',  title: 'Objets liés (sous le titre de la fiche)', allowMultiple: true, optional: true,
       type: 'RefList' },
     { name: 'Contexte',    title: 'Contexte (fiche seulement)', allowMultiple: true, optional: true },
+    // Couleur des cartes (#241) : la cellule contient le nom d'une couleur
+    // (« bleu », « vert »…) ; vide = couleur automatique.
+    { name: 'Couleur',     title: 'Couleur des cartes (bleu, vert…)', optional: true, type: 'Text,Choice' },
   ],
 });
 
@@ -750,9 +758,84 @@ function construireCarte(ligne) {
   if (pastilles.children.length && taille !== 'compacte') carte.appendChild(pastilles);
   // Grande carte (#237) : le début du texte principal et le nombre d'objets liés
   if (taille === 'grande') ajouterApercu(carte, ligne);
+  colorerCarte(carte, ligne);
 
   carte.addEventListener('click', () => ouvrirFiche(ligne.id));
   return carte;
+}
+
+/* ── Couleur des cartes (#241) ───────────────────────────────────
+   Seulement si une colonne « Couleur » est associée : sans elle, les cartes
+   gardent leur bandeau violet habituel. Les teintes et la couleur
+   automatique viennent de ../_commun/palette.js. */
+
+// Opacité du fond coloré d'une carte (1 = teinte pleine) : le bandeau et la
+// pastille ● gardent leur couleur pleine, le fond reste discret.
+const OPACITE_FOND_CARTE = 0.2;
+
+/** Colonne associée à « Couleur », ou null. */
+function colonneCouleur() {
+  return (ETAT.colonnes && ETAT.colonnes.Couleur) || null;
+}
+
+/**
+ * Colore une carte (bandeau et fond) et lui ajoute la pastille ● : un bouton
+ * qui ouvre le menu des couleurs, ou un simple témoin si la colonne est
+ * calculée par une formule (on ne peut pas y écrire).
+ */
+function colorerCarte(carte, ligne) {
+  const colId = colonneCouleur();
+  if (!colId) return;
+  const couleur = Palette.pourLigne(ligne.id, ligne[colId]);
+  carte.classList.add('carte-coloree');
+  // Fond adouci : 20 % d'opacité (80 % de transparence) sur le blanc de la carte
+  carte.style.setProperty('--carte-fond', Palette.transparente(couleur.fond, OPACITE_FOND_CARTE));
+  carte.style.setProperty('--carte-trait', couleur.trait);
+
+  const modifiable = !estFormule(colId);
+  const rond = document.createElement(modifiable ? 'button' : 'span');
+  rond.className = 'carte-couleur';
+  // Infobulle : la couleur, et comment elle a été obtenue
+  let aide = `Couleur : ${Palette.libelle(couleur)}`;
+  if (couleur.inconnue) aide += ` (automatique : « ${couleur.inconnue} » n'est pas une couleur connue)`;
+  else if (!couleur.choisie) aide += ' (automatique)';
+  rond.title = aide + (modifiable ? ' — cliquer pour changer' : ' — calculée par une formule');
+  if (modifiable) {
+    rond.type = 'button';
+    rond.setAttribute('aria-label', rond.title);
+    // Le clic ne « remonte » pas jusqu'à la carte : il n'ouvre pas sa fiche
+    rond.addEventListener('click', (e) => { e.stopPropagation(); ouvrirMenuCouleur(rond, ligne, colId, couleur); });
+    rond.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); });
+  }
+  carte.appendChild(rond);
+}
+
+/**
+ * Menu des couleurs, sous la pastille ● : « Automatique » (vide la cellule),
+ * puis les huit couleurs, chacune précédée de son rond. Le choix s'écrit tout
+ * de suite dans Grist, comme une pastille modifiée sur la carte (#205).
+ */
+function ouvrirMenuCouleur(ancre, ligne, colId, couleur) {
+  const menu = Fiche.menuChoix(ancre, {
+    options: Palette.COULEURS.map(c => ({ valeur: c.nom, libelle: Palette.libelle(c) })),
+    selection: [couleur.choisie ? couleur.nom : ''],
+    vide: 'Automatique',
+    valeurVide: '',
+    surChoix: (nom) => {
+      if ((nom || '') === String(ligne[colId] ?? '').trim().toLowerCase()) return;   // rien ne change
+      ecrireCellule(ligne, colId, nom || '');
+    },
+  });
+  // Rond de couleur devant chaque choix (le menu commun n'affiche que du texte)
+  const items = menu.querySelectorAll('.fiche-menu-item');
+  items.forEach((item, i) => {
+    // Le premier choix est « Automatique » : son rond montre la couleur tirée du numéro
+    const c = i === 0 ? Palette.automatique(ligne.id) : Palette.COULEURS[i - 1];
+    const rond = document.createElement('span');
+    rond.className = 'palette-rond';
+    rond.style.background = c.trait;
+    item.prepend(rond);
+  });
 }
 
 /* ── Taille des cartes (#237) ────────────────────────────────────
