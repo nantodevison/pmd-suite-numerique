@@ -8,7 +8,7 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-19 10:43_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-19 17:48_
 
 ### 🖐️ À faire
 - [ ] #242 Proposer un affichage de base commun (Moyenne, EPIC « Mutualiser les fonctions communes du Kanban et de la Galerie »)
@@ -23,7 +23,6 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [ ] #249 Uniformiser l'Ux des widgets (Basse, EPIC « Mutualiser les fonctions communes du Kanban et de la Galerie »)
 
 ### ♻️ En cours
-- [ ] #241 Augmenter la différenciation visuelle des cartes (Haute, EPIC « Améliorer l'Ux/Ui de la galerie »)
 - [ ] #247 Structurer les pages Grist dédiées à Andrea (Moyenne, EPIC « Créer un MVP pour Andrea »)
 
 <!-- fin kanban -->
@@ -32,7 +31,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [ ] Prévenir Vincent et Elisa des changements de la barre (#214), de la création de carte liée (#222), des attributs dans les filtres (#223, colonnes « EPIC › … ») et de #226 (panneau des filtres compacté, « Afficher ▾ » dans les menus, EPIC / Assigné en pastilles dans « Nouvelle carte »), et recueillir leur avis
 - [ ] Essayer taches.py voir sur un vrai projet Notion (testé sur faux serveur seulement)
 - [ ] MVP Andrea (#247) : structurer les pages Grist d'Andrea avec la Page et les Interactions (par URL) ; la Page peut servir de source « Sélectionner par » pour la Galerie ; passer Page et Interactions « en test » au catalogue une fois branchées
-- [ ] #241 étape B : afficher l'image de la colonne Image (pièce jointe Grist) sur les cartes de la Galerie
+- [ ] Installer gitleaks sur ce poste (absent de %LOCALAPPDATA%\Programs le 2026-11-19 : contrôle manuel des secrets à la place)
 
 ## En cours
 - [x] Fiche dense du Kanban fusionnée sur master (PR #15, feat/fiche-centrale), 2026-10-24 = mise en production du Kanban, vérifiée dans le document de l'Observatoire
@@ -68,6 +67,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [x] #186 : nouvelle carte préremplie d'après la vue (filtres « est » à une valeur, colonnes hors formulaire comprises), menus « Hors de la vue », avis avant création, Kanban et Galerie ; pastilles dans la nouvelle fiche de la Galerie (PR #57), 2026-11-15 ; testée dans le builder
 - [x] #235 : widget Page, une ligne affichée comme une page Notion, source possible de « Sélectionner par » (PR #58), 2026-11-18 ; testée dans le builder
 - [x] #246 : widget Interactions, journal des échanges d'un projet, projet choisi dans ⚙, fiche de création et de modification (PR #59), 2026-11-18 ; testé dans le builder
+- [x] #241 close : couleur des cartes de la Galerie (PR #60), puis image en haut des cartes depuis une colonne pièce jointe (PR #61), 2026-11-19 ; banc 464 vérifications, testée dans le builder
 
 ## Prochaines étapes
 (Les étapes du projet sont désormais suivies dans Grist : voir « Kanban (Grist) » ci-dessus.)
@@ -199,3 +199,6 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - 2026-11-17 — Grist pour centraliser, Docs pour la prise de notes en réunion ; une réunion = une ligne d'Interactions avec son url (+ colonne Titre) ; liens Box et Docs dans une future table Documents — centraliser sans multiplier les outils
 - 2026-11-17 — une page Grist par projet (widget page filtré sur une ligne de Projets2, sous-pages Rendez-vous et Kanban), dupliquée depuis un projet modèle — la duplication de page conserve les filtres (testé sur la page EPICs)
 - 2026-11-17 — Kanban et Galerie inchangés pour Andrea tant qu'elle n'a pas testé et fait ses retours (table Retour_U)
+- 2026-11-19 — image des cartes de la Galerie en couverture en haut de la carte (moyenne 80 px, grande 140 px, rien en compacte ni dans la fiche), première image de la cellule, pas de bande vide sans image — titre lisible, comme Notion ; « image en fond » écartée
+- 2026-11-19 — images lues avec un jeton Grist en lecture seule ; une pièce jointe illisible même avec un jeton neuf n'est plus retentée jusqu'à la relecture de _grist_Attachments — sinon un jeton demandé à chaque redessin (recherche)
+- 2026-11-19 — CLAUDE.md global : valider un commit vaut accord pour son push, et sur une branche de travail pour la PR, la fusion, le retour sur la branche principale et la suppression de la branche — enchaîner sans redemander ; confirme la décision du 2026-10-29
