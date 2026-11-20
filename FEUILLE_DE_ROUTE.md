@@ -33,49 +33,10 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [ ] Associer `Chef_de_projet` (désormais liste de références) aux Pastilles de la Galerie et de la Page des projets, et `Contributeurs` à celles de la Galerie des EPICs (PR #64)
 
 ## En cours
-- [x] Fiche dense du Kanban fusionnée sur master (PR #15, feat/fiche-centrale), 2026-10-24 = mise en production du Kanban, vérifiée dans le document de l'Observatoire
 - [ ] Refaire le modèle ⚙ de la Galerie dans le document réel
-- [x] Filtres combinables du Kanban (#195), PR #17 fusionnée le 2026-10-26, vérifiée sur les données réelles
-- [x] Vues enregistrées (#196) : 8 tests validés dans le builder, PR #18 fusionnée le 2026-10-27 = mise en production ; #187 (glisser-déposer des colonnes) réglée du même coup
-- [x] Onglets codés en dur remplacés par un onglet Accueil (#197, PR #19), vues recréées dans l'Observatoire (#198), README et catalogue (#199), 2026-10-27
-- [x] Kanban générique : millésime et lecture de EPICs retirés (#147, PR #20), équipe projet dans ⚙ (#148, PR #21), 2026-10-28 ; équipe cochée et Accueil vérifié dans l'Observatoire le même jour
-- [x] #202 : onglet actif dans le navigateur (PR #22, 2026-10-28), « Qui suis-je ? » + filtre 👤 Moi (PR #23), vues personnelles 🔒 + « Mes tâches » (PR #24), 2026-10-29 ; reste l'étape 3 après test
-- [x] #201 étape 1 : clé API Grist trouvée dans une sortie de notebook (commit 3cae070) → régénérée ; clé Brevo supprimée ; historique et 32 images sains ; étape 2 : revue de code sans faille
-- [x] #201 : double authentification GitHub, jeton de la sync révoqué (ce poste), widgets archivés retirés (PR #25, tag archive-widgets-gt-cbs), API Grist servie par la DINUM et Markdown en liste blanche (PR #26), 2026-10-30 ; reste l'autre poste
-- [x] #183 étape 1 : liens Bloque / Bloquée par dans la fiche et à la création, module _commun/liens.js (PR #27), 2026-10-31
-- [x] #183 étape 2 : classes de statut dans ⚙ et badges ⛔ / ➡️ (PR #28), 2026-10-31 ; étape 3 : avertissements (PR #29), 2026-11-01 ; #183 close, étape 4 (Galerie) reportée dans #207, bloquée par #188
-- [x] #203 : numéro #id sur les cartes et dans la barre de la fiche (PR #30), 2026-11-01
-- [x] #209 : recherche dans le Kanban et la Galerie, règle commune _commun/recherche.js (PR #31), 2026-11-01
-- [x] #211 : tri des cartes du Kanban sur n'importe quelle colonne, module _commun/tri.js (PR #32), 2026-11-01
-- [x] #201 close : ligne GITHUB_TOKEN retirée du .env de ce poste, 2026-11-02
-- [x] #208 : cases à cocher cliquables dans l'aperçu de la fiche, Kanban et Galerie (PR #33), 2026-11-02
-- [x] #212 : couleur de chaque statut choisie dans ⚙, elle suit le statut (PR #34), 2026-11-02
-- [x] #210 : ⚙ en fenêtre à onglets ① Projet ② Colonnes ③ Statuts ④ Équipe, étape ③ mise à jour aussitôt ; brique commune _commun/fenetre.js (PR #35), 2026-11-02 ; à réutiliser pour les vues et filtres (#214)
-- [x] #202 close : test concluant avec Vincent et Elisa, 2026-11-05 ; étapes 3 (Mes onglets) et 4 (export/import) non réalisées, leur sort est à décider dans #214
-- [x] #214 : fenêtre « Gérer la vue », barre compacte (PR #36), vue « Toutes les cartes », bouton « ? », vues 👥 par projet (PR #37), 2026-11-07 ; vérifiée dans l'Observatoire le même jour
-- [x] #222 : créer une carte liée depuis « ＋ Bloque… » / « ＋ Bloquée par… » de la fiche (PR #38), 2026-11-07
-- [x] #223 étape 1 : attributs d'une référence affichables dans le panneau des filtres (🏷 Afficher), aux couleurs des choix Grist ; colonnes rapportées nommées « EPIC › Priorite » (PR #39), 2026-11-10 ; testée dans le document réel
-- [x] #226 : panneau des filtres compacté, bouton « Afficher ▾ », attributs dans les menus de la fiche et de « Nouvelle carte », toutes les colonnes reçues (includeColumns normal) (PR #40), 2026-11-11 ; testée dans le builder
-- [x] #229, #230 : banc d'essai du Kanban dans tests/kanban (PR #41, #42) : 143 vérifications par largeur, casses volontaires détectées, 2026-11-12
-- [x] #204 : filtres et vues enregistrées dans la Galerie, par _commun/filtres.js et _commun/vues.js (PR #49), 2026-11-13 ; banc 142 vérifications, testée dans le builder
-- [x] #205, #206 : pastilles de la Galerie modifiables sur la carte et dans la fiche, alerte de cohérence entre références ; tri.css chargé par le Kanban (PR #52), 2026-11-14
-- [x] #239 : la Galerie lit les colonnes non associées (filtres, tri, regroupement, attributs étaient vides en production) ; faux Grist rendu fidèle (PR #53), 2026-11-14
-- [x] #184 : fiche de la Galerie presque plein cadre au centre, objets liés sous l'en-tête avec leurs attributs (« Afficher ▾ »), 2 lignes puis « + n autres ▾ », encart Contexte souple (PR #54), 2026-11-15
-- [x] #237 : taille des cartes de la Galerie (compacte, moyenne, grande avec résumé et nombre d'objets liés) (PR #55), 2026-11-15
-- [x] #238 : condition de liste déroulante de Grist respectée dans les menus des pastilles, évaluateur _commun/condition.js (PR #56), 2026-11-15
-- [x] #186 : nouvelle carte préremplie d'après la vue (filtres « est » à une valeur, colonnes hors formulaire comprises), menus « Hors de la vue », avis avant création, Kanban et Galerie ; pastilles dans la nouvelle fiche de la Galerie (PR #57), 2026-11-15 ; testée dans le builder
-- [x] #235 : widget Page, une ligne affichée comme une page Notion, source possible de « Sélectionner par » (PR #58), 2026-11-18 ; testée dans le builder
-- [x] #246 : widget Interactions, journal des échanges d'un projet, projet choisi dans ⚙, fiche de création et de modification (PR #59), 2026-11-18 ; testé dans le builder
-- [x] #241 close : couleur des cartes de la Galerie (PR #60), puis image en haut des cartes depuis une colonne pièce jointe (PR #61), 2026-11-19 ; banc 464 vérifications, testée dans le builder
-- [x] #264 : nom propre à chaque Galerie dans ⚙, ajouté aux clés de mémoire du navigateur (PR #62), 2026-11-19 ; testée dans le builder
-- [x] #244 : numéro des cartes de la Galerie en bas à droite et « Fiche · #N » (PR #63), 2026-11-19 ; banc 508 vérifications, testée dans le builder
-- [x] Listes de références en pastilles (suite au passage de `Projets2.Chef_de_projet` en liste à double sens) : modifiables dans la Galerie (cases, recherche à cases, homonymes distingués), lecture seule dans la Page ; option `multiple` de `Fiche.menuRecherche` ; schéma gestion-projets réexporté (PR #64), 2026-11-20 ; quatre bancs OK, testée dans le builder ; gitleaks 8.30.1 installé sur ce poste
 
 ## Prochaines étapes
 (Les étapes du projet sont désormais suivies dans Grist : voir « Kanban (Grist) » ci-dessus.)
-- [x] Publier le Kanban de Rémi (PR #11) et corriger l'écriture des références et du nom de table (PR #12), testé par URL le 2026-09-24
-- [x] Choix du projet au démarrage : un Kanban = un projet (PR #13), sans « Vue : … » dans la barre (PR #14), 2026-10-02 ; suite de la généralisation suivie dans Grist (EPICs 21 à 23)
-- [x] Basculer le Kanban de l'Observatoire du builder vers la version par URL — fait par Martin, avant le 2026-10-02
 - [ ] Réparer les cellules EPIC / `qui_` invalides du document réel (en cours, par Martin)
 - [ ] Valider la fiche type d'écoute client (Docs) avec May-Jeanne — à suivre dans le projet Grist « Fiche écoute client »
 
