@@ -68,9 +68,10 @@ grist.ready({
   columns: [
     { name: 'Titre',     title: 'Titre', type: 'Text' },
     { name: 'Texte',     title: 'Texte de la page (Markdown)', type: 'Text', optional: true },
-    // Mêmes types que les pastilles de la Galerie (pas de liste de références)
+    // Mêmes types que les pastilles de la Galerie ; une liste de références
+    // (ex. les chefs d'un projet) donne une pastille par élément.
     { name: 'Pastilles', title: 'Pastilles (sous le titre)', allowMultiple: true, optional: true,
-      type: 'Text,Numeric,Int,Bool,Date,DateTime,Choice,ChoiceList,Ref' },
+      type: 'Text,Numeric,Int,Bool,Date,DateTime,Choice,ChoiceList,Ref,RefList' },
   ],
 });
 

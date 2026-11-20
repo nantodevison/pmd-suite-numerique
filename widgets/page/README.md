@@ -56,7 +56,7 @@ widget :
 |---|---|---|---|
 | **Titre** | oui | grand titre de la page, en lecture seule | `Titre` |
 | **Texte de la page (Markdown)** | non | corps de la page, modifiable | `Presentation` |
-| **Pastilles (sous le titre)** | non, plusieurs colonnes possibles | pastilles colorées, en lecture seule, libellé au survol | `Type`, `Chef_de_projet` |
+| **Pastilles (sous le titre)** | non, plusieurs colonnes possibles | pastilles colorées, en lecture seule, libellé au survol ; une liste de références donne une pastille par élément | `Type`, `Chef_de_projet` |
 
 Couleurs des pastilles : les mêmes que dans la Galerie (couleur du choix dans
 Grist, échelle du rouge au vert pour un pourcentage, pastel propre à chaque

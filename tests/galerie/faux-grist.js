@@ -7,7 +7,13 @@
    donnée réelle) :
      - EPICs    : la table affichée par la Galerie (4 cartes) ;
      - Projets  : visée par la référence EPICs.Projet ;
-     - Taches   : visée par la liste de références EPICs.Taches.
+     - Taches   : visée par la liste de références EPICs.Taches ;
+     - Personnes : visée par la liste de références EPICs.Redacteurs
+                  (14 lignes, plus que le seuil de la recherche, dont deux
+                  homonymes : « Personne 02 », numéros 2 et 14).
+   Particularité de Redacteurs : le faux Grist la range sous ses NUMÉROS
+   (comme le vrai), et non sous ses noms comme les autres références, pour
+   vérifier que le widget distingue deux homonymes.
    Comme le vrai Grist :
      - onRecords envoie les références sous leur NOM affiché (et non leur
        numéro), avec l'association des colonnes en second argument ;
@@ -65,15 +71,18 @@
     [18, 1, 'Couleur_calc',  'Any',          'Couleur calculée', '"vert"',        true,  '', 0],
     // Image des cartes (#241, étape B) : numéros de pièces jointes (_grist_Attachments)
     [19, 1, 'Image',         'Attachments',  'Image',         '',                 false, '', 0],
+    // Liste de références modifiable en pastilles (cases à cocher, recherche à cases)
+    [22, 1, 'Redacteurs', 'RefList:Personnes', 'Rédacteurs', '',            false, '', 60],
     [20, 2, 'Nom',         'Text',           'Nom',         '',                 false, '', 0],
     [21, 2, 'Etat',        'Text',           'État',        '',                 false, '', 0],
     [30, 3, 'Nom',         'Text',           'Nom',         '',                 false, '', 0],
     [31, 3, 'statut',      'Choice',         'Statut',      '',                 false, choixStatut, 0],
     [40, 4, 'Nom',         'Text',           'Nom',         '',                 false, '', 0],
     [41, 4, 'Projet',      'Ref:Projets',    'Projet',      '',                 false, '', 20],
+    [60, 5, 'Nom',         'Text',           'Nom',         '',                 false, '', 0],
   ];
   const meta = {
-    _grist_Tables: { id: [1, 2, 3, 4], tableId: ['EPICs', 'Projets', 'Taches', 'Versions'] },
+    _grist_Tables: { id: [1, 2, 3, 4, 5], tableId: ['EPICs', 'Projets', 'Taches', 'Versions', 'Personnes'] },
     // displayCol (10e champ) : 0 si absent, comme une référence sans colonne cachée
     _grist_Tables_column: ['id', 'parentId', 'colId', 'type', 'label', 'formula', 'isFormula', 'widgetOptions', 'visibleCol', 'displayCol']
       .reduce((o, k, i) => (o[k] = colonnes.map(c => c[i] ?? 0), o), {}),
@@ -92,7 +101,20 @@
                statut: ['Fait', 'En cours', 'À faire'] },
     // Comme fetchTable : une référence sous son NUMÉRO (Version A → Atelier, Version B → Vitrine)
     Versions:  { id: [1, 2], Nom: ['Version A', 'Version B'], Projet: [1, 2] },
+    // Personne 01 … Personne 13, puis un homonyme de Personne 02 (numéro 14)
+    Personnes: {
+      id:  Array.from({ length: 14 }, (_, k) => k + 1),
+      Nom: [...Array.from({ length: 13 }, (_, k) => `Personne ${String(k + 1).padStart(2, '0')}`), 'Personne 02'],
+    },
   };
+  // Colonnes rangées sous leurs numéros (voir l'en-tête)
+  const PAR_NUMEROS = new Set(['Redacteurs']);
+  /** Numéros → noms (format d'onRecords) pour une colonne rangée sous ses numéros. */
+  function nomsDe(col, numeros) {
+    if (!Array.isArray(numeros)) return numeros ?? null;
+    const t = donnees.Personnes;
+    return numeros.map(n => { const i = t.id.indexOf(n); return i === -1 ? n : t.Nom[i]; });
+  }
 
   // Ancien texte du widget Notepad (JSON), à convertir en Markdown
   const NOTEPAD = '{"ops":[{"insert":"Ancien texte"},{"insert":"\\n"}]}';
@@ -105,15 +127,16 @@
       Avancement: 0.67, Projet: 'Atelier', Taches: ['Rédiger le guide', 'Relire le guide'],
       Objectif: 'Guide publié', Echeance: JANVIER_2026, Code: 'E1', Projet_Etat: 'Ouvert', Urgent: true,
       Themes: ['Guide'], Version: 'Version A', Taches_statut: ['Fait', 'En cours'], Voir_aussi: [],
-      Couleur: ' Rose ', Couleur_calc: 'vert', Image: [1, 2] },
+      Couleur: ' Rose ', Couleur_calc: 'vert', Image: [1, 2],
+      Redacteurs: [14] },   // le SECOND « Personne 02 » (homonyme)
     { id: 2, Titre: 'Préparer la démonstration', Description: NOTEPAD, Priorite: 'Later',
       Avancement: 1, Projet: 'Atelier', Taches: [], Objectif: 'Démonstration jouée', Echeance: null, Code: 'E2',
       Projet_Etat: 'Ouvert', Urgent: false, Themes: null, Version: '', Taches_statut: [], Voir_aussi: ['Carte en erreur'],
-      Couleur: '', Couleur_calc: 'vert', Image: [3] },
+      Couleur: '', Couleur_calc: 'vert', Image: [3], Redacteurs: [] },
     { id: 3, Titre: 'Archiver le site', Description: 'Texte simple', Priorite: null,
       Avancement: 0.1, Projet: 'Vitrine', Taches: ['Copier les pages'], Objectif: '', Echeance: null, Code: 'E3',
       Projet_Etat: 'Fermé', Urgent: true, Themes: null, Version: 'Version B', Taches_statut: ['À faire'], Voir_aussi: [],
-      Couleur: 'pourpre', Couleur_calc: 'vert', Image: [4] },
+      Couleur: 'pourpre', Couleur_calc: 'vert', Image: [4], Redacteurs: [1, 3] },
     // Référence vers une ligne qui n'existe pas : cellule en erreur
     { id: 4, Titre: 'Carte en erreur', Description: '', Priorite: null, Avancement: 0,
       Projet: ['E', 'InvalidTypedValue', 'Ref:Projets', 99], Taches: [], Objectif: '', Echeance: null, Code: 'E4',
@@ -141,7 +164,9 @@
     const associees = new Set(['id', ...Object.values(association).flat().filter(Boolean)]);
     // Une carte créée alors que la vue est filtrée n'est pas renvoyée
     const visibles = records.filter(r => !(window.FAUX_GRIST.masquerCreees && r.id >= 100));
-    const envoi = visibles.map(r => Object.fromEntries(Object.entries(r).filter(([col]) => associees.has(col))));
+    const envoi = visibles.map(r => Object.fromEntries(Object.entries(r).filter(([col]) => associees.has(col))
+      // Comme Grist : une référence part sous son NOM affiché
+      .map(([col, v]) => [col, PAR_NUMEROS.has(col) ? nomsDe(col, v) : v])));
     window.FAUX_GRIST.dernierEnvoi = envoi;
     rappels.records(envoi.map(r => ({ ...r })), association);
   }
@@ -162,6 +187,7 @@
       const c = colonnes.find(x => x[1] === 1 && x[2] === col);
       const ref = c && /^Ref(?:List)?:(.+)$/.exec(c[3]);
       if (Array.isArray(v) && v[0] === 'L') v = v.slice(1);
+      if (PAR_NUMEROS.has(col)) return [col, v];   // gardée sous ses numéros
       if (ref) {
         const t = tableVisee(ref[1]);
         const nom = (n) => { const i = t.id.indexOf(n); return i === -1 ? n : t.Nom[i]; };
@@ -211,6 +237,7 @@
   /** Valeur d'une carte (format d'onRecords) → format de fetchTable. */
   function commeFetchTable(col, v) {
     if (v === null || (Array.isArray(v) && v[0] === 'E')) return v;   // vide ou cellule en erreur
+    if (PAR_NUMEROS.has(col)) return ['L', ...v];   // déjà sous ses numéros
     const c = colonnes.find(x => x[1] === 1 && x[2] === col);
     const ref = c && /^Ref(?:List)?:(.+)$/.exec(c[3]);
     if (ref) {

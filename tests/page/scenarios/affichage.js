@@ -27,6 +27,16 @@ Banc.lancer(async () => {
   await Banc.attendre(100);
   ok('nouvel envoi : curseur non replacé', FAUX_GRIST.curseurs.length === 1);
 
+  // Liste de références en pastilles : une pastille par personne, colorée
+  await relancer({ criteres: [{ col: 'id', valeur: 1 }], colonnes: { Pastilles: ['Equipe'] } });
+  ok('liste de références : une pastille par personne',
+    textes('.page-pastilles .pastille').join('|') === 'Personne A|Personne B', textes('.page-pastilles .pastille').join('|'));
+  ok('liste de références : libellé au survol',
+    $('.page-pastilles .pastille')?.title === 'Équipe projet : Personne A', $('.page-pastilles .pastille')?.title);
+  ok('liste de références : pastel', Boolean($('.page-pastilles .pastille')?.style.background));
+  await relancer({ criteres: [{ col: 'id', valeur: 2 }], colonnes: { Pastilles: ['Equipe'] } });
+  ok('liste de références vide : pas de pastille', !$('.page-pastilles'));
+
   // Critère sur une référence : retenu sous son numéro, il survit au renommage
   await relancer({ criteres: [{ col: 'Chef', valeur: 2 }] });
   ok('référence : ligne 2', $('.page')?.dataset.id === '2' && $('.page-titre')?.textContent === 'Vitrine');

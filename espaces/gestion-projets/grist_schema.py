@@ -17,6 +17,9 @@ class Contacts:
   Doublon_Email = grist.Bool()
   Service = grist.Choice()
   Projets = grist.ReferenceList('Projets2', reverse_of='Contacts_Projets')
+  EPICs = grist.ReferenceList('EPICs', reverse_of='Pilote')
+  EPICs_Contributeurs = grist.ReferenceList('EPICs', reverse_of='Contributeurs')
+  Projets_Chef_de_projet = grist.ReferenceList('Projets2', reverse_of='Chef_de_projet')
 
   @grist.formulaType(grist.Text())
   def Envoi_mail(rec, table):
@@ -56,44 +59,6 @@ class Contacts:
 
 
 @grist.UserTable
-class Departement:
-  NumeroDept = grist.Numeric()
-  NomDept = grist.Text()
-
-  @grist.formulaType(grist.Text())
-  def GestionComplet(rec, table):
-    return ", ".join(
-        [
-            r.Nom
-            for r in Structures.all
-            if rec.id in [x.id for x in r.Departements]
-        ]
-    )
-
-  @grist.formulaType(grist.Numeric())
-  def Nb_gestionnaire_fait(rec, table):
-    return len([
-        r for r in Taches.all
-        if r.Fait
-        and r.Nom in rec.GestionComplet
-    ])
-
-  @grist.formulaType(grist.Numeric())
-  def Nb_gestionnaire(rec, table):
-    return len(rec.GestionComplet.split(","))
-
-  @grist.formulaType(grist.Numeric())
-  def Avance(rec, table):
-    if rec.Nb_gestionnaire == 0:
-        return 0
-    else:
-        return round(
-            rec.Nb_gestionnaire_fait / rec.Nb_gestionnaire,
-            1
-        )
-
-
-@grist.UserTable
 class Departements:
   NumeroDept = grist.Numeric()
   NomDept = grist.Text()
@@ -124,6 +89,8 @@ class EPICs:
   Priorite = grist.Choice()
   Couleur = grist.Text()
   Image = grist.Attachments()
+  Pilote = grist.Reference('Contacts', reverse_of='EPICs')
+  Contributeurs = grist.ReferenceList('Contacts', reverse_of='EPICs_Contributeurs')
 
   def Avancement(rec, table):
     cnt=0
@@ -216,9 +183,7 @@ class Enum_Type_retourU:
 class Info:
   Cible = grist.Text()
   Texte = grist.Text()
-
-  def C(rec, table):
-    return None
+  Type = grist.Choice()
 
 
 @grist.UserTable
@@ -253,8 +218,8 @@ class Objectifs_resultats_cles:
   delai = grist.Date()
   EPICs = grist.ReferenceList('EPICs', reverse_of='objectifs_resultats_cle')
   Description = grist.Text()
-  Image = grist.Attachments()
   Couleur = grist.Text()
+  Image = grist.Attachments()
 
 
 @grist.UserTable
@@ -321,6 +286,7 @@ class Projets2:
   Latitude = grist.Numeric()
   Longitude = grist.Numeric()
   Theme = grist.ReferenceList('Enum_Themes')
+  Image = grist.Attachments()
   Annee = grist.Int()
   EPICs = grist.ReferenceList('EPICs', reverse_of='Projet')
 
@@ -347,11 +313,10 @@ class Projets2:
   Contacts_Projets = grist.ReferenceList('Contacts', reverse_of='Projets')
   Structures = grist.ReferenceList('Structures', reverse_of='Projets')
   Presentation = grist.Text()
-  Chef_de_projet = grist.Reference('Contacts')
   Documents = grist.ReferenceList('Documents', reverse_of='Projet')
   Type = grist.Choice()
-  Image = grist.Attachments()
   Couleur = grist.Text()
+  Chef_de_projet = grist.ReferenceList('Contacts', reverse_of='Projets_Chef_de_projet')
 
   def Contacts_Email(rec, table):
     return rec.Contacts.Email

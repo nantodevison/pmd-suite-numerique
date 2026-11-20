@@ -13,7 +13,7 @@ référence pour les noms de tables et de colonnes utilisés par les widgets.
 
 | Module | Tables ou colonnes |
 |---|---|
-| Gestion de projet | `Projets2` → `Objectifs_resultats_cles` → `EPICs` → `Taches` ; colonnes `Presentation` (texte Markdown de la page du projet, sans limite de longueur), `Chef_de_projet` (→ `Contacts`) et `Type` de `Projets2` |
+| Gestion de projet | `Projets2` → `Objectifs_resultats_cles` → `EPICs` → `Taches` ; colonnes `Presentation` (texte Markdown de la page du projet, sans limite de longueur), `Chef_de_projet` (liste de références → `Contacts` : un projet peut avoir plusieurs chefs ; à double sens avec `Contacts.Projets_Chef_de_projet`) et `Type` de `Projets2` ; colonnes `Pilote` (référence → `Contacts`, à double sens avec `Contacts.EPICs`) et `Contributeurs` (liste de références → `Contacts`, à double sens avec `Contacts.EPICs_Contributeurs`) de `EPICs` |
 | Documents | `Documents` : `Titre`, `Projet` (liste de références : un document peut servir plusieurs projets), `Type`, `url` (Box, Docs…) |
 | CRM | `Contacts`, `Structures`, `Interactions` (dont `Titre` et `url` : lien vers la note Docs d'une réunion) |
 | Retours utilisateurs | `Retour_U` et ses tables `Enum_…` (`Enum_Type_retourU`, `Enum_Tags_retourU`, `Enum_Opportunite_retourU`) |
@@ -41,7 +41,6 @@ référence pour les noms de tables et de colonnes utilisés par les widgets.
 
 ## À nettoyer un jour
 
-- Deux tables proches : `Departement` et `Departements`.
 - Plusieurs liens entre `Projets2` et les contacts ou structures : `Contacts`,
   `Contacts_Projets`, `ect_client_contacts`, `Structures`, `Client`, `Partenaire`.
 - `from urllib import quote` (formules `Envoi_mail` et `Mail_groupe`) est une

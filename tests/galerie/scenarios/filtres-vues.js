@@ -24,7 +24,7 @@ Banc.lancer(async () => {
                  : onglets().join('|') === 'Toutes les cartes')
     && $('#view-tabs #vue-ajouter') && $('#resumes-vue').firstElementChild?.textContent === '🔽 Filtres', onglets().join('|'));
   const filtrables = ETAT.colonnesFiltrables.map(c => c.label).join('|');
-  ok('colonnes filtrables : Choix et Références de la table, par libellé', filtrables === 'Priorité|Projet|Tâches|Thèmes|Version|Voir aussi', filtrables);
+  ok('colonnes filtrables : Choix et Références de la table, par libellé', filtrables === 'Priorité|Projet|Rédacteurs|Tâches|Thèmes|Version|Voir aussi', filtrables);
   ok('quatre cartes, sans filtre', cartes() === '1,2,3,4');
 
   // ── Un filtre, depuis « 🔽 Filtres » ──
