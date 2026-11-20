@@ -30,7 +30,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [ ] Prévenir Vincent et Elisa des changements de la barre (#214), de la création de carte liée (#222), des attributs dans les filtres (#223, colonnes « EPIC › … ») et de #226 (panneau des filtres compacté, « Afficher ▾ » dans les menus, EPIC / Assigné en pastilles dans « Nouvelle carte »), et recueillir leur avis
 - [ ] Essayer taches.py voir sur un vrai projet Notion (testé sur faux serveur seulement)
 - [ ] MVP Andrea (#247) : structurer les pages Grist d'Andrea avec la Page et les Interactions (par URL) ; la Page peut servir de source « Sélectionner par » pour la Galerie ; passer Page et Interactions « en test » au catalogue une fois branchées ; donner un nom spécifique à chaque Galerie dans ⚙ (#264), y compris sur les pages dupliquées, puis « Enregistrer » ; retirer la pastille `identifiant` des Galeries d'EPICs (doublon du numéro, #244)
-- [ ] Installer gitleaks sur ce poste (absent de %LOCALAPPDATA%\Programs le 2026-11-19 : contrôle manuel des secrets à la place)
+- [ ] Associer `Chef_de_projet` (désormais liste de références) aux Pastilles de la Galerie et de la Page des projets, et `Contributeurs` à celles de la Galerie des EPICs (PR #64)
 
 ## En cours
 - [x] Fiche dense du Kanban fusionnée sur master (PR #15, feat/fiche-centrale), 2026-10-24 = mise en production du Kanban, vérifiée dans le document de l'Observatoire
@@ -69,6 +69,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [x] #241 close : couleur des cartes de la Galerie (PR #60), puis image en haut des cartes depuis une colonne pièce jointe (PR #61), 2026-11-19 ; banc 464 vérifications, testée dans le builder
 - [x] #264 : nom propre à chaque Galerie dans ⚙, ajouté aux clés de mémoire du navigateur (PR #62), 2026-11-19 ; testée dans le builder
 - [x] #244 : numéro des cartes de la Galerie en bas à droite et « Fiche · #N » (PR #63), 2026-11-19 ; banc 508 vérifications, testée dans le builder
+- [x] Listes de références en pastilles (suite au passage de `Projets2.Chef_de_projet` en liste à double sens) : modifiables dans la Galerie (cases, recherche à cases, homonymes distingués), lecture seule dans la Page ; option `multiple` de `Fiche.menuRecherche` ; schéma gestion-projets réexporté (PR #64), 2026-11-20 ; quatre bancs OK, testée dans le builder ; gitleaks 8.30.1 installé sur ce poste
 
 ## Prochaines étapes
 (Les étapes du projet sont désormais suivies dans Grist : voir « Kanban (Grist) » ci-dessus.)
