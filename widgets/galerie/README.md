@@ -54,7 +54,7 @@ section **Colonnes** du widget, associer :
 |---|---|---|---|
 | **Titre** | oui | titre de la carte et de la fiche | `Titre` |
 | **Texte principal (Markdown)** | non | texte de la fiche (pas sur la carte, mais pris en compte par la recherche) | `Description` |
-| **Pastilles (carte et fiche)** | non, plusieurs colonnes possibles (pas de liste de références) | pastilles colorées sur la carte ; dans la fiche, sans libellé, à droite du titre (au centre) ou dessous (sur le côté) | `Avancement`, `Priorite`, `Projet` |
+| **Pastilles (carte et fiche)** | non, plusieurs colonnes possibles | pastilles colorées sur la carte ; dans la fiche, sans libellé, à droite du titre (au centre) ou dessous (sur le côté) ; une liste de références donne une pastille par élément | `Avancement`, `Priorite`, `Projet`, `Chef_de_projet` |
 | **Objets liés (sous le titre de la fiche)** | non, plusieurs colonnes possibles (listes de références seulement) | une ligne par colonne sous le titre de la fiche, un élément par pastille blanche | `Taches`, `Retour_U` |
 | **Contexte (fiche seulement)** | non, plusieurs colonnes possibles | encart « libellé : valeur » sous l'en-tête de la fiche | `objectifs_resultats_cle` |
 | **Couleur des cartes (bleu, vert…)** | non (texte ou choix) | couleur de chaque carte, voir « Couleur des cartes » | `Couleur` |
@@ -92,12 +92,14 @@ type de la colonne :
 | Choix | les choix de Grist, dans leur ordre, plus « — aucun — » |
 | Choix multiple | les mêmes, en cases à cocher (le menu reste ouvert) |
 | Référence | les lignes de la table visée, de A à Z, plus « — aucune — » ; un champ de recherche au-delà de 12 lignes |
+| Liste de références | les mêmes lignes, en cases à cocher (le menu reste ouvert) ; au-delà de 12 lignes, un champ de recherche au-dessus des cases (Entrée coche le premier résultat et vide le champ) |
 | Case à cocher | « ✓ oui » / « ✗ non » |
 | Date | un calendrier, et « Effacer la date » |
 
 - **Sur la carte** : le clic n'ouvre pas la fiche, et le choix est **écrit
   tout de suite** dans Grist, comme une cellule modifiée (Ctrl + Z dans Grist
-  pour annuler). Pour une liste de choix, chaque case cochée est écrite. Les
+  pour annuler). Pour une liste (choix multiple, liste de références),
+  chaque case cochée est écrite. Les
   pastilles vides ne s'affichent pas : la carte reste concise ; une colonne
   vide se remplit depuis la fiche.
 - **Dans la fiche** : chaque colonne modifiable a sa pastille, « + Priorité »
@@ -108,6 +110,10 @@ type de la colonne :
 - La table visée par une référence est **relue à chaque ouverture** du menu :
   un projet ajouté dans Grist est proposé tout de suite. Elle n'est jamais lue
   au chargement du widget.
+- **Homonymes** (liste de références) : Grist envoie au widget les noms
+  affichés, où deux personnes du même nom se confondent. À l'ouverture du
+  menu, le widget relit donc la cellule dans la table, qui donne les numéros
+  des lignes : la bonne personne est cochée, et la bonne est écrite.
 - **Condition de liste déroulante** (#238) : si la colonne en a une dans
   Grist (par exemple `choice.Projet == $Projet` sur les objectifs), le menu
   ne propose que les options qui la respectent, pour une Référence comme

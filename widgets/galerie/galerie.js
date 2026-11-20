@@ -122,12 +122,13 @@ grist.ready({
   columns: [
     { name: 'Titre',       title: 'Titre', type: 'Text' },
     { name: 'Description', title: 'Texte principal (Markdown)', type: 'Text', optional: true },
-    // « type » limite les colonnes proposées par Grist. Les listes de
-    // références (RefList) sont exclues des pastilles : elles vont dans
-    // « Objets liés ». Une colonne calculée sans type déclaré (« Any »,
-    // comme Avancement) reste proposée partout.
+    // « type » limite les colonnes proposées par Grist. Une liste de
+    // références (RefList) peut aller en pastilles (une par élément, ex.
+    // les chefs d'un projet) ou dans « Objets liés » (ex. les tâches d'un
+    // EPIC, avec leurs attributs). Une colonne calculée sans type déclaré
+    // (« Any », comme Avancement) reste proposée partout.
     { name: 'Pastilles',   title: 'Pastilles (carte et fiche)', allowMultiple: true, optional: true,
-      type: 'Text,Numeric,Int,Bool,Date,DateTime,Choice,ChoiceList,Ref' },
+      type: 'Text,Numeric,Int,Bool,Date,DateTime,Choice,ChoiceList,Ref,RefList' },
     { name: 'ObjetsLies',  title: 'Objets liés (sous le titre de la fiche)', allowMultiple: true, optional: true,
       type: 'RefList' },
     { name: 'Contexte',    title: 'Contexte (fiche seulement)', allowMultiple: true, optional: true },
@@ -375,6 +376,8 @@ function creerPastilles(colId, valeur) { return Pastilles.creer(info(colId), val
      - Choix multiple   → la même liste, en cases à cocher ;
      - Référence        → les lignes de la table visée, plus « — aucune — »
                           (champ de recherche au-delà de SEUIL_RECHERCHE) ;
+     - Liste de références → les mêmes lignes, en cases à cocher (recherche
+                          à cases au-delà de SEUIL_RECHERCHE) ;
      - Case à cocher    → oui / non ;
      - Date             → un calendrier, avec « Effacer la date ».
    Les autres colonnes (texte, nombre, colonne calculée par une formule)
@@ -385,9 +388,8 @@ function creerPastilles(colId, valeur) { return Pastilles.creer(info(colId), val
    ══════════════════════════════════════════════════════════════ */
 
 // Types de colonnes (sans le nom de table : « Ref » pour « Ref:Projets »)
-// dont la pastille se modifie d'un clic. Les listes de références n'en font
-// pas partie : Grist ne les propose pas en pastilles.
-const TYPES_MODIFIABLES = ['Choice', 'ChoiceList', 'Ref', 'Bool', 'Date'];
+// dont la pastille se modifie d'un clic.
+const TYPES_MODIFIABLES = ['Choice', 'ChoiceList', 'Ref', 'RefList', 'Bool', 'Date'];
 // Au-delà de ce nombre de lignes visées, le menu d'une référence devient un
 // champ de recherche : une longue liste se parcourt mal.
 const SEUIL_RECHERCHE = 12;
@@ -493,6 +495,9 @@ async function ouvrirMenuPastille(ancre, colId, valeur, surChoix, ligne = {}) {
 
   } else if (colonne.typeBase === 'Ref') {
     await ouvrirMenuReference(ancre, colId, valeur, surChoix, garder, ranger);
+
+  } else if (colonne.typeBase === 'RefList') {
+    await ouvrirMenuListeReferences(ancre, colId, valeur, surChoix, ligne, garder, ranger);
   }
 }
 
@@ -568,6 +573,88 @@ async function ouvrirMenuReference(ancre, colId, valeur, surChoix, garder = () =
       surChoix: choisir,
     });
   }
+}
+
+/**
+ * Menu d'une liste de références (ex. les chefs d'un projet) : des cases à
+ * cocher, ou une recherche à cases au-delà de SEUIL_RECHERCHE lignes visées.
+ * Le menu reste ouvert ; chaque case cochée ou décochée appelle surChoix
+ * avec la liste complète : ['L', 3, 7] pour Grist (null si vide), et les
+ * noms pour l'affichage.
+ * Comme pour une référence simple, la table visée est relue à chaque
+ * ouverture, et la condition de liste déroulante (#238) s'applique.
+ *   ligne : { idLigne, enAttente, selonVue } (voir ouvrirMenuPastille)
+ */
+async function ouvrirMenuListeReferences(ancre, colId, valeur, surChoix, ligne = {},
+  garder = () => true, ranger = (o) => o) {
+  let ref = null, lignes = null, actuels = [];
+  try {
+    const doc = await Colonnes.lireDocument();
+    ref = await Colonnes.lireReference(doc, ETAT.table, colId);
+    if (ref) {
+      lignes = await Colonnes.lireLignes(doc, ref.tableVisee);
+      actuels = await numerosActuels(colId, valeur, ligne, ref);
+    }
+  } catch (err) {
+    console.error('Galerie – lecture de la table visée impossible :', err);
+  }
+  if (!ref) { afficherToast('⚠️ Impossible de lire les valeurs possibles', 3000); return; }
+  if (!ancre.isConnected) return;   // grille redessinée pendant la lecture
+
+  const ligneVisee = (i) => Object.fromEntries(Object.keys(lignes).map(c => [c, lignes[c][i]]));
+  const options = ref.options
+    // Condition de liste déroulante ; les valeurs actuelles restent proposées
+    .filter((o, i) => actuels.includes(o.id) || garder(ligneVisee(i)))
+    .map(o => ({ valeur: o.id, libelle: o.nom || `n° ${o.id}` }));
+  // Un numéro qui ne correspond à aucune ligne (ligne supprimée) reste
+  // proposé, coché : sinon la première case cochée l'effacerait en silence.
+  actuels.filter(id => !options.some(o => o.valeur === id))
+    .forEach(id => options.push({ valeur: id, libelle: `n° ${id}` }));
+  options.sort((a, b) => a.libelle.localeCompare(b.libelle, 'fr'));
+  const rangees = ranger(options);
+
+  // Grist renverra ensuite les noms affichés : on les donne pour l'aperçu.
+  const choisir = (ids) => surChoix(ids.length ? ['L', ...ids] : null,
+    ids.map(id => ref.nom(id) || `n° ${id}`));
+
+  if (options.length > SEUIL_RECHERCHE) {
+    Fiche.menuRecherche(ancre, {
+      options: rangees, multiple: true, selection: actuels,
+      placeholder: `Rechercher : ${libelle(colId)}`,
+      surChoix: choisir,
+    });
+  } else {
+    Fiche.menuChoix(ancre, { options: rangees, selection: actuels, multiple: true, surChoix: choisir });
+  }
+}
+
+/**
+ * Numéros des lignes visées par la liste de références `colId` d'une carte.
+ * Grist envoie au widget les NOMS affichés : deux contacts homonymes y sont
+ * indiscernables. On prend donc, dans l'ordre :
+ *   1. le choix en attente de la fiche (déjà au format ['L', numéros…]) ;
+ *   2. la cellule relue dans la table (fetchTable donne les numéros) ;
+ *   3. à défaut (nouvelle carte, lecture impossible), les noms traduits en
+ *      numéros, le premier homonyme l'emportant.
+ */
+async function numerosActuels(colId, valeur, { idLigne, enAttente } = {}, ref) {
+  const numeros = (v) => {
+    const liste = decoderListe(v);
+    return Array.isArray(liste) ? liste.filter(n => typeof n === 'number' && n > 0) : [];
+  };
+  if (enAttente && colId in enAttente) return numeros(enAttente[colId]);
+  if (idLigne) {
+    try {
+      const table = await grist.docApi.fetchTable(ETAT.table);
+      const i = table.id.indexOf(idLigne);
+      if (i !== -1 && colId in table) return numeros(table[colId][i]);
+    } catch (err) {
+      console.warn('Galerie – cellule non relue, les noms servent :', err);
+    }
+  }
+  if (estErreur(valeur)) return [];
+  const noms = decoderListe(valeur);
+  return (Array.isArray(noms) ? noms : []).map(nom => ref.id(nom)).filter(Boolean);
 }
 
 /**

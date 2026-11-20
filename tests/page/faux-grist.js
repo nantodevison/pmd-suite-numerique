@@ -8,7 +8,8 @@
      - Projets  : la table reliée au widget (4 lignes, dont deux qui
                   portent le même titre, pour vérifier qu'un critère seul
                   ne suffit pas toujours) ;
-     - Contacts : visée par la référence Projets.Chef.
+     - Contacts : visée par la référence Projets.Chef et par la liste de
+                  références Projets.Equipe (plusieurs personnes).
    Comme le vrai Grist :
      - onRecords n'envoie que l'id et les colonnes ASSOCIÉES (#239),
        références sous leur NOM affiché ;
@@ -43,6 +44,8 @@
     [8,  1, 'Themes',       'ChoiceList',    'Thèmes',         '',                        false, '', 0],
     // Colonne vide (formule vide) : modifiable, comme une colonne de données
     [9,  1, 'Notes',        'Any',           'Notes',          '',                        true,  '', 0],
+    // Liste de références : pastilles (une par personne), jamais critère
+    [11, 1, 'Equipe',       'RefList:Contacts', 'Équipe projet', '',                      false, '', 20],
     [10, 1, 'manualSort',   'ManualSortPos', 'manualSort',     '',                        false, '', 0],
     [20, 2, 'Nom',          'Text',          'Nom',            '',                        false, '', 0],
   ];
@@ -59,7 +62,8 @@
   // Les lignes, telles que Grist les envoie : références sous leur NOM affiché
   const LIGNES = [
     { id: 1, Titre: 'Atelier vélo', Presentation: '# Objectifs\n- [ ] Cartographier\n- [x] Réunir les partenaires',
-      Type: 'Interne', Chef: 'Personne A', Annee: 2025, Archive: false, Resume: 'Résumé : Atelier vélo', Themes: ['Vélo'], Notes: null },
+      Type: 'Interne', Chef: 'Personne A', Annee: 2025, Archive: false, Resume: 'Résumé : Atelier vélo', Themes: ['Vélo'], Notes: null,
+      Equipe: ['Personne A', 'Personne B'] },
     { id: 2, Titre: 'Vitrine', Presentation: '', Type: 'Collectivité', Chef: 'Personne B', Annee: 2026,
       Archive: true, Resume: 'Résumé : Vitrine', Themes: null, Notes: null },
     // Même titre que la ligne 1 : « Titre = Atelier vélo » désigne deux lignes
@@ -85,7 +89,9 @@
 
   /** Valeur d'une ligne (format d'onRecords) → format de fetchTable. */
   function commeFetchTable(col, v) {
-    if (col === 'Chef') { const i = contacts.Nom.indexOf(v); return i === -1 ? 0 : contacts.id[i]; }
+    const numero = (nom) => { const i = contacts.Nom.indexOf(nom); return i === -1 ? 0 : contacts.id[i]; };
+    if (col === 'Chef') return numero(v);
+    if (col === 'Equipe') return Array.isArray(v) ? ['L', ...v.map(numero)] : null;
     return Array.isArray(v) ? ['L', ...v] : (v ?? null);
   }
 

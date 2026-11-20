@@ -650,11 +650,21 @@
    *   existants   : facultatif, avec creer : tous les noms déjà pris, y compris
    *                 ceux qui ne sont pas proposés dans le menu ; à défaut, les
    *                 noms des options (champ « nom », sinon le libellé).
+   *   multiple    : facultatif (false par défaut). true → plusieurs choix :
+   *                 une case à cocher par option, le menu reste ouvert, et
+   *                 surChoix reçoit à chaque case la LISTE des valeurs
+   *                 cochées (dans l'ordre des options, comme menuChoix).
+   *                 « creer » est alors ignoré.
+   *   selection   : avec multiple, valeurs cochées à l'ouverture (liste)
    * La recherche ignore majuscules et accents, et chaque mot saisi doit
    * figurer dans le libellé. Entrée choisit le premier résultat (la ligne
-   * « Créer » quand rien d'autre ne correspond).
+   * « Créer » quand rien d'autre ne correspond) ; avec multiple, Entrée
+   * coche (ou décoche) le premier résultat et vide le champ, pour enchaîner.
    */
-  function menuRecherche(ancre, { options, placeholder = 'Rechercher…', surChoix, creer, existants }) {
+  function menuRecherche(ancre, { options, placeholder = 'Rechercher…', surChoix, creer, existants,
+    multiple = false, selection = [] }) {
+    if (multiple) creer = null;   // pas de création en mode plusieurs choix
+    const choisis = new Set(selection);
     const menu = ouvrirMenu(ancre);
     menu.classList.add('fiche-menu-recherche');
     const saisie = document.createElement('input');
@@ -674,20 +684,30 @@
       }
       trouvees.slice(0, 50).forEach(o => {   // au-delà, mieux vaut préciser la recherche
         if (o.separateur) { liste.appendChild(separateurMenu(o.separateur)); return; }
-        const item = document.createElement('button');
-        item.type = 'button';
+        // Plusieurs choix : une étiquette <label> qui contient sa case à
+        // cocher (un clic n'importe où sur la ligne coche la case).
+        const item = document.createElement(multiple ? 'label' : 'button');
         item.className = 'fiche-menu-item';
         const libelle = document.createElement('span');
         libelle.className = 'fiche-menu-libelle';
         libelle.textContent = o.libelle;
-        item.appendChild(libelle);
+        if (multiple) {
+          const caseACocher = document.createElement('input');
+          caseACocher.type = 'checkbox';
+          caseACocher.checked = choisis.has(o.valeur);
+          caseACocher.addEventListener('change', () => basculer(o.valeur, caseACocher.checked));
+          item.append(caseACocher, libelle);
+        } else {
+          item.type = 'button';
+          item.appendChild(libelle);
+          item.addEventListener('click', () => { fermerMenu(); surChoix(o.valeur); });
+        }
         if (o.detail) {
           const detail = document.createElement('span');
           detail.className = 'fiche-menu-detail';
           detail.textContent = o.detail;
           item.appendChild(detail);
         }
-        item.addEventListener('click', () => { fermerMenu(); surChoix(o.valeur); });
         liste.appendChild(item);
       });
       if (creer) ligneCreer();
@@ -708,9 +728,27 @@
       liste.appendChild(item);
     }
 
+    // Plusieurs choix : coche ou décoche une valeur, puis prévient l'appelant
+    // avec toutes les valeurs cochées, dans l'ordre des options.
+    function basculer(valeur, coche) {
+      if (coche) choisis.add(valeur); else choisis.delete(valeur);
+      surChoix(options.filter(x => !x.separateur).map(x => x.valeur).filter(v => choisis.has(v)));
+    }
+
     saisie.addEventListener('input', afficher);
     saisie.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter') return;
+      if (multiple) {
+        // Coche le premier résultat, puis vide le champ pour la saisie suivante
+        const premiere = liste.querySelector('input[type="checkbox"]');
+        if (!premiere) return;
+        e.preventDefault();
+        premiere.checked = !premiere.checked;
+        premiere.dispatchEvent(new Event('change'));
+        saisie.value = '';
+        afficher();
+        return;
+      }
       const premier = liste.querySelector('button');
       if (premier) { e.preventDefault(); premier.click(); }
     });
