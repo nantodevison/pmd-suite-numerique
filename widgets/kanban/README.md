@@ -100,6 +100,28 @@ Tant qu'aucun projet n'est choisi, le Kanban affiche toutes les tâches, signale
 > existant) : ouvrir ⚙, choisir le projet, « Appliquer », puis « Enregistrer »
 > dans Grist.**
 
+#### Avec « Sélectionner par » (#248)
+
+On peut relier le Kanban à un autre widget de la **même page Grist**, par
+exemple une Page qui montre un projet, avec « Sélectionner par ». La liaison
+de Grist ne relie que des widgets d'une même page : un Kanban placé sur une
+sous-page, comme dans le MVP d'Andrea, n'est pas concerné.
+
+**C'est toujours le projet choisi dans ⚙ qui commande.** La liaison ne fait
+que réduire les cartes que Grist envoie au Kanban. Le projet de ⚙ sert à bien
+plus : remplir les nouvelles cartes, ranger les vues 👥, limiter les EPIC
+proposés et rattacher les cartes liées. Le widget ne peut d'ailleurs pas
+connaître le projet sélectionné dans la Page : l'API Grist ne le lui donne pas.
+
+Si la liaison désigne un autre projet que celui de ⚙, le Kanban ne reçoit
+aucune carte de son projet. Il affiche alors, au-dessus du tableau :
+« ℹ️ Grist a envoyé n cartes, aucune du projet « … »… ».
+Un projet encore sans tâche affiche le même avis, qui disparaît dès la
+première carte.
+
+Conseil : ne liez pas le Kanban. Pour suivre un autre projet, ajoutez un
+autre Kanban avec son propre réglage dans ⚙.
+
 ### Équipe projet
 
 L'étape **« ④ Équipe projet »** de ⚙ liste les personnes de la

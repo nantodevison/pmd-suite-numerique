@@ -1488,6 +1488,7 @@ function renderBoard() {
   renderFilterChips();
   renderVueTabs();
   majBarreProjet();
+  majAvisProjet();
   majBoutonMoi();
   majFenetreVue();
 
@@ -1563,6 +1564,34 @@ function renderBoard() {
   }
 }
 
+/* Avis « aucune carte de ce projet » (#248).
+   Sans liaison, Grist envoie les tâches de TOUS les projets et le Kanban ne
+   garde que celles du projet de ⚙ : recevoir des cartes d'autres projets est
+   donc normal. Le cas à signaler : des cartes reçues, mais AUCUNE du projet
+   de ⚙. C'est ce qui arrive quand « Sélectionner par » relie le Kanban à une
+   Page qui montre un autre projet (le tableau resterait vide sans
+   explication). Un projet encore sans tâche affiche aussi l'avis : le texte
+   reste juste (« si ce Kanban est lié… »). C'est le projet de ⚙ qui commande :
+   il sert aussi à remplir les nouvelles cartes, ranger les vues, limiter les
+   EPIC. */
+function majAvisProjet() {
+  const avis = document.getElementById('avis-projet');
+  if (!avis) return;
+  const aSignaler = Boolean(
+    STATE.projetKanban && STATE.mapping.projet && REFS.projet
+    && STATE.records.length > 0
+    && recordsDuProjet().length === 0
+  );
+  avis.hidden = !aSignaler;
+  if (!aSignaler) { avis.textContent = ''; return; }
+  const n = STATE.records.length;
+  // textContent : le nom du projet vient de Grist, il n'est jamais lu comme du HTML
+  avis.textContent = `ℹ️ Grist a envoyé ${n} carte${n > 1 ? 's' : ''}, `
+    + `aucune du projet « ${nomAffiche('projet', STATE.projetKanban)} ». `
+    + 'Si ce Kanban est lié par « Sélectionner par », vérifiez que la sélection désigne bien ce projet : '
+    + 'c\'est le projet choisi dans ⚙ qui commande.';
+}
+
 /** Barre du haut : nom du projet du Kanban, ou alerte si aucun projet n'est choisi. */
 function majBarreProjet() {
   const tn = document.getElementById('toolbar-table-name');
@@ -1604,6 +1633,7 @@ function remplirAide() {
       </div>
       <ol class="aide-etapes">
         <li><strong>⚙ Configurer</strong> : quatre étapes, une par onglet : ① le projet du Kanban, ② les colonnes de la table, ③ la couleur et la classe des statuts, ④ l'équipe projet (personnes proposées dans « Assigné à »). Un ⚠️ signale une étape à faire. Cliquez sur <strong>Appliquer</strong>, puis sur <strong>Enregistrer</strong>, en haut à droite de Grist.</li>
+        <li><strong>Lier le Kanban à une Page</strong> (« Sélectionner par » de Grist) : c'est toujours le projet choisi dans ⚙ qui commande. La liaison ne fait que réduire les cartes envoyées au Kanban ; si elle désigne un autre projet, le Kanban reste vide. Pour suivre un autre projet, ajoutez un autre Kanban.</li>
         <li><strong>＋ Vue</strong> : crée une vue à partir de l'affichage actuel, <strong>🔒 pour vous</strong> (par défaut : gardée aussitôt dans votre navigateur) ou <strong>👥 pour tous</strong> (puis cliquez sur <strong>Enregistrer</strong> de Grist pour la garder). Le menu <strong>⋯</strong> de l'onglet actif permet de la renommer, de la supprimer, ou de copier une vue partagée en vue perso pour l'adapter sans gêner les autres.</li>
         <li><strong>👤 Qui suis-je ?</strong> (en haut à droite) : indiquez votre nom, une fois (rien à enregistrer). Le filtre sur la colonne « Assigné à » propose alors <strong>👤 Moi</strong>, qui montre vos propres cartes ; dans une vue partagée, il montre à chacun les siennes.</li>
         <li><strong>🔽 Filtres</strong>, <strong>⇅ Trier</strong> et <strong>▦ Colonnes</strong> : ces boutons résument la vue et ouvrent <strong>Gérer la vue</strong>, qui règle son nom, ses filtres (« EPIC est … », « Assigné n'est pas … »), son tri et ses colonnes. <strong>💾 Enregistrer</strong> garde tout, <strong>Annuler</strong> ne change rien. Sur <strong>Toutes les cartes</strong>, 💾 crée une nouvelle vue. Dans le filtre d'une référence, et dans les menus EPIC ou Assigné à de la fiche et de la création, le bouton <strong>Afficher ▾</strong> montre des attributs de chaque valeur (la priorité d'un EPIC…), si la table a une colonne ajoutée « depuis la référence ».</li>

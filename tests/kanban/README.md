@@ -21,7 +21,7 @@ py tests/kanban/jouer.py --largeurs 1200 -v   # une largeur, toutes les lignes
 Le bilan s'affiche par scénario et par largeur (`BILAN 42 OK, 0 KO`), suivi des
 lignes en échec. Le code de sortie vaut 0 si tout est OK.
 
-## Ce qui est vérifié (306 vérifications par largeur)
+## Ce qui est vérifié (323 vérifications par largeur)
 
 | Scénario | Fonctions |
 |---|---|
@@ -35,6 +35,7 @@ lignes en échec. Le code de sortie vaut 0 si tout est OK.
 | `filtres` | Règle des filtres de `_commun/filtres.js` (#191), vérifiée directement sur le module : est / n'est pas, `(vide)`, listes, valeurs proposées et leur ordre, copie et signature des vues, attributs (listes de références, désaccords, couleurs), mémoire des attributs ; dans le Kanban, « 👤 Moi » (#202) ; panneau commun dans « Gérer la vue » : choix dans l'ordre de Grist et à leur couleur (#236), cocher, est / n'est pas, étiquette, supprimer |
 | `vues-interface` | Interface commune de `_commun/vues.js` (#231, étape 2), vérifiée sans le Kanban sur un mini-widget inventé : barre, « ＋ Vue » partagée, ⋯, « 🔽 n filtres », fenêtre (photographie, Annuler, 💾, nouvelle vue depuis « Toutes les cartes »), suppression en deux clics, Kanban non touché ; puis, dans le Kanban, barre construite par le module et onglets Tri et Colonnes ajoutés |
 | `vues-registre` | Registre des vues de `_commun/vues.js` (#231), vérifié directement sur le module : ouverture (partagées puis perso, vue active retenue ou ancien réglage), rangement par projet (vues d'un autre projet masquées mais toujours réécrites), création partagée ou perso, renommage, suppression, autre projet, mémoire indisponible, écriture refusée ; dans le Kanban, vues enregistrées par la version précédente relues telles quelles (mêmes clés du navigateur) |
+| `selectionner-par` | Projet de ⚙ et « Sélectionner par » (#248) : avis au-dessus du tableau quand aucune carte reçue n'est du projet de ⚙ (texte seul, singulier), jamais si Grist envoie aussi d'autres projets ni sans projet choisi ; ligne du mode d'emploi |
 | `structure` | Structure du document lue par `_commun/colonnes.js` (#188) : une lecture par rafraîchissement, table des EPICs lue une fois, EPIC créé entre-temps connu à l'ouverture d'une fiche, libellés, colonnes rapportées, ordre et couleurs des choix, listes de ⚙, recherche sans lecture dans Grist, structure illisible sans plantage |
 
 Pour obtenir la page à coller dans le Custom Widget Builder :
