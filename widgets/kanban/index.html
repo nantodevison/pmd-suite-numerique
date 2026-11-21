@@ -175,6 +175,14 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
   overflow: hidden;
 }
 
+/* Avis au-dessus du tableau (#248) : information, pas une erreur */
+.avis-projet {
+  margin: 10px 16px 0; padding: 8px 12px;
+  background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 8px;
+  color: #2c5282; font-size: 12.5px; line-height: 1.45;
+}
+.avis-projet[hidden] { display: none; }
+
 .board {
   display: flex;
   gap: 14px;
@@ -696,6 +704,10 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
 
   <!-- Board -->
   <div class="board-wrap">
+    <!-- Avis (#248) : aucune carte reçue n'est du projet de ⚙, sans doute
+         une liaison « Sélectionner par » sur un autre projet ; texte écrit
+         par kanban.js (majAvisProjet) -->
+    <p id="avis-projet" class="avis-projet" hidden></p>
     <div id="board" class="board">
       <div class="empty-state">
         <div class="empty-icon">📋</div>
