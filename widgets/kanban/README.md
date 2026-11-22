@@ -28,6 +28,7 @@ combinables, recherche, tri sur n'importe quelle colonne, vues enregistrées
 | [`../_commun/vues.js`](../_commun/vues.js), [`vues.css`](../_commun/vues.css) | Vues (#231) : registre (« Toutes les cartes », vues partagées et perso, vue active, rangement par projet) et interface (onglets ou sélecteur, menu ⋯, « ＋ Vue », fenêtre « Gérer la vue » : onglets Vue et Filtres) ; les onglets Tri et Colonnes, leurs boutons-résumés et « Mes tâches » restent propres au Kanban |
 | [`../_commun/tri.js`](../_commun/tri.js), [`tri.css`](../_commun/tri.css) | Comparaison de deux valeurs selon le type de leur colonne, et panneau du tri ⇅ (onglet Tri de « Gérer la vue »), communs avec la Galerie (#232) |
 | [`../_commun/fenetre.js`](../_commun/fenetre.js), [`fenetre.css`](../_commun/fenetre.css) | Fenêtre à onglets de ⚙ (étapes, états ✓ / ⚠️ / ℹ️, barre « Appliquer » toujours visible) |
+| [`../_commun/messages.js`](../_commun/messages.js), [`messages.css`](../_commun/messages.css) | Petit message (toast) et questions d'abandon « … Les abandonner ? », communs aux widgets (#249) |
 
 Le Kanban dépend du dossier `_commun/` : il ne fonctionne donc qu'**en mode
 URL** (en copier-coller, il faudrait aussi coller les fichiers de `_commun/`).

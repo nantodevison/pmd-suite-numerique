@@ -432,7 +432,7 @@ const ficheModifiee = () => Boolean(ETAT.fiche) && Object.keys(ETAT.fiche.modifs
 /** Ouvre la fiche d'une interaction (id), ou une fiche vide pour en créer une (null). */
 function ouvrirFiche(id) {
   if (ETAT.fiche && ficheModifiee() && ETAT.fiche.id !== id
-      && !confirm('La fiche ouverte a des modifications non sauvegardées. Les abandonner ?')) return;
+      && !Messages.abandonner('fiche')) return;
   ETAT.fiche = {
     id,
     // Valeurs de départ d'une nouvelle ligne (écrites même si l'on n'y touche pas)
@@ -495,11 +495,15 @@ function dessinerFiche() {
   const f = ETAT.fiche;
   if (!f) return;
   const nouvelle = f.id === null;
-  if (!nouvelle && rangFiche() === -1) {   // ligne supprimée entre-temps dans Grist
+  if (!nouvelle && rangFiche() === -1) {
+    // Ligne tout juste créée, pas encore relue : on garde la fiche telle quelle
+    if (f.attendue) return;
+    // Sinon, ligne supprimée entre-temps dans Grist
     fermerFiche(true);
     afficherToast('⚠️ Cette interaction n\'existe plus', 3000);
     return;
   }
+  delete f.attendue;   // la ligne créée est arrivée (ou ce n'était pas une création)
   document.getElementById('fiche-libelle').textContent = nouvelle ? `Nouveau : ${ETAT.reglages.libelle}` : 'Interaction';
   const corps = document.getElementById('fiche-corps');
   corps.replaceChildren();
@@ -706,11 +710,22 @@ async function sauverFiche() {
   b.disabled = true;
   b.textContent = '…';
   try {
-    await grist.docApi.applyUserActions([nouvelle
+    const resultat = await grist.docApi.applyUserActions([nouvelle
       ? ['AddRecord', ETAT.table, null, champs]
       : ['UpdateRecord', ETAT.table, f.id, champs]]);
-    afficherToast(nouvelle ? '✓ Interaction créée' : '✓ Modifications sauvegardées');
-    fermerFiche(true);   // Grist renverra les lignes (onRecords) : la liste sera à jour
+    // La fiche reste ouverte, comme dans le Kanban et la Galerie (#249) : on
+    // voit ce qui est enregistré et l'on peut enchaîner. Grist renvoie ensuite
+    // les lignes (onRecords) : la liste et la fiche se redessinent à jour.
+    if (nouvelle) {
+      // La fiche passe sur la ligne créée (son numéro est rendu par Grist).
+      // « attendue » : elle n'est pas encore dans la table relue ; d'ici là,
+      // dessinerFiche ne doit pas la croire supprimée.
+      ETAT.fiche = { id: resultat.retValues[0], defauts: {}, modifs: {}, attendue: true };
+      afficherToast('✓ Interaction créée');
+    } else {
+      f.modifs = {};
+      afficherToast('✓ Modifications sauvegardées');
+    }
   } catch (err) {
     afficherToast(`⚠️ Erreur : ${err.message || err}`, 4000);
     console.error('Interactions – erreur de sauvegarde :', err);
@@ -722,7 +737,7 @@ async function sauverFiche() {
 
 /** Ferme la fiche ; demande confirmation si elle a des modifications (sauf forcer). */
 function fermerFiche(forcer = false) {
-  if (!forcer && ficheModifiee() && !confirm('Abandonner les modifications de cette fiche ?')) return;
+  if (!forcer && ficheModifiee() && !Messages.abandonner('fiche')) return;
   Fiche.fermer(panneau);
   ETAT.fiche = null;
 }
@@ -798,14 +813,14 @@ async function appliquerReglages() {
     afficherToast('⚠️ Choisissez un projet de la liste', 3000);
     return;
   }
-  if (ficheModifiee() && !confirm('La fiche ouverte a des modifications non sauvegardées. Les abandonner ?')) return;
+  if (ficheModifiee() && !Messages.abandonner('fiche')) return;
   if (ETAT.fiche) fermerFiche(true);
   ETAT.reglages = { projet, libelle: champLibelle.value.trim() || LIBELLE_DEFAUT };
   FENETRE.fermer({ forcer: true });
   try {
     await grist.setOption('projet', ETAT.reglages.projet);
     await grist.setOption('libelleBouton', ETAT.reglages.libelle);
-    afficherToast('✓ Projet choisi — cliquez sur « Enregistrer » dans Grist pour garder ce choix', 5000);
+    Messages.reglagesAppliques();
   } catch (err) {
     afficherToast(`⚠️ Réglage non enregistré : ${err.message || err}`, 5000);
     console.error('Interactions – erreur setOption :', err);
@@ -832,11 +847,7 @@ document.getElementById('bouton-aide').addEventListener('click', () => FENETRE_A
    6. PETIT MESSAGE TEMPORAIRE
    ══════════════════════════════════════════════════════════════ */
 
-let _minuterieToast = null;
+/** Petit message en bas de l'écran : module commun ../_commun/messages.js (#249). */
 function afficherToast(texte, duree = 2200) {
-  const t = document.getElementById('toast');
-  t.textContent = texte;
-  t.classList.add('visible');
-  clearTimeout(_minuterieToast);
-  _minuterieToast = setTimeout(() => t.classList.remove('visible'), duree);
+  Messages.toast(texte, duree);
 }

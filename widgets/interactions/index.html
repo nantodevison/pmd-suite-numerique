@@ -19,6 +19,8 @@
   <link rel="stylesheet" href="../_commun/fiche.css" />
   <link rel="stylesheet" href="../_commun/pastilles.css" />
   <link rel="stylesheet" href="../_commun/fenetre.css" />
+  <!-- Petit message (toast) commun aux widgets (#249) -->
+  <link rel="stylesheet" href="../_commun/messages.css" />
   <style>
 /* ══════════════════════════════════════════════════════════════
    INTERACTIONS GRIST — styles (même palette que la Page et la Galerie)
@@ -135,14 +137,7 @@ input[type="date"].champ-saisie, input[type="datetime-local"].champ-saisie { wid
 .config-champ { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; max-width: 420px; }
 .config-champ label { font-size: 12px; font-weight: 600; }
 
-/* Petit message temporaire en bas de l'écran */
-.toast {
-  position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%);
-  background: #2d3748; color: #fff; padding: 8px 16px; border-radius: 8px;
-  font-size: 13px; z-index: 2000; opacity: 0; transition: opacity .2s; pointer-events: none;
-  max-width: calc(100vw - 32px);
-}
-.toast.visible { opacity: 1; }
+/* Petit message (toast) : style commun dans ../_commun/messages.css */
 
 @media (max-width: 520px) {
   .journal { padding: 12px 12px 40px; }
@@ -232,6 +227,8 @@ input[type="date"].champ-saisie, input[type="datetime-local"].champ-saisie { wid
   <div class="toast" id="toast"></div>
 
   <!-- Règle de recherche commune, avant fiche.js qui s'en sert -->
+  <!-- Toast et questions d'abandon communs (#249), avant les modules qui s'en servent -->
+  <script src="../_commun/messages.js"></script>
   <script src="../_commun/recherche.js"></script>
   <script src="../_commun/fiche.js"></script>
   <!-- Dessin des pastilles (après fiche.js qui lui sert) -->

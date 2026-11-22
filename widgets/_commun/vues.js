@@ -376,7 +376,7 @@
         { libelle: '💾 Enregistrer', classe: 'btn-primary', surClic: enregistrerFenetre },
       ],
       textePied: '• Non enregistré',
-      messageModif: 'Les modifications de cette vue seront perdues. Continuer ?',
+      messageModif: (window.Messages && Messages.QUESTIONS.vue) || 'Les modifications de cette vue ne sont pas enregistrées. Les abandonner ?',
       infoPied: info,
       surFermeture: quitterFenetre,   // Annuler, ✕, Échap, clic sur le fond, 💾
     });

@@ -6,7 +6,8 @@ Banc.lancer(async () => {
 
   ok('quatre cartes, dans l\'ordre de Grist', Banc.cartes().join() === '1,2,3,4', Banc.cartes().join());
   ok('compteur : 4', $('#compte').textContent === '4', $('#compte').textContent);
-  ok('nom de la table en titre', $('#titre-table').textContent === '🖼️ EPICs', $('#titre-table').textContent);
+  ok('titre : type de widget, puis la table en gris (#249)', $('#titre-table').textContent === '🖼️ Galerie · EPICs'
+    && $('#titre-table .barre-nom')?.textContent === ' · EPICs' && $('#titre-table').title === 'Table : EPICs', $('#titre-table').textContent);
 
   const carte = (id) => $(`.carte[data-id="${id}"]`);
   const pastilles = (id) => [...carte(id).querySelectorAll('.pastille')];

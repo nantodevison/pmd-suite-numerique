@@ -461,7 +461,7 @@ async function saveConfig() {
   renderBoard();
   // Rien n'est encore dans le document : les options du widget n'y sont
   // gardées qu'après « Enregistrer » de Grist (même message que les autres widgets, #249)
-  showToast('✓ Configuration appliquée — cliquez sur « Enregistrer » dans Grist pour la garder', 5000);
+  Messages.reglagesAppliques();
 }
 
 /* ── Classes et couleurs de statut (#183, #212) ─────────────────
@@ -2288,7 +2288,7 @@ async function openEditPanel(recordId) {
   // Un clic sur une autre carte remplace le contenu de la fiche : on prévient
   // si des modifications de la carte affichée n'ont pas été sauvegardées.
   if (STATE.editPanel.dirty && STATE.editPanel.recordId !== recordId) {
-    if (!confirm('Des modifications non sauvegardées seront perdues. Continuer ?')) return;
+    if (!Messages.abandonner('fiche')) return;
   }
   STATE.editPanel.recordId = recordId;
   STATE.editPanel.dirty    = false;
@@ -2580,7 +2580,7 @@ function updateDirtyIndicator() {
 
 function closeEditPanel(force = false) {
   if (STATE.editPanel.dirty && !force) {
-    if (!confirm('Des modifications non sauvegardées seront perdues. Continuer ?')) return;
+    if (!Messages.abandonner('fiche')) return;
   }
   Fiche.fermer(document.getElementById('edit-panel'));
   document.getElementById('board').classList.remove('panel-open');
@@ -3098,16 +3098,9 @@ function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+/** Petit message en bas de l'écran : module commun ../_commun/messages.js (#249). */
 function showToast(msg, duration = 2200) {
-  const t = document.getElementById('toast');
-  if (!t) return;
-  t.textContent = msg;
-  t.classList.remove('hidden', 'fade');
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => {
-    t.classList.add('fade');
-    setTimeout(() => t.classList.add('hidden'), 320);
-  }, duration);
+  Messages.toast(msg, duration);
 }
 
 /* ══════════════════════════════════════════════════════════════

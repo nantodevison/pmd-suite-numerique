@@ -21,6 +21,8 @@
   <link rel="stylesheet" href="../_commun/pastilles.css" />
   <!-- Filtres et vues enregistrées, communs avec le Kanban (#204) -->
   <link rel="stylesheet" href="../_commun/fenetre.css" />
+  <!-- Petit message (toast) commun aux widgets (#249) -->
+  <link rel="stylesheet" href="../_commun/messages.css" />
   <link rel="stylesheet" href="../_commun/filtres.css" />
   <link rel="stylesheet" href="../_commun/vues.css" />
   <!-- Panneau du tri, commun avec le Kanban (#232) -->
@@ -50,7 +52,7 @@ body { display: flex; flex-direction: column; overflow: hidden; }
   padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
 }
 .barre-titre { font-size: 15px; font-weight: 700; }
-/* Nom de la Galerie (#264), discret à côté du nom de la table */
+/* Nom de la Galerie (#264), ou à défaut de la table, discret après « Galerie » */
 .barre-nom { font-weight: 400; color: var(--text-muted); }
 .barre-compte {
   font-size: 11px; font-weight: 700; color: var(--text-muted);
@@ -255,12 +257,7 @@ button.carte-couleur:hover, button.carte-couleur:focus-visible {
 }
 
 /* Petit message temporaire en bas de l'écran */
-.toast {
-  position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
-  background: #2d3748; color: #fff; padding: 8px 16px; border-radius: 8px;
-  font-size: 13px; z-index: 2000; opacity: 0; transition: opacity .2s; pointer-events: none;
-}
-.toast.visible { opacity: 1; }
+/* Petit message (toast) : style commun dans ../_commun/messages.css */
 
 /* ── En-tête de la fiche (#184), propre à la Galerie : ../_commun/fiche.css
    (commun avec le Kanban) n'est pas modifié, on le surcharge ici. ── */
@@ -454,6 +451,8 @@ button.fiche-lie-ouvrable:hover, button.fiche-lie-ouvrable:focus-visible { borde
   <div class="toast" id="toast"></div>
 
   <!-- Règle de recherche commune avec le Kanban, avant fiche.js qui s'en sert -->
+  <!-- Toast et questions d'abandon communs (#249), avant les modules qui s'en servent -->
+  <script src="../_commun/messages.js"></script>
   <script src="../_commun/recherche.js"></script>
   <script src="../_commun/fiche.js"></script>
   <!-- Dessin des pastilles, commun avec le widget Page (après fiche.js qui lui sert) -->

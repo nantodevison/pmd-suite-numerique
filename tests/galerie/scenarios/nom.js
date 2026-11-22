@@ -14,8 +14,8 @@ Banc.lancer(async () => {
   const nomsVues = () => VUES.toutes().map(v => v.nom).join('|');
 
   // ── Sans nom : comme avant #264 ──
-  ok('sans nom : titre de la barre sans nom de Galerie', $('#titre-table').textContent === '🖼️ EPICs'
-    && !$('#titre-table .barre-nom'), $('#titre-table').textContent);
+  ok('sans nom : « Galerie » puis la table en gris', $('#titre-table').textContent === '🖼️ Galerie · EPICs'
+    && $('#titre-table .barre-nom')?.textContent === ' · EPICs', $('#titre-table').textContent);
   ok('sans nom : clé de mémoire inchangée', cleMemoire('taille') === ANCIENNE('taille'), cleMemoire('taille'));
 
   // Une vue partagée, dans le document
@@ -72,8 +72,8 @@ Banc.lancer(async () => {
   ok('⚙ fermée, message qui rappelle « Enregistrer » de Grist', !$('#reglages').open
     && $('#toast').textContent === '✓ Réglages appliqués — cliquez sur « Enregistrer » dans Grist pour les garder',
     $('#toast').textContent);
-  ok('titre : nom de la Galerie en gris après la table', $('#titre-table').textContent === '🖼️ EPICs · EPICs Vitrine'
-    && $('#titre-table .barre-nom')?.textContent === ' · EPICs Vitrine', $('#titre-table').textContent);
+  ok('titre : nom de la Galerie en gris à la place de la table, table au survol', $('#titre-table').textContent === '🖼️ Galerie · EPICs Vitrine'
+    && $('#titre-table .barre-nom')?.textContent === ' · EPICs Vitrine' && $('#titre-table').title === 'Table : EPICs', $('#titre-table').textContent);
   ok('clés de mémoire : le nom s\'ajoute', cleMemoire('vueActive') === NOUVELLE('vueActive', 'EPICs Vitrine'), cleMemoire('vueActive'));
 
   // ── On repart de zéro sous le nouveau nom ──
@@ -111,7 +111,7 @@ Banc.lancer(async () => {
   ok('sans nom : vues et taille de l\'ancienne clé retrouvées', nomsVues() === 'Équipe|Vitrine'
     && VUES.active()?.nom === 'Vitrine' && $('#grille').dataset.taille === 'compacte',
     `${nomsVues()} / ${VUES.active()?.nom} / ${$('#grille').dataset.taille}`);
-  ok('titre sans nom', $('#titre-table').textContent === '🖼️ EPICs');
+  ok('titre sans nom', $('#titre-table').textContent === '🖼️ Galerie · EPICs');
 
   // ── « Annuler » ne change rien ──
   ouvrirReglages();
@@ -142,6 +142,6 @@ Banc.lancer(async () => {
   ETAT.optionsChargees = false;
   await Banc.demarrer({ nom: 'EPICs Vitrine' });
   ok('ouverture avec un nom : lu dans les options, affiché', ETAT.nomGalerie === 'EPICs Vitrine'
-    && $('#titre-table').textContent === '🖼️ EPICs · EPICs Vitrine', $('#titre-table').textContent);
+    && $('#titre-table').textContent === '🖼️ Galerie · EPICs Vitrine', $('#titre-table').textContent);
   ok('ouverture avec un nom : clés du nom', cleMemoire('vuesPerso') === NOUVELLE('vuesPerso', 'EPICs Vitrine'));
 });

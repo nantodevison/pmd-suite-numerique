@@ -30,12 +30,27 @@ Banc.lancer(async () => {
   const maj = Banc.actionsDepuis(avant).find(a => a[0] === 'UpdateRecord');
   ok('« Sauvegarder » écrit la description', maj && maj[2] === 1 && maj[3].Description === '- [x] Plan\n- [x] Sommaire', JSON.stringify(maj));
   ok('après sauvegarde : plus de modification en attente', !STATE.editPanel.dirty);
+  // Le message « ✓ Modifications sauvegardées » ne cache pas « ✓ Sauvegarder »,
+  // fiche sur le côté ou au centre (écran peu haut, retour du 2026-11-22, #249)
+  const toast = document.getElementById('toast');
+  const piedFiche = document.querySelector('#edit-panel .edit-panel-footer');
+  const auDessus = () => toast.getBoundingClientRect().bottom <= piedFiche.getBoundingClientRect().top;
+  await attendre(400);   // fin de l'animation d'ouverture
+  showToast('Essai côté');
+  ok('message au-dessus du pied de la fiche (côté)', auDessus(),
+    `${toast.getBoundingClientRect().bottom} / ${piedFiche.getBoundingClientRect().top}`);
+  document.getElementById('edit-panel').classList.add('fiche-centre');
+  await attendre(100);
+  showToast('Essai centre');
+  ok('message au-dessus du pied de la fiche (centre)', auDessus(),
+    `${toast.getBoundingClientRect().bottom} / ${piedFiche.getBoundingClientRect().top}`);
+  document.getElementById('edit-panel').classList.remove('fiche-centre');
 
   // ── Fermer sans sauvegarder demande confirmation ──
   changerDepuisMenu('priorite', 'Basse');
   Banc.repondre(false);
   closeEditPanel();
-  ok('fermer une fiche modifiée demande confirmation', /non sauvegardées/.test(Banc.confirmations.at(-1) || ''));
+  ok('fermer une fiche modifiée demande confirmation', (Banc.confirmations.at(-1) || '') === Messages.QUESTIONS.fiche);
   ok('« Annuler » : la fiche reste ouverte', STATE.editPanel.recordId === 1);
   closeEditPanel(true);
   ok('fermeture forcée', STATE.editPanel.recordId === null);

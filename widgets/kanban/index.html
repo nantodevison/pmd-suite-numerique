@@ -19,6 +19,8 @@
   <link rel="stylesheet" href="../_commun/fiche.css" />
   <link rel="stylesheet" href="../_commun/liens.css" />
   <link rel="stylesheet" href="../_commun/fenetre.css" />
+  <!-- Petit message (toast) commun aux widgets (#249) -->
+  <link rel="stylesheet" href="../_commun/messages.css" />
   <link rel="stylesheet" href="../_commun/filtres.css" />
   <link rel="stylesheet" href="../_commun/vues.css" />
   <link rel="stylesheet" href="../_commun/tri.css" />
@@ -524,10 +526,7 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
 }
 .classe-devinee select { font-style: italic; color: var(--text-muted); }
 
-/* ── Toast ── */
-.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #2d3748; color: #fff; padding: 10px 22px; border-radius: 10px; font-size: 13px; font-weight: 500; box-shadow: 0 4px 20px rgba(0,0,0,.2); z-index: 2000; pointer-events: none; opacity: 1; transition: opacity .3s; max-width: 90vw; text-align: center; }
-.toast.hidden { display: none; }
-.toast.fade { opacity: 0; }
+/* ── Toast : style commun dans ../_commun/messages.css (#249) ── */
 
 @media (max-width: 600px) {
   .config-grid, .modal-row, .classes-liste { grid-template-columns: 1fr; }
@@ -706,8 +705,10 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
     </div>
   </div>
 
-  <div id="toast" class="toast hidden"></div>
+  <div id="toast" class="toast"></div>
   <!-- Règle de recherche commune (#209), avant fiche.js qui s'en sert -->
+  <!-- Toast et questions d'abandon communs (#249), avant les modules qui s'en servent -->
+  <script src="../_commun/messages.js"></script>
   <script src="../_commun/recherche.js"></script>
   <!-- Comparaison des valeurs pour le tri des cartes (#211) -->
   <script src="../_commun/tri.js"></script>

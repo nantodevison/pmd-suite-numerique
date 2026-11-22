@@ -358,7 +358,7 @@ async function sauverTexte() {
 }
 
 function annulerTexte() {
-  if (!confirm('Abandonner les modifications du texte ?')) return;
+  if (!Messages.abandonner('texte')) return;
   ETAT.texteModifie = null;
   majBarreSauver();
   afficher();
@@ -559,13 +559,13 @@ async function appliquerReglages() {
     if (!zone.textContent.startsWith('⚠️')) zone.textContent = '⚠️ Les critères doivent désigner une seule ligne.';
     return;
   }
-  if (ETAT.texteModifie !== null && !confirm('Le texte modifié de la page n\'est pas sauvegardé. L\'abandonner ?')) return;
+  if (ETAT.texteModifie !== null && !Messages.abandonner('texte')) return;
   ETAT.texteModifie = null;
   ETAT.criteres = complets.map(c => ({ col: c.col, valeur: c.valeur }));
   FENETRE.fermer({ forcer: true });
   try {
     await grist.setOption('criteres', ETAT.criteres);
-    afficherToast('✓ Ligne choisie — cliquez sur « Enregistrer » dans Grist pour garder ce choix', 5000);
+    Messages.reglagesAppliques();
   } catch (err) {
     afficherToast(`⚠️ Réglage non enregistré : ${err.message || err}`, 5000);
     console.error('Page – erreur setOption :', err);
@@ -580,11 +580,7 @@ document.getElementById('bouton-reglages').addEventListener('click', ouvrirRegla
    6. PETIT MESSAGE TEMPORAIRE
    ══════════════════════════════════════════════════════════════ */
 
-let _minuterieToast = null;
+/** Petit message en bas de l'écran : module commun ../_commun/messages.js (#249). */
 function afficherToast(texte, duree = 2200) {
-  const t = document.getElementById('toast');
-  t.textContent = texte;
-  t.classList.add('visible');
-  clearTimeout(_minuterieToast);
-  _minuterieToast = setTimeout(() => t.classList.remove('visible'), duree);
+  Messages.toast(texte, duree);
 }
