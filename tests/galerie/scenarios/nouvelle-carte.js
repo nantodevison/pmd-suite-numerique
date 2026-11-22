@@ -5,6 +5,9 @@ Banc.lancer(async () => {
   const MODELE = '## Objectif\n- [ ] première étape';
   await Banc.demarrer({ modele: MODELE });
   const { ok, $ } = Banc;
+  // Boutons de la barre du bas de la fenêtre ⚙ (../_commun/fenetre.js, #249 étape B)
+  const boutonReglages = (texte) => [...document.querySelectorAll('#reglages .fenetre-pied button')]
+    .find(b => b.textContent.trim() === texte);
 
   $('#btn-nouvelle').click();
   await Banc.attendre(100);
@@ -62,7 +65,7 @@ Banc.lancer(async () => {
     $('#reglages-reprendre').textContent.includes('Écrire la documentation') && !$('#reglages-reprendre').disabled);
   $('#reglages-reprendre').click();
   ok('⚙ : texte de la carte repris', $('#reglages-modele').value === '- [ ] Plan\n- [x] Sommaire');
-  $('#reglages-enregistrer').click();
+  boutonReglages('✓ Appliquer').click();
   await Banc.attendre(100);
   ok('⚙ : modèle enregistré dans les options du widget', FAUX_GRIST.options.modele === '- [ ] Plan\n- [x] Sommaire');
   ok('⚙ : fenêtre fermée', !$('#reglages').open);
@@ -75,6 +78,13 @@ Banc.lancer(async () => {
   $('#reglages-reprendre').click();
   ok('⚙ : texte Notepad repris en Markdown', $('#reglages-modele').value.trim() === 'Ancien texte',
     JSON.stringify($('#reglages-modele').value));
-  $('#reglages-annuler').click();
+  // Texte repris = modification : « Annuler » demande confirmation (fenetre.js)
+  ok('⚙ : texte repris marqué « modifications non appliquées »', $('#reglages').classList.contains('modifiee'));
+  Banc.repondre(false);
+  boutonReglages('Annuler').click();
+  ok('⚙ : confirmation refusée, la fenêtre reste ouverte', $('#reglages').open);
+  Banc.repondre(true);
+  boutonReglages('Annuler').click();
+  ok('⚙ : confirmation acceptée, fenêtre fermée', !$('#reglages').open);
   ok('⚙ : « Annuler » ne change pas le modèle', FAUX_GRIST.options.modele === '- [ ] Plan\n- [x] Sommaire');
 });

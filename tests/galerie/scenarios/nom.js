@@ -8,6 +8,9 @@ Banc.lancer(async () => {
   const { ok, attendre, $ } = Banc;
   const ANCIENNE = (nom) => `galerie.${nom}.doc-invente.EPICs`;
   const NOUVELLE = (nom, galerie) => `galerie.${nom}.doc-invente.EPICs.${galerie}`;
+  // Boutons de la barre du bas de la fenêtre ⚙ (../_commun/fenetre.js, #249 étape B)
+  const boutonReglages = (texte) => [...document.querySelectorAll('#reglages .fenetre-pied button')]
+    .find(b => b.textContent.trim() === texte);
   const nomsVues = () => VUES.toutes().map(v => v.nom).join('|');
 
   // ── Sans nom : comme avant #264 ──
@@ -35,13 +38,34 @@ Banc.lancer(async () => {
     aide.includes('même table') && aide.includes('Choisissez un nom spécifique') && aide.includes('évitez « EPICs »'), aide);
 
   // Bouton « Appliquer », pas « Enregistrer » : celui de Grist reste à cliquer (#249)
-  ok('⚙ : bouton « ✓ Appliquer » (pas « Enregistrer », réservé à Grist)',
-    $('#reglages-enregistrer').textContent.trim() === '✓ Appliquer', $('#reglages-enregistrer').textContent);
+  const pied = [...document.querySelectorAll('#reglages .fenetre-pied button')].map(b => b.textContent.trim());
+  ok('⚙ : barre du bas « Annuler » puis « ✓ Appliquer » (pas « Enregistrer », réservé à Grist)',
+    pied.join('|') === 'Annuler|✓ Appliquer', pied.join('|'));
   ok('⚙ : aide qui rappelle « Enregistrer » dans Grist', aide.includes('Après « Appliquer », cliquez sur Enregistrer dans'), aide);
+
+  // Fenêtre commune fenetre.js (#249, étape B) : titre, deux onglets et leurs états
+  ok('⚙ : fenêtre commune, titre « Réglages de la Galerie »', $('#reglages').classList.contains('fenetre')
+    && $('#reglages .fenetre-titre').textContent === '⚙️ Réglages de la Galerie', $('#reglages .fenetre-titre')?.textContent);
+  const onglets = [...document.querySelectorAll('#reglages .fenetre-onglet')];
+  ok('⚙ : onglets « Nom de la Galerie » et « Modèle de texte »', onglets.map(o => o.querySelector('.fenetre-onglet-libelle').textContent).join('|')
+    === 'Nom de la Galerie|Modèle de texte');
+  ok('⚙ : sans nom, onglet Nom en ℹ️', onglets[0].dataset.etat === 'info', onglets[0].dataset.etat);
+  ok('⚙ : ouverte sur l\'onglet Nom', fenetreReglages().ongletActif() === 'nom');
+  // La frappe met à jour l'état de l'onglet et la marque « modifiée »
+  $('#reglages-nom').value = 'Essai';
+  $('#reglages-nom').dispatchEvent(new Event('input', { bubbles: true }));
+  await attendre(50);
+  ok('⚙ : nom tapé, onglet Nom en ✓ et fenêtre marquée modifiée', onglets[0].dataset.etat === 'ok'
+    && $('#reglages').classList.contains('modifiee'), onglets[0].dataset.etat);
+  // Échap avec des modifications : confirmation (refusée ici, la fenêtre reste)
+  Banc.repondre(false);
+  $('#reglages').dispatchEvent(new Event('cancel', { cancelable: true }));
+  ok('⚙ : Échap avec modifications, confirmation refusée → fenêtre ouverte', $('#reglages').open);
+  $('#reglages-nom').value = '';
 
   // ── Donner un nom (espaces autour retirés) ──
   $('#reglages-nom').value = '  EPICs Vitrine  ';
-  $('#reglages-enregistrer').click();
+  boutonReglages('✓ Appliquer').click();
   await attendre(100);
   ok('nom enregistré dans les options, sans espaces autour', FAUX_GRIST.options.nom === 'EPICs Vitrine',
     JSON.stringify(FAUX_GRIST.options.nom));
@@ -81,7 +105,7 @@ Banc.lancer(async () => {
   ouvrirReglages();
   ok('⚙ : nom actuel affiché', $('#reglages-nom').value === 'EPICs Vitrine');
   $('#reglages-nom').value = '   ';
-  $('#reglages-enregistrer').click();
+  boutonReglages('✓ Appliquer').click();
   await attendre(100);
   ok('nom effacé (espaces seuls = aucun nom)', FAUX_GRIST.options.nom === '' && ETAT.nomGalerie === '');
   ok('sans nom : vues et taille de l\'ancienne clé retrouvées', nomsVues() === 'Équipe|Vitrine'
@@ -92,7 +116,7 @@ Banc.lancer(async () => {
   // ── « Annuler » ne change rien ──
   ouvrirReglages();
   $('#reglages-nom').value = 'Brouillon';
-  $('#reglages-annuler').click();
+  boutonReglages('Annuler').click();
   await attendre(50);
   ok('⚙ : « Annuler » ne change pas le nom', ETAT.nomGalerie === '' && FAUX_GRIST.options.nom === '');
 
@@ -100,7 +124,7 @@ Banc.lancer(async () => {
   FAUX_GRIST.options = {};
   ouvrirReglages();
   $('#reglages-modele').value = '## Objectif';
-  $('#reglages-enregistrer').click();
+  boutonReglages('✓ Appliquer').click();
   await attendre(100);
   ok('modèle seul modifié : nom non écrit', FAUX_GRIST.options.modele === '## Objectif' && !('nom' in FAUX_GRIST.options),
     JSON.stringify(FAUX_GRIST.options));
@@ -108,7 +132,7 @@ Banc.lancer(async () => {
   // ── Nom piégé : affiché comme du texte, jamais comme du HTML ──
   ouvrirReglages();
   $('#reglages-nom').value = '<img src=x onerror="window.PIEGE=1">';
-  $('#reglages-enregistrer').click();
+  boutonReglages('✓ Appliquer').click();
   await attendre(100);
   ok('nom piégé : affiché tel quel, sans balise créée', !$('#titre-table img') && !window.PIEGE
     && $('#titre-table').textContent.includes('<img'), $('#titre-table').innerHTML);

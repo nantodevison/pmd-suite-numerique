@@ -2211,7 +2211,39 @@ function changerNomGalerie(nom) {
   afficherGrille();
 }
 
-const fenetreReglages = () => document.getElementById('reglages');
+/* Fenêtre ⚙ : la brique commune ../_commun/fenetre.js, comme le Kanban, la
+   Page et Interactions (#249, étape B). Elle apporte la barre du bas
+   « Annuler / ✓ Appliquer » toujours visible, la marque « modifications non
+   appliquées » et la confirmation si l'on ferme sans appliquer, Échap, le
+   déplacement et le redimensionnement. Créée au premier usage : elle déplace
+   chez elle les deux onglets écrits dans index.html. */
+let _fenetreReglages = null;
+function fenetreReglages() {
+  if (_fenetreReglages) return _fenetreReglages;
+  _fenetreReglages = Fenetre.creer({
+    titre: '⚙️ Réglages de la Galerie',
+    onglets: [
+      { id: 'nom', libelle: 'Nom de la Galerie', contenu: document.getElementById('reglages-onglet-nom'),
+        // Sans nom, la mémoire du navigateur est partagée avec les autres
+        // Galeries sans nom de la même table (#264) : à savoir, pas une erreur
+        etat: () => (nettoyerNomGalerie(document.getElementById('reglages-nom').value)
+          ? { etat: 'ok', aide: 'Nom donné' }
+          : { etat: 'info', aide: 'Sans nom : réglages du navigateur partagés avec les autres Galeries sans nom de cette table' }) },
+      { id: 'modele', libelle: 'Modèle de texte', contenu: document.getElementById('reglages-onglet-modele'),
+        etat: () => (document.getElementById('reglages-modele').value.trim()
+          ? { etat: 'ok', aide: 'Modèle rempli' }
+          : { etat: '', aide: 'Facultatif : texte proposé dans les nouvelles cartes' }) },
+    ],
+    actions: [
+      { libelle: 'Annuler', classe: 'btn-ghost', fermer: true },
+      // « Appliquer » et non « Enregistrer » : le bouton de Grist reste à cliquer ensuite (#249, étape A)
+      { libelle: '✓ Appliquer', classe: 'btn-primary', surClic: enregistrerReglages },
+    ],
+  });
+  // Identifiant d'avant (élément <dialog> propre à la Galerie) : gardé pour les bancs d'essai
+  _fenetreReglages.element.id = 'reglages';
+  return _fenetreReglages;
+}
 
 /** Carte dont on peut reprendre le texte : celle ouverte, sinon celle sélectionnée. */
 function carteSource() {
@@ -2229,7 +2261,7 @@ function ouvrirReglages() {
   bouton.textContent = bouton.disabled
     ? 'Reprendre le texte d\'une carte : ouvrez ou sélectionnez-la d\'abord'
     : `↧ Reprendre le texte de « ${source[ETAT.colonnes.Titre] || '(sans titre)'} »`;
-  fenetreReglages().showModal();
+  fenetreReglages().ouvrir('nom');
 }
 
 function reprendreTexteCarte() {
@@ -2238,6 +2270,9 @@ function reprendreTexteCarte() {
   if (!source || !colTexte) return;
   // Un ancien texte Notepad est repris directement en Markdown.
   document.getElementById('reglages-modele').value = Fiche.notepadVersMarkdown(String(source[colTexte] || ''));
+  // Texte changé par le code, pas par la frappe : la fenêtre ne l'a pas vu
+  fenetreReglages().marquerModifiee(true);
+  fenetreReglages().majEtats();
 }
 
 async function enregistrerReglages() {
@@ -2250,7 +2285,7 @@ async function enregistrerReglages() {
       await grist.setOption('nom', nom);
       changerNomGalerie(nom);
     }
-    fenetreReglages().close();
+    fenetreReglages().fermer({ forcer: true });
     afficherToast('✓ Réglages appliqués — cliquez sur « Enregistrer » dans Grist pour les garder', 5000);
   } catch (err) {
     afficherToast(`⚠️ Erreur : ${err.message || err}`, 4000);
@@ -2364,8 +2399,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-nouvelle').addEventListener('click', ouvrirNouvelleFiche);
   document.getElementById('btn-reglages').addEventListener('click', ouvrirReglages);
   document.getElementById('reglages-reprendre').addEventListener('click', reprendreTexteCarte);
-  document.getElementById('reglages-enregistrer').addEventListener('click', enregistrerReglages);
-  document.getElementById('reglages-annuler').addEventListener('click', () => fenetreReglages().close());
   document.getElementById('bandeau-notepad-bouton').addEventListener('click', () =>
     convertirNotepad().catch(err => afficherToast(`⚠️ Erreur : ${err.message || err}`, 4000)));
   document.getElementById('recherche').addEventListener('input', (e) => {
@@ -2375,8 +2408,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     // Réglages ou « Gérer la vue » ouverts : Échap ne concerne qu'eux
-    // (le navigateur ferme lui-même ces fenêtres <dialog>).
-    if (fenetreReglages().open || UI_VUES.fenetre.estOuverte()) return;
+    // (fenetre.js les ferme elle-même, avec confirmation si besoin).
+    if (fenetreReglages().estOuverte() || UI_VUES.fenetre.estOuverte()) return;
     // Un panneau des vues ou un filtre ouvert : on le ferme, lui seul
     if (panneauOuvert()) { UI_VUES.fermerMenus(); return; }
     if (panneau().classList.contains('open')) fermerFiche();
