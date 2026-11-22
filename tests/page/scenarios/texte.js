@@ -80,6 +80,9 @@ Banc.lancer(async () => {
   appliquer.click();
   await Banc.attendre(50);
   ok('changer de ligne, « non » : confirmation, fenêtre ouverte', Banc.confirmations.length === nb + 1 && $('dialog.fenetre').open);
+  // Question commune (../_commun/messages.js, #249)
+  ok('question : « Le texte modifié n\'est pas sauvegardé. L\'abandonner ? »',
+    Banc.confirmations.at(-1) === 'Le texte modifié n\'est pas sauvegardé. L\'abandonner ?', Banc.confirmations.at(-1));
   Banc.repondre(true);
   appliquer.click();
   await Banc.attendre(100);

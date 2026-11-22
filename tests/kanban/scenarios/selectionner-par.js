@@ -63,7 +63,7 @@ Banc.lancer(async () => {
   await attendre(200);
   const message = document.getElementById('toast').textContent;
   ok('⚙ appliquée : message qui rappelle « Enregistrer » dans Grist',
-    message === '✓ Configuration appliquée — cliquez sur « Enregistrer » dans Grist pour la garder', message);
+    message === '✓ Réglages appliqués — cliquez sur « Enregistrer » dans Grist pour les garder', message);
   ok('⚙ appliquée : plus de « Configuration sauvegardée »', !message.includes('sauvegardée'), message);
 
   // ── Mode d'emploi « ? » ──

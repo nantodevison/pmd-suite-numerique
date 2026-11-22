@@ -770,18 +770,22 @@ async function ecrireCellule(ligne, colId, valeur) {
    ══════════════════════════════════════════════════════════════ */
 
 /**
- * Titre de la barre : nom de la table, suivi en gris du nom de la Galerie
- * s'il est réglé (#264). Une page dupliquée qui porte encore le nom du
- * modèle se repère ainsi d'un coup d'œil. textContent : le nom est saisi
- * par l'utilisateur, il ne doit jamais être lu comme du HTML.
+ * Titre de la barre : le type de widget, « 🖼️ Galerie », comme « 📌 Kanban »
+ * et « 🤝 Interactions » (#249). Suivi en gris du nom de la Galerie s'il est
+ * réglé (#264 : une page dupliquée qui porte encore le nom du modèle se
+ * repère d'un coup d'œil), sinon du nom de la table ; la table reste lisible
+ * au survol. textContent : le nom est saisi par l'utilisateur, il ne doit
+ * jamais être lu comme du HTML.
  */
 function majTitre() {
   const titre = document.getElementById('titre-table');
-  titre.textContent = '🖼️ ' + (ETAT.table || 'Galerie');
-  if (ETAT.nomGalerie) {
+  titre.textContent = '🖼️ Galerie';
+  titre.title = ETAT.table ? `Table : ${ETAT.table}` : '';
+  const precision = ETAT.nomGalerie || ETAT.table;
+  if (precision) {
     const nom = document.createElement('span');
     nom.className = 'barre-nom';
-    nom.textContent = ' · ' + ETAT.nomGalerie;
+    nom.textContent = ' · ' + precision;
     titre.appendChild(nom);
   }
 }
@@ -1548,7 +1552,7 @@ function ficheModifiee() { return Object.keys(ETAT.fiche.modifs).length > 0; }
 
 function ouvrirFiche(id) {
   if (ficheModifiee() && ETAT.fiche.id !== id) {
-    if (!confirm('Des modifications non sauvegardées seront perdues. Continuer ?')) return;
+    if (!Messages.abandonner('fiche')) return;
   }
   ETAT.fiche = { id, nouvelle: false, modifs: {} };
   remplirFiche(id);
@@ -1566,7 +1570,7 @@ function ouvrirFiche(id) {
  */
 async function ouvrirNouvelleFiche() {
   if (ficheModifiee()) {
-    if (!confirm('Des modifications non sauvegardées seront perdues. Continuer ?')) return;
+    if (!Messages.abandonner('fiche')) return;
   }
   const vue = await preparerVueNouvelleCarte();
   ETAT.fiche = { id: null, nouvelle: true, modifs: {}, vue };
@@ -2167,19 +2171,16 @@ async function attendreLigne(id, delaiMax = 2000) {
 
 function fermerFiche(force = false) {
   if (ficheModifiee() && !force) {
-    if (!confirm('Des modifications non sauvegardées seront perdues. Continuer ?')) return;
+    if (!Messages.abandonner('fiche')) return;
   }
   Fiche.fermer(panneau());
   ETAT.fiche = { id: null, nouvelle: false, modifs: {} };
   majIndicateur();
 }
 
+/** Petit message en bas de l'écran : module commun ../_commun/messages.js (#249). */
 function afficherToast(texte, duree = 2200) {
-  const toast = document.getElementById('toast');
-  toast.textContent = texte;
-  toast.classList.add('visible');
-  clearTimeout(afficherToast.minuteur);
-  afficherToast.minuteur = setTimeout(() => toast.classList.remove('visible'), duree);
+  Messages.toast(texte, duree);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -2302,7 +2303,7 @@ async function enregistrerReglages() {
       changerNomGalerie(nom);
     }
     fenetreReglages().fermer({ forcer: true });
-    afficherToast('✓ Réglages appliqués — cliquez sur « Enregistrer » dans Grist pour les garder', 5000);
+    Messages.reglagesAppliques();
   } catch (err) {
     afficherToast(`⚠️ Erreur : ${err.message || err}`, 4000);
     console.error('Galerie – enregistrement des réglages impossible :', err);

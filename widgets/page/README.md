@@ -20,6 +20,7 @@ Statut : **en développement** (version 0, #235).
 | [`../_commun/pastilles.js`](../_commun/pastilles.js), [`pastilles.css`](../_commun/pastilles.css) | Dessin des pastilles, commun avec la Galerie |
 | [`../_commun/colonnes.js`](../_commun/colonnes.js) | Structure du document (libellés, types, couleurs des choix) |
 | [`../_commun/fenetre.js`](../_commun/fenetre.js), [`fenetre.css`](../_commun/fenetre.css) | Fenêtre des réglages ⚙ |
+| [`../_commun/messages.js`](../_commun/messages.js), [`messages.css`](../_commun/messages.css) | Petit message (toast) et questions d'abandon « … Les abandonner ? », communs aux widgets (#249) |
 | [`../_commun/recherche.js`](../_commun/recherche.js) | Chargé pour `fiche.js` |
 
 La Page dépend du dossier `_commun/` : elle ne fonctionne qu'**en mode URL**.

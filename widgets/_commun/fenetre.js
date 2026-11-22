@@ -79,7 +79,8 @@
    *                  qu'au dessin suivant de la page.
    */
   function creer({ titre, onglets, actions = [],
-                   messageModif = 'Des modifications non appliquées seront perdues. Continuer ?',
+                   // Question commune (../_commun/messages.js, #249) ; texte de secours sans le module
+                   messageModif = (window.Messages && Messages.QUESTIONS.fenetre) || 'Les modifications de cette fenêtre ne sont pas appliquées. Les abandonner ?',
                    textePied = '• Modifications non appliquées', infoPied = null,
                    surFermeture = null }) {
     let modifiee = false;

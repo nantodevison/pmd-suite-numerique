@@ -46,7 +46,11 @@ Banc.lancer(async () => {
   ok('sauvegarde : UpdateRecord du seul titre', JSON.stringify(Banc.actionsDepuis(avant))
     === JSON.stringify([['UpdateRecord', 'Interactions', 1, { Titre: 'Réunion de lancement (v2)' }]]),
     JSON.stringify(Banc.actionsDepuis(avant)));
-  ok('sauvegarde : fiche fermée, message', !ficheOuverte() && $('#toast').textContent.includes('sauvegardées'));
+  // La fiche reste ouverte, comme dans le Kanban et la Galerie (#249)
+  ok('sauvegarde : fiche restée ouverte, message', ficheOuverte() && ETAT.fiche?.id === 1
+    && $('#toast').textContent.includes('sauvegardées'));
+  ok('sauvegarde : plus de modification en attente', !$('#fiche-modifie').classList.contains('visible') && $('#fiche-sauver').disabled);
+  ok('sauvegarde : fiche redessinée avec la valeur enregistrée', $('#fiche-corps .fiche-titre').value === 'Réunion de lancement (v2)');
   ok('sauvegarde : liste à jour', $('.interaction[data-id="1"] .interaction-titre')?.textContent === 'Réunion de lancement (v2)');
 
   // 3. Date, type et personnes
@@ -125,6 +129,20 @@ Banc.lancer(async () => {
   ok('création : projet en liste', JSON.stringify(ajout[3]?.Projets) === '["L",1]');
   ok('création : date (maintenant)', Math.abs((ajout[3]?.Date || 0) - Date.now() / 1000) < 120, ajout[3]?.Date);
   ok('création : liste à jour, en tête', Number($('.interaction')?.dataset.id) === 7, $('.interaction')?.dataset.id);
+  // La fiche reste ouverte sur l'interaction créée, comme dans la Galerie (#249)
+  ok('création : fiche restée ouverte sur la ligne créée', ficheOuverte() && ETAT.fiche?.id === 7
+    && $('#fiche-libelle').textContent === 'Interaction', `${ETAT.fiche?.id} / ${$('#fiche-libelle').textContent}`);
+  ok('création : fiche relue (titre, personne, lien), rien en attente', $('#fiche-corps .fiche-titre').value === 'Nouveau rendez-vous'
+    && JSON.stringify(personnes()) === '[2]' && $('#fiche-lien').value === 'https://docs.exemple.org/docs/note-7/'
+    && $('#fiche-sauver').disabled && !ETAT.fiche.attendue);
+  ok('création : message', $('#toast').textContent === '✓ Interaction créée', $('#toast').textContent);
+  // Une modification juste après la création : UpdateRecord de la ligne créée
+  saisirTitre('Nouveau rendez-vous (corrigé)');
+  avant = FAUX_GRIST.actions.length;
+  await sauver();
+  ok('création puis modification : UpdateRecord de la ligne 7', JSON.stringify(Banc.actionsDepuis(avant))
+    === JSON.stringify([['UpdateRecord', 'Interactions', 7, { Titre: 'Nouveau rendez-vous (corrigé)' }]]),
+    JSON.stringify(Banc.actionsDepuis(avant)));
 
   // 8. Référence simple et date sans heure
   await relancer({ projet: 2, colonnes: { Projet: 'Projet_principal', Date: 'Jour' } });

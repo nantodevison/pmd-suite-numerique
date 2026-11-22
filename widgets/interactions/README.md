@@ -20,6 +20,7 @@ Statut : **en développement** (version 0, #246).
 | [`../_commun/pastilles.js`](../_commun/pastilles.js), [`pastilles.css`](../_commun/pastilles.css) | Pastille colorée du type |
 | [`../_commun/colonnes.js`](../_commun/colonnes.js) | Structure du document et noms des projets et des personnes |
 | [`../_commun/fenetre.js`](../_commun/fenetre.js), [`fenetre.css`](../_commun/fenetre.css) | Fenêtre des réglages ⚙ et du mode d'emploi « ? » |
+| [`../_commun/messages.js`](../_commun/messages.js), [`messages.css`](../_commun/messages.css) | Petit message (toast) et questions d'abandon « … Les abandonner ? », communs aux widgets (#249) |
 | [`../_commun/recherche.js`](../_commun/recherche.js) | Règle de recherche du menu des personnes |
 
 Le widget dépend du dossier `_commun/` : il ne fonctionne qu'**en mode URL**.
@@ -115,7 +116,9 @@ première visite, c'est ⚙ qui s'ouvre, tant qu'aucun projet n'est choisi.
   est rappelé, non modifiable.
 - **Lien** : créez d'abord la note dans Docs, puis collez son adresse. La
   fiche ne crée pas de document Docs.
-- « ✓ Sauvegarder » (ou Ctrl + S) n'écrit que les colonnes modifiées. Une
+- « ✓ Sauvegarder » (ou Ctrl + S) n'écrit que les colonnes modifiées. La fiche
+  reste ouverte, comme dans le Kanban et la Galerie (#249) ; après une
+  création, elle passe sur l'interaction créée. Une
   création exige un titre ; elle reçoit la date du moment (modifiable) et le
   projet de ⚙. Fermer une fiche modifiée (✕, Annuler, Échap) demande
   confirmation.

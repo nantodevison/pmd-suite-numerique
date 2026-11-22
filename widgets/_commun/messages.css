@@ -1,0 +1,18 @@
+/* ══════════════════════════════════════════════════════════════
+   MESSAGES — style du petit message temporaire (toast) de
+   ../_commun/messages.js, commun aux widgets (#249, étape D).
+   À 70 px du bas par défaut ; messages.js le remonte au-dessus d'une barre
+   du bas visible (pied de la fiche, d'une fenêtre, « Texte modifié » de la
+   Page), pour ne jamais cacher « ✓ Sauvegarder ».
+   ══════════════════════════════════════════════════════════════ */
+
+.toast {
+  position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%);
+  max-width: calc(100vw - 32px); padding: 9px 18px; border-radius: 10px;
+  background: #2d3748; color: #fff; text-align: center;
+  font-family: var(--font, system-ui, sans-serif); font-size: 13px; font-weight: 500;
+  box-shadow: 0 4px 20px rgba(0,0,0,.2);
+  z-index: 2000; pointer-events: none;
+  opacity: 0; transition: opacity .25s;
+}
+.toast.visible { opacity: 1; }

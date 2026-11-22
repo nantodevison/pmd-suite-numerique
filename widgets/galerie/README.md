@@ -25,11 +25,13 @@ EPICs, objectifs et résultats clés, projets… Les tâches restent gérées pa
 | [`../_commun/tri.js`](../_commun/tri.js), [`tri.css`](../_commun/tri.css) | Comparaison des valeurs selon le type de leur colonne, et panneau du tri ⇅, communs avec le Kanban |
 | [`../_commun/vues.js`](../_commun/vues.js), [`vues.css`](../_commun/vues.css) | Vues enregistrées : barre des vues et fenêtre « Gérer la vue », communes avec le Kanban |
 | [`../_commun/fenetre.js`](../_commun/fenetre.js), [`fenetre.css`](../_commun/fenetre.css) | Fenêtre à onglets (« Gérer la vue », ⚙ et mode d'emploi « ? ») |
+| [`../_commun/messages.js`](../_commun/messages.js), [`messages.css`](../_commun/messages.css) | Petit message (toast) et questions d'abandon « … Les abandonner ? », communs aux widgets (#249) |
 
 ## La barre du haut
 
-Même disposition que le Kanban et Interactions (#249) : à gauche, le nom de
-la table (suivi en gris du nom de la Galerie, s'il est réglé), le nombre de
+Même disposition que le Kanban et Interactions (#249) : à gauche, **🖼️ Galerie**
+(le type de widget, comme « 📌 Kanban »), suivi en gris du nom de la Galerie
+s'il est réglé, sinon du nom de la table (visible aussi au survol), le nombre de
 cartes affichées, **?** et **⚙** ; à droite, **🔍 Rechercher** et
 **+ Nouvelle carte**.
 
@@ -206,7 +208,7 @@ Plusieurs Galeries sur la **même table** (par exemple une page par projet,
 dupliquée depuis un modèle) partageraient, dans le navigateur de chacun, vue
 active, vues 🔒, taille des cartes… Pour les séparer, donner à chacune un
 **nom spécifique** dans ⚙ (« EPICs Observatoire » plutôt que « EPICs »),
-« Appliquer », puis « Enregistrer » dans Grist. Le nom s'affiche en gris à côté du titre.
+« Appliquer », puis « Enregistrer » dans Grist. Le nom s'affiche en gris après « 🖼️ Galerie », à la place du nom de la table.
 
 - **Page dupliquée** : la copie hérite du nom ; le changer.
 - **Changer de nom** repart de zéro : vues 🔒, vue active, taille et zones
