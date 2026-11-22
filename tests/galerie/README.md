@@ -20,7 +20,7 @@ py tests/galerie/jouer.py --largeurs 1200 -v  # une largeur, toutes les lignes
 Le bilan s'affiche par scénario et par largeur (`BILAN 26 OK, 0 KO`), suivi des
 lignes en échec. Le code de sortie vaut 0 si tout est OK.
 
-## Ce qui est vérifié (548 vérifications par largeur)
+## Ce qui est vérifié (557 vérifications par largeur)
 
 | Scénario | Fonctions |
 |---|---|

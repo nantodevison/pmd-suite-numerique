@@ -24,7 +24,7 @@ EPICs, objectifs et résultats clés, projets… Les tâches restent gérées pa
 | [`../_commun/filtres.js`](../_commun/filtres.js), [`filtres.css`](../_commun/filtres.css) | Règle et panneau des filtres, communs avec le Kanban |
 | [`../_commun/tri.js`](../_commun/tri.js), [`tri.css`](../_commun/tri.css) | Comparaison des valeurs selon le type de leur colonne, et panneau du tri ⇅, communs avec le Kanban |
 | [`../_commun/vues.js`](../_commun/vues.js), [`vues.css`](../_commun/vues.css) | Vues enregistrées : barre des vues et fenêtre « Gérer la vue », communes avec le Kanban |
-| [`../_commun/fenetre.js`](../_commun/fenetre.js), [`fenetre.css`](../_commun/fenetre.css) | Fenêtre à onglets (« Gérer la vue ») |
+| [`../_commun/fenetre.js`](../_commun/fenetre.js), [`fenetre.css`](../_commun/fenetre.css) | Fenêtre à onglets (« Gérer la vue » et ⚙) |
 
 La Galerie dépend du dossier `_commun/` : elle ne fonctionne qu'**en mode URL**.
 
@@ -323,11 +323,13 @@ Associer une colonne **pièce jointe** (par exemple `Image`) au champ
   principal prérempli avec le modèle. Rien n'est créé dans Grist avant
   « ✓ Sauvegarder » (un titre est alors exigé) ; fermer la fiche ne laisse
   aucune ligne vide. La fiche reste ensuite ouverte sur la carte créée.
-- **⚙** : nom de la Galerie (voir « Nom de la Galerie » plus haut) et
-  modèle de texte des nouvelles cartes, en Markdown, enregistré dans
+- **⚙** : fenêtre commune aux widgets (`fenetre.js`, #249), en deux onglets,
+  « Nom de la Galerie » (voir plus haut ; ℹ️ tant qu'il est vide) et
+  « Modèle de texte » des nouvelles cartes, en Markdown, enregistré dans
   le document Grist (chaque Galerie a le sien ; rien dans le dépôt).
   « Reprendre le texte de … » copie le texte de la carte ouverte ou
-  sélectionnée, pour en faire un squelette.
+  sélectionnée, pour en faire un squelette. « ✓ Appliquer », puis
+  « Enregistrer » dans Grist ; fermer sans appliquer demande confirmation.
 - **Pastilles** : elles se choisissent dès la nouvelle fiche (« + Priorité »…)
   et sont écrites avec la carte. Objets liés et contexte se remplissent une
   fois la carte créée (la fiche reste ouverte) ou dans Grist.

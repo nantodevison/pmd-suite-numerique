@@ -104,26 +104,19 @@ body { display: flex; flex-direction: column; overflow: hidden; }
 .config-etape { font-size: 15px; font-weight: 700; margin: 0 0 6px; }
 .config-aide { font-size: 12px; color: var(--text-muted); margin: 0; }
 
-/* Fenêtre des réglages (élément <dialog> du navigateur) */
-.reglages {
-  width: min(640px, 92vw); margin: auto; padding: 20px 22px;
-  border: 1px solid var(--border); border-radius: 12px;
-  box-shadow: 0 24px 60px rgba(15, 23, 42, .28); color: var(--text);
-}
-.reglages[open] { display: flex; flex-direction: column; gap: 10px; }
-.reglages::backdrop { background: rgba(15, 23, 42, .38); }
-.reglages-titre { font-size: 15px; }
+/* Onglets de la fenêtre ⚙ (cadre, onglets et barre du bas : ../_commun/fenetre.css) */
+.reglages-onglet { display: flex; flex-direction: column; gap: 10px; }
+.reglages-onglet[hidden] { display: none; }
 .reglages-libelle { font-size: 12px; font-weight: 600; color: var(--text-muted); }
-.reglages .reglages-modele { display: block; min-height: 40vh; }
+.reglages-modele { display: block; min-height: 30vh; }
 .reglages-nom {
   font: inherit; font-size: 13px; padding: 6px 10px;
   border: 1px solid var(--border); border-radius: 8px; color: var(--text);
 }
 .reglages-aide { font-size: 12px; color: var(--text-muted); margin: 0; }
-.reglages-separation { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
-.reglages #reglages-reprendre { align-self: flex-start; }
-.reglages #reglages-reprendre:disabled { opacity: .5; cursor: default; }
-.reglages-pied { display: flex; gap: 8px; margin-top: 6px; }
+.reglages-rappel { margin-top: 6px; }
+#reglages-reprendre { align-self: flex-start; }
+#reglages-reprendre:disabled { opacity: .5; cursor: default; }
 
 /* Grille de cartes : autant de colonnes que la largeur le permet */
 .grille {
@@ -360,8 +353,11 @@ button.fiche-lie-ouvrable:hover, button.fiche-lie-ouvrable:focus-visible { borde
 
   <!-- Réglages : nom de la Galerie (#264) et modèle de texte des nouvelles
        cartes, enregistrés dans le document Grist (propres à chaque Galerie). -->
-  <dialog class="reglages" id="reglages">
-    <h2 class="reglages-titre">Réglages de la Galerie</h2>
+  <!-- Deux onglets de la fenêtre ⚙, construite par ../_commun/fenetre.js
+       (comme le Kanban, la Page et Interactions, #249) : galerie.js les y
+       déplace ; la fenêtre porte l'identifiant « reglages ». -->
+  <section class="reglages-onglet" id="reglages-onglet-nom" hidden>
+    <h3 class="config-etape">Nom de la Galerie</h3>
     <label class="reglages-libelle" for="reglages-nom">Nom de cette Galerie</label>
     <input type="text" class="reglages-nom" id="reglages-nom" maxlength="60"
            placeholder="ex. EPICs Observatoire" />
@@ -371,20 +367,18 @@ button.fiche-lie-ouvrable:hover, button.fiche-lie-ouvrable:focus-visible { borde
       avec ceux d'une autre Galerie.</strong></p>
     <p class="reglages-aide">Exemple : évitez « EPICs » ou « Galerie » ; préférez « EPICs Observatoire »
       ou « Galerie de Camille ».</p>
-    <hr class="reglages-separation" />
+    <p class="reglages-aide reglages-rappel">Après « Appliquer », cliquez sur <strong>Enregistrer</strong> dans
+      Grist (en haut du widget) pour garder ces réglages dans le document.</p>
+  </section>
+  <section class="reglages-onglet" id="reglages-onglet-modele" hidden>
+    <h3 class="config-etape">Modèle de texte</h3>
     <label class="reglages-libelle" for="reglages-modele">Modèle de texte des nouvelles cartes (Markdown)</label>
     <textarea class="fiche-md-saisie reglages-modele" id="reglages-modele"
               placeholder="## 1- Source de l'idée&#10;&#10;## 2- …"></textarea>
     <button type="button" class="fiche-md-bouton" id="reglages-reprendre"></button>
-    <p class="reglages-aide">Après « Appliquer », cliquez sur <strong>Enregistrer</strong> dans
+    <p class="reglages-aide reglages-rappel">Après « Appliquer », cliquez sur <strong>Enregistrer</strong> dans
       Grist (en haut du widget) pour garder ces réglages dans le document.</p>
-    <div class="reglages-pied">
-      <!-- « Appliquer » et non « Enregistrer » : ne pas confondre avec le bouton
-           de Grist, qui reste à cliquer ensuite (#249). L'identifiant ne change pas. -->
-      <button type="button" class="fiche-btn-principal" id="reglages-enregistrer">✓ Appliquer</button>
-      <button type="button" class="fiche-btn-secondaire" id="reglages-annuler">Annuler</button>
-    </div>
-  </dialog>
+  </section>
 
   <!-- Affiché seulement s'il reste des textes de l'ancien widget Notepad -->
   <div class="bandeau" id="bandeau-notepad" hidden>
