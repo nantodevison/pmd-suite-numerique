@@ -195,7 +195,7 @@ Plusieurs Galeries sur la **même table** (par exemple une page par projet,
 dupliquée depuis un modèle) partageraient, dans le navigateur de chacun, vue
 active, vues 🔒, taille des cartes… Pour les séparer, donner à chacune un
 **nom spécifique** dans ⚙ (« EPICs Observatoire » plutôt que « EPICs »),
-puis « Enregistrer » dans Grist. Le nom s'affiche en gris à côté du titre.
+« Appliquer », puis « Enregistrer » dans Grist. Le nom s'affiche en gris à côté du titre.
 
 - **Page dupliquée** : la copie hérite du nom ; le changer.
 - **Changer de nom** repart de zéro : vues 🔒, vue active, taille et zones

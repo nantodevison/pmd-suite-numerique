@@ -58,6 +58,14 @@ Banc.lancer(async () => {
   STATE.projetKanban = projet;
   await envoyer(tousKanban);
 
+  // ── ⚙ « Appliquer » : le message rappelle « Enregistrer » de Grist (#249, étape A) ──
+  await saveConfig();
+  await attendre(200);
+  const message = document.getElementById('toast').textContent;
+  ok('⚙ appliquée : message qui rappelle « Enregistrer » dans Grist',
+    message === '✓ Configuration appliquée — cliquez sur « Enregistrer » dans Grist pour la garder', message);
+  ok('⚙ appliquée : plus de « Configuration sauvegardée »', !message.includes('sauvegardée'), message);
+
   // ── Mode d'emploi « ? » ──
   remplirAide();
   const aide = document.getElementById('aide-contenu').textContent;

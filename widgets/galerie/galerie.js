@@ -2251,7 +2251,7 @@ async function enregistrerReglages() {
       changerNomGalerie(nom);
     }
     fenetreReglages().close();
-    afficherToast('✓ Réglages enregistrés (pensez à « Enregistrer » dans Grist)', 3500);
+    afficherToast('✓ Réglages appliqués — cliquez sur « Enregistrer » dans Grist pour les garder', 5000);
   } catch (err) {
     afficherToast(`⚠️ Erreur : ${err.message || err}`, 4000);
     console.error('Galerie – enregistrement des réglages impossible :', err);
