@@ -15,7 +15,8 @@ Banc.lancer(async () => {
   FAUX_GRIST.masquees = [6];
   await relancer({ projet: 1 });
   ok('projet 1 : du plus récent au plus ancien, sans date à la fin', JSON.stringify(ids()) === '[2,3,1,5]', JSON.stringify(ids()));
-  ok('compte', $('.journal-compte')?.textContent === '4 interactions', $('.journal-compte')?.textContent);
+  ok('compte dans la barre', $('#barre-compte')?.textContent === '4' && $('#barre-compte').title === '4 interactions' && !$('#barre-compte').hidden,
+    $('#barre-compte')?.textContent);
   ok('date et heure de Paris (heure d\'été)', ligne(2).querySelector('.interaction-date').textContent === '2 mai 2026 · 14:00',
     ligne(2).querySelector('.interaction-date').textContent);
   ok('date et heure de Paris (heure d\'hiver)', ligne(1).querySelector('.interaction-date').textContent === '10 mars 2026 · 09:30',
@@ -68,13 +69,13 @@ Banc.lancer(async () => {
   // 3. Une interaction peut servir plusieurs projets
   await relancer({ projet: 2 });
   ok('projet 2 : interactions qui le contiennent', JSON.stringify(ids()) === '[4,2]', JSON.stringify(ids()));
-  ok('compte au singulier/pluriel', $('.journal-compte')?.textContent === '2 interactions');
+  ok('compte au singulier/pluriel', $('#barre-compte')?.title === '2 interactions');
 
   // 4. Projet sans interaction
   await relancer({ projet: 3 });
   ok('projet sans interaction : message', ($('.journal')?.textContent || '').includes('Aucune interaction pour ce projet'));
   ok('projet sans interaction : bouton de création', $('#bouton-creer')?.textContent === '＋ Rendez-vous');
-  ok('compte 0', $('.journal-compte')?.textContent === '0 interaction');
+  ok('compte 0', $('#barre-compte')?.textContent === '0' && $('#barre-compte').title === '0 interaction');
 
   // 5. Projet en référence simple, date sans heure
   await relancer({ projet: 1, colonnes: { Projet: 'Projet_principal', Date: 'Jour' } });

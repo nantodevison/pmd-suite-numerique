@@ -1499,7 +1499,7 @@ function renderBoard() {
     return;
   }
   if (STATE.records.length === 0) {
-    board.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><p>Aucune donnée</p></div>`;
+    board.innerHTML = `<div class="empty-state"><div class="empty-icon">📌</div><p>Aucune donnée</p></div>`;
     return;
   }
 

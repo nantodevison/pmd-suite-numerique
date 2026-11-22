@@ -23,10 +23,11 @@ Pour obtenir la page à coller dans le Custom Widget Builder :
 py tests/interactions/assembler.py    # → tests/interactions/genere/interactions-builder.html
 ```
 
-## Ce qui est vérifié
+## Ce qui est vérifié (117 vérifications par largeur)
 
 | Scénario | Fonctions |
 |---|---|
+| `barre` | Barre du haut commune (#249) : ordre (titre, nombre, ?, ⚙, création), « 🤝 Interactions » et le projet en gris, barre collée en haut, plus de ⚙ flottant ; sans projet, ni nombre ni bouton de création ; nom de projet piégé affiché comme du texte ; mode d'emploi « ? » (fenêtre commune sans colonne d'onglets, texte, lien vers le README, « Fermer »), Échap qui ne ferme que l'aide, fiche ouverte derrière |
 | `reglages` | Fenêtre ⚙ : ouverte d'office sans projet, message et bouton ; projets proposés de A à Z ; état de l'onglet ; « Appliquer » refusé sans projet ; projet enregistré sous son numéro, libellé du bouton ; rappel « Enregistrer » ; options lues une seule fois ; Annuler ; projet disparu signalé ; options mal formées |
 | `liste` | Filtre sur le projet (liste de références, référence simple, interaction de deux projets) ; ordre du plus récent au plus ancien, sans date à la fin ; filtre de la vue Grist ; date et heure de Paris (hiver, été), date sans heure ; pastille du type (couleur de Grist, pastel) ; personnes ; lien `https` seulement, sans ouvrir la fiche ; titre piégé affiché comme du texte ; projet sans interaction ; colonnes facultatives absentes, obligatoires manquantes ; table illisible ; changement fait dans Grist ; Entrée au clavier |
 | `fiche` | Valeurs affichées ; titre, date, type, personnes modifiés (seules ces colonnes écrites, date en secondes du fuseau de Paris, liste `['L', …]`, `null` sans personne) ; lien non reconnu averti ; fermeture avec confirmation (✕, Échap) ; création (titre exigé, date du moment, projet en liste ou en référence simple, AddRecord) ; date sans heure (minuit universel) ; lien calculé en lecture seule ; Ctrl + S ; personne ajoutée dans Grist proposée ; Échap ferme d'abord le menu ; envoi de Grist pendant une saisie |

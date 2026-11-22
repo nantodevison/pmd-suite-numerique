@@ -24,7 +24,18 @@ EPICs, objectifs et résultats clés, projets… Les tâches restent gérées pa
 | [`../_commun/filtres.js`](../_commun/filtres.js), [`filtres.css`](../_commun/filtres.css) | Règle et panneau des filtres, communs avec le Kanban |
 | [`../_commun/tri.js`](../_commun/tri.js), [`tri.css`](../_commun/tri.css) | Comparaison des valeurs selon le type de leur colonne, et panneau du tri ⇅, communs avec le Kanban |
 | [`../_commun/vues.js`](../_commun/vues.js), [`vues.css`](../_commun/vues.css) | Vues enregistrées : barre des vues et fenêtre « Gérer la vue », communes avec le Kanban |
-| [`../_commun/fenetre.js`](../_commun/fenetre.js), [`fenetre.css`](../_commun/fenetre.css) | Fenêtre à onglets (« Gérer la vue » et ⚙) |
+| [`../_commun/fenetre.js`](../_commun/fenetre.js), [`fenetre.css`](../_commun/fenetre.css) | Fenêtre à onglets (« Gérer la vue », ⚙ et mode d'emploi « ? ») |
+
+## La barre du haut
+
+Même disposition que le Kanban et Interactions (#249) : à gauche, le nom de
+la table (suivi en gris du nom de la Galerie, s'il est réglé), le nombre de
+cartes affichées, **?** et **⚙** ; à droite, **🔍 Rechercher** et
+**+ Nouvelle carte**.
+
+Le bouton **?** ouvre un court mode d'emploi (cartes, nouvelle carte, vues,
+filtres, recherche, ⚙, les deux « Enregistrer »), avec un lien vers ce README.
+Contrairement au Kanban, il ne s'ouvre pas de lui-même à la première visite.
 
 La Galerie dépend du dossier `_commun/` : elle ne fonctionne qu'**en mode URL**.
 

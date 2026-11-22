@@ -38,23 +38,31 @@
 html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var(--text); background: var(--bg); }
 body { overflow-y: auto; }
 
-/* Bouton ⚙, discret en haut à droite (comme la Page) */
-.bouton-reglages {
-  position: fixed; top: 8px; right: 10px; z-index: 10;
-  border: none; background: none; cursor: pointer;
-  font-size: 16px; padding: 4px 6px; border-radius: 6px; opacity: .45;
+/* Barre du haut, commune aux widgets (#249, règle R1), comme la Galerie :
+   à gauche le titre, le nombre, « ? » et ⚙ ; à droite le bouton de création.
+   Elle reste en haut quand la liste défile. */
+.barre {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
 }
-.bouton-reglages:hover, .bouton-reglages:focus-visible { opacity: 1; background: var(--col-bg); outline: none; }
+.barre-titre { font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
+/* Nom du projet, discret après « Interactions » (comme le nom d'une Galerie) */
+.barre-nom { font-weight: 400; color: var(--text-muted); }
+.barre-compte {
+  font-size: 11px; font-weight: 700; color: var(--text-muted);
+  background: var(--col-bg); padding: 2px 9px; border-radius: 999px;
+}
+.bouton-icone {
+  flex-shrink: 0; padding: 5px 10px; border-radius: 8px; cursor: pointer;
+  border: 1.5px solid var(--border); background: var(--surface);
+  font-family: var(--font); font-size: 14px; line-height: 1; color: var(--text-muted);
+}
+.bouton-icone:hover, .bouton-icone:focus-visible { border-color: var(--accent); color: var(--text); outline: none; }
+.barre .btn-primary { margin-left: auto; }
 
 /* Colonne de lecture centrée */
-.journal { max-width: 860px; margin: 0 auto; padding: 14px 20px 40px; }
-.journal-entete {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  padding: 0 34px 12px 0; border-bottom: 1px solid var(--border); margin-bottom: 4px;
-}
-.journal-projet { font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
-.journal-compte { color: var(--text-muted); font-size: 12px; }
-.journal-entete .btn-primary { margin-left: auto; }
+.journal { max-width: 860px; margin: 0 auto; padding: 6px 20px 40px; }
 
 /* Une interaction = une ligne cliquable */
 .interaction {
@@ -146,8 +154,16 @@ input[type="date"].champ-saisie, input[type="datetime-local"].champ-saisie { wid
   </style>
 </head>
 <body>
-  <button type="button" class="bouton-reglages" id="bouton-reglages"
-          title="Réglages : projet affiché" aria-label="Réglages : projet affiché">⚙</button>
+  <!-- Barre du haut (#249) : titre et nombre écrits par interactions.js
+       (majBarre) ; le bouton de création n'apparaît qu'avec la liste -->
+  <header class="barre">
+    <span class="barre-titre" id="barre-titre">🤝 Interactions</span>
+    <span class="barre-compte" id="barre-compte" hidden></span>
+    <button type="button" class="bouton-icone" id="bouton-aide" title="Mode d'emploi">?</button>
+    <button type="button" class="bouton-icone" id="bouton-reglages"
+            title="Réglages : projet affiché" aria-label="Réglages : projet affiché">⚙</button>
+    <button type="button" class="btn-primary" id="bouton-creer" hidden></button>
+  </header>
 
   <!-- Contenu dessiné par interactions.js : la liste, ou un message -->
   <main id="contenu"></main>
@@ -183,6 +199,34 @@ input[type="date"].champ-saisie, input[type="datetime-local"].champ-saisie { wid
     </div>
     <p class="config-aide">Après « Appliquer », cliquez sur <strong>Enregistrer</strong> dans
       Grist (en haut du widget) pour garder ce choix dans le document.</p>
+  </section>
+
+  <!-- Mode d'emploi, derrière le bouton « ? » (#249, règle R4) : texte fixe,
+       déplacé dans sa fenêtre par ../_commun/fenetre.js (style commun dans
+       fenetre.css). Le mode d'emploi complet est le README du widget. -->
+  <section id="aide-contenu" hidden>
+    <div class="aide">
+      <h2>Bienvenue dans le journal des interactions</h2>
+      <p class="aide-intro">La liste montre les <strong>interactions d'un projet</strong> (rendez-vous,
+        appels, réunions…), de la plus récente à la plus ancienne.</p>
+      <ol class="aide-etapes">
+        <li><strong>⚙ Réglages</strong> : choisissez le <strong>projet</strong> affiché, et si vous le
+          souhaitez le libellé du bouton de création. Cliquez sur <strong>Appliquer</strong>, puis sur
+          <strong>Enregistrer</strong>, en haut à droite de Grist. Sur une page dupliquée, il suffit de
+          changer le projet.</li>
+        <li><strong>＋ Rendez-vous</strong> (ou le libellé choisi) : ouvre une fiche vide. Un titre est
+          exigé ; la date du moment et le projet de ⚙ sont remplis d'office.</li>
+        <li><strong>Une ligne</strong> : cliquez dessus pour ouvrir sa fiche et la modifier (titre, date,
+          type, personnes, lien). <strong>✓ Sauvegarder</strong> ou Ctrl + S écrit dans Grist ; fermer une
+          fiche modifiée demande confirmation.</li>
+        <li><strong>🔗 Lien</strong> : créez d'abord la note de la réunion (dans Docs, par exemple), puis
+          collez son adresse dans la fiche. Le 🔗 de la liste l'ouvre dans un nouvel onglet.</li>
+        <li><strong>Colonnes</strong> : elles s'associent dans le panneau de droite de Grist, section
+          « Colonnes » du widget (Date, Titre et Projet sont obligatoires).</li>
+      </ol>
+      <p class="aide-plus"><a href="https://github.com/nantodevison/pmd-suite-numerique/blob/master/widgets/interactions/README.md"
+        target="_blank" rel="noopener">📖 En savoir plus (mode d'emploi complet)</a></p>
+    </div>
   </section>
 
   <div class="toast" id="toast"></div>

@@ -365,18 +365,7 @@ html, body { height: 100%; font-family: var(--font); font-size: 13px; color: var
 .empty-icon { font-size: 44px; line-height: 1; }
 .empty-hint { font-size: 11.5px; opacity: .7; max-width: 300px; }
 
-/* ── Mode d'emploi (#214) : un seul panneau, donc pas de colonne d'onglets ── */
-.fenetre-aide .fenetre-onglets { display: none; }
-.aide {
-  width: 100%; max-width: 640px; height: 100%; margin: 0 auto; overflow-y: auto;
-  padding: 24px 8px 40px; color: var(--text); font-size: 13px; line-height: 1.5;
-}
-.aide h2 { font-size: 20px; margin: 0 0 8px; }
-.aide-intro { color: var(--text-muted); margin: 0 0 16px; }
-.aide-etapes { margin: 20px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; }
-.aide-plus { margin-top: 20px; }
-.aide-boutons { display: flex; flex-wrap: wrap; gap: 8px; }
-.aide-plus a { color: var(--accent); }
+/* ── Mode d'emploi (#214) : son style est commun, dans ../_commun/fenetre.css ── */
 
 /* ══════════════════════════════════════════════════════════════
    MODAL D'AJOUT DE CARTE
@@ -660,7 +649,7 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
   <!-- Toolbar -->
   <header class="toolbar">
     <div class="toolbar-left">
-      <span class="toolbar-title">📋 Kanban</span>
+      <span class="toolbar-title">📌 Kanban</span>
       <button id="btn-aide" class="btn-icon" title="Mode d'emploi">?</button>
       <button id="btn-config" class="btn-icon" title="Configurer">⚙</button>
     </div>
@@ -710,7 +699,7 @@ body .edit-panel.fiche-centre .edit-title-field { font-size: 21px; }
     <p id="avis-projet" class="avis-projet" hidden></p>
     <div id="board" class="board">
       <div class="empty-state">
-        <div class="empty-icon">📋</div>
+        <div class="empty-icon">📌</div>
         <p>En attente de données…</p>
         <p class="empty-hint">Configurez le widget et accordez l'accès à votre table.</p>
       </div>

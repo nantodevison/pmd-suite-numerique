@@ -58,6 +58,7 @@ body { display: flex; flex-direction: column; overflow: hidden; }
 }
 .recherche {
   margin-left: auto; width: min(280px, 45vw);
+  min-width: 90px;   /* widget étroit : la recherche rétrécit, les boutons restent entiers */
   padding: 6px 10px; border: 1.5px solid var(--border); border-radius: 8px;
   font-family: inherit; font-size: 13px; color: var(--text);
 }
@@ -68,6 +69,9 @@ body { display: flex; flex-direction: column; overflow: hidden; }
   font-family: inherit; font-size: 13px; color: var(--text);
 }
 .bouton-barre:hover { border-color: var(--accent); }
+/* « ? » et ⚙ : petits boutons carrés, en gris comme dans le Kanban */
+.bouton-icone { padding: 5px 10px; font-size: 14px; line-height: 1; color: var(--text-muted); }
+.bouton-icone:hover { color: var(--text); }
 .bouton-nouvelle { border: none; background: var(--accent); color: #fff; font-weight: 600; }
 
 /* Barre des vues (#204) : onglets, « ＋ Vue » et « 🔽 Filtres » sont
@@ -309,13 +313,16 @@ button.fiche-lie-ouvrable:hover, button.fiche-lie-ouvrable:focus-visible { borde
 </head>
 <body>
 
+  <!-- Barre commune aux widgets (#249, règle R1) : à gauche le titre, le
+       nombre, « ? » et ⚙ ; à droite la recherche et « + Nouvelle carte » -->
   <header class="barre">
     <span class="barre-titre" id="titre-table">🖼️ Galerie</span>
     <span class="barre-compte" id="compte">0</span>
+    <button type="button" class="bouton-barre bouton-icone" id="btn-aide" title="Mode d'emploi">?</button>
+    <button type="button" class="bouton-barre bouton-icone" id="btn-reglages" title="Réglages de la Galerie">⚙</button>
     <input type="search" class="recherche" id="recherche" placeholder="🔍 Rechercher… ou #numéro"
            title="Tous les mots, dans n'importe quelle colonne (accents ignorés) ; #12 : ligne n° 12" />
     <button type="button" class="bouton-barre bouton-nouvelle" id="btn-nouvelle">+ Nouvelle carte</button>
-    <button type="button" class="bouton-barre" id="btn-reglages" title="Réglages de la Galerie">⚙</button>
   </header>
 
   <!-- Vues enregistrées et filtres (#204) : onglets (ou sélecteur ▾), « ＋ Vue »
@@ -378,6 +385,46 @@ button.fiche-lie-ouvrable:hover, button.fiche-lie-ouvrable:focus-visible { borde
     <button type="button" class="fiche-md-bouton" id="reglages-reprendre"></button>
     <p class="reglages-aide reglages-rappel">Après « Appliquer », cliquez sur <strong>Enregistrer</strong> dans
       Grist (en haut du widget) pour garder ces réglages dans le document.</p>
+  </section>
+
+  <!-- Mode d'emploi, derrière le bouton « ? » (#249, règle R4) : texte fixe,
+       déplacé dans sa fenêtre par ../_commun/fenetre.js (style commun dans
+       fenetre.css). Le mode d'emploi complet est le README du widget. -->
+  <section id="aide-contenu" hidden>
+    <div class="aide">
+      <h2>Bienvenue dans la Galerie</h2>
+      <p class="aide-intro">Chaque ligne de la table devient une <strong>carte</strong>. Les cartes
+        s'affichent dans des <strong>vues</strong>, chacune avec ses filtres, son tri et son
+        regroupement. <strong>Toutes les cartes</strong> montre tout ce que Grist envoie.</p>
+      <ol class="aide-etapes">
+        <li><strong>Cartes</strong> : cliquez sur une carte pour ouvrir sa <strong>fiche</strong>, lire et
+          modifier son titre et son texte (en Markdown). Les <strong>pastilles</strong> (priorité, projet…)
+          se changent d'un clic, sur la carte comme dans la fiche ; la pastille ● change la couleur.</li>
+        <li><strong>+ Nouvelle carte</strong> : ouvre une fiche vide, préremplie avec le modèle de texte de ⚙.
+          Un titre est exigé.</li>
+        <li><strong>＋ Vue</strong> : crée une vue à partir de l'affichage actuel, <strong>🔒 pour vous</strong>
+          (gardée aussitôt dans votre navigateur) ou <strong>👥 pour tous</strong> (puis cliquez sur
+          <strong>Enregistrer</strong> de Grist). Le menu <strong>⋯</strong> de l'onglet actif permet de la
+          gérer, de la renommer, de la copier en vue perso ou de la supprimer.</li>
+        <li><strong>🔽 Filtres</strong>, <strong>⇅ Trier</strong> et <strong>▤ Regrouper</strong> ouvrent
+          <strong>Gérer la vue</strong> : <strong>💾 Enregistrer</strong> garde les réglages dans la vue,
+          <strong>Annuler</strong> ne change rien. Le bouton <strong>▦</strong> (« ▦ Moyenne ▾ ») règle la taille
+          des cartes, retenue par votre navigateur.</li>
+        <li><strong>🔍 Rechercher</strong> : garde les cartes qui contiennent tous les mots tapés, dans
+          n'importe quelle colonne, sans tenir compte des accents ; <strong>#12</strong> retrouve la ligne
+          n° 12. La recherche s'ajoute aux filtres et ne s'enregistre nulle part.</li>
+        <li><strong>⚙ Réglages</strong> : le <strong>nom de la Galerie</strong>, utile si plusieurs Galeries
+          montrent la même table (chacune garde alors ses vues 🔒 et sa taille), et le <strong>modèle de
+          texte</strong> des nouvelles cartes. Cliquez sur <strong>Appliquer</strong>, puis sur
+          <strong>Enregistrer</strong>, en haut à droite de Grist.</li>
+        <li><strong>⚠️ Deux « Enregistrer »</strong> : celui de la Galerie (💾) garde les réglages dans la
+          vue ; celui de Grist, en haut à droite, les inscrit dans le document, pour tous. Sans ce dernier
+          clic, une vue 👥 partagée ou un réglage de ⚙ est perdu au rechargement de la page. Les cartes,
+          les vues 🔒 et la taille sont gardées aussitôt.</li>
+      </ol>
+      <p class="aide-plus"><a href="https://github.com/nantodevison/pmd-suite-numerique/blob/master/widgets/galerie/README.md"
+        target="_blank" rel="noopener">📖 En savoir plus (mode d'emploi complet)</a></p>
+    </div>
   </section>
 
   <!-- Affiché seulement s'il reste des textes de l'ancien widget Notepad -->
