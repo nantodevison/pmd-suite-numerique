@@ -34,6 +34,11 @@ Banc.lancer(async () => {
   ok('⚙ : aide (même table, même nom → réglages partagés ; nom spécifique ; exemples)',
     aide.includes('même table') && aide.includes('Choisissez un nom spécifique') && aide.includes('évitez « EPICs »'), aide);
 
+  // Bouton « Appliquer », pas « Enregistrer » : celui de Grist reste à cliquer (#249)
+  ok('⚙ : bouton « ✓ Appliquer » (pas « Enregistrer », réservé à Grist)',
+    $('#reglages-enregistrer').textContent.trim() === '✓ Appliquer', $('#reglages-enregistrer').textContent);
+  ok('⚙ : aide qui rappelle « Enregistrer » dans Grist', aide.includes('Après « Appliquer », cliquez sur Enregistrer dans'), aide);
+
   // ── Donner un nom (espaces autour retirés) ──
   $('#reglages-nom').value = '  EPICs Vitrine  ';
   $('#reglages-enregistrer').click();
@@ -41,7 +46,8 @@ Banc.lancer(async () => {
   ok('nom enregistré dans les options, sans espaces autour', FAUX_GRIST.options.nom === 'EPICs Vitrine',
     JSON.stringify(FAUX_GRIST.options.nom));
   ok('⚙ fermée, message qui rappelle « Enregistrer » de Grist', !$('#reglages').open
-    && $('#toast').textContent.includes('Enregistrer'), $('#toast').textContent);
+    && $('#toast').textContent === '✓ Réglages appliqués — cliquez sur « Enregistrer » dans Grist pour les garder',
+    $('#toast').textContent);
   ok('titre : nom de la Galerie en gris après la table', $('#titre-table').textContent === '🖼️ EPICs · EPICs Vitrine'
     && $('#titre-table .barre-nom')?.textContent === ' · EPICs Vitrine', $('#titre-table').textContent);
   ok('clés de mémoire : le nom s\'ajoute', cleMemoire('vueActive') === NOUVELLE('vueActive', 'EPICs Vitrine'), cleMemoire('vueActive'));

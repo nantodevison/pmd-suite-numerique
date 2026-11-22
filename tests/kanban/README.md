@@ -21,7 +21,7 @@ py tests/kanban/jouer.py --largeurs 1200 -v   # une largeur, toutes les lignes
 Le bilan s'affiche par scénario et par largeur (`BILAN 42 OK, 0 KO`), suivi des
 lignes en échec. Le code de sortie vaut 0 si tout est OK.
 
-## Ce qui est vérifié (323 vérifications par largeur)
+## Ce qui est vérifié (325 vérifications par largeur)
 
 | Scénario | Fonctions |
 |---|---|

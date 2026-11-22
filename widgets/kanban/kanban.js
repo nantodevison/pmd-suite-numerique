@@ -459,7 +459,9 @@ async function saveConfig() {
   // Les vues personnelles sont propres au projet : on relit celles du projet choisi
   if (VUES.relirePerso()) chargerFiltresDeLaVue();   // vue active disparue : « Toutes les cartes »
   renderBoard();
-  showToast('✓ Configuration sauvegardée');
+  // Rien n'est encore dans le document : les options du widget n'y sont
+  // gardées qu'après « Enregistrer » de Grist (même message que les autres widgets, #249)
+  showToast('✓ Configuration appliquée — cliquez sur « Enregistrer » dans Grist pour la garder', 5000);
 }
 
 /* ── Classes et couleurs de statut (#183, #212) ─────────────────
