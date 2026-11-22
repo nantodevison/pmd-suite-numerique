@@ -8,7 +8,7 @@ Gardez-le court : quelques lignes par section suffisent.
 
 <!-- début kanban : section régénérée par taches.py, ne pas modifier à la main -->
 ## Kanban (Grist)
-_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-19 23:47_
+_Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-11-22 22:40_
 
 ### 🖐️ À faire
 - [ ] #242 Proposer un affichage de base commun (Moyenne, EPIC « Mutualiser les fonctions communes du Kanban et de la Galerie »)
@@ -18,8 +18,6 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - [ ] #234 Relire la structure des colonnes (libellés, couleurs des choix, noms des références) quand le document change, au même moment dans le Kanban et la Galerie (_commun/colonnes.js) (Basse, EPIC « Mutualiser les fonctions communes du Kanban et de la Galerie »)
 - [ ] #240 Galerie : consulter un objet lié (tâche…) dans la fiche (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
 - [ ] #243 Préremplir une nouvelle carte avec la valeur de « Sélectionner par » de Grist (Galerie et Kanban liés) (Basse, EPIC « Améliorer l'Ux/Ui de la galerie »)
-- [ ] #248 Kanban : articuler le choix du projet (⚙) et « Sélectionner par » une Page (Basse, EPIC « Améliorer l'interface du kanban »)
-- [ ] #249 Uniformiser l'Ux des widgets (Basse, EPIC « Mutualiser les fonctions communes du Kanban et de la Galerie »)
 
 ### ♻️ En cours
 - [ ] #247 Structurer les pages Grist dédiées à Andrea (Moyenne, EPIC « Créer un MVP pour Andrea »)
@@ -28,6 +26,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 
 ## ⚠️ Prochaine séance
 - [ ] Prévenir Vincent et Elisa des changements de la barre (#214), de la création de carte liée (#222), des attributs dans les filtres (#223, colonnes « EPIC › … ») et de #226 (panneau des filtres compacté, « Afficher ▾ » dans les menus, EPIC / Assigné en pastilles dans « Nouvelle carte »), et recueillir leur avis
+- [ ] Prévenir Andrea des changements de #249 : ⚙ de la Galerie en deux onglets avec « ✓ Appliquer » (puis « Enregistrer » de Grist), « ? » et ⚙ à gauche, titre « 🖼️ Galerie · … », questions « … Les abandonner ? », barre du haut d'Interactions et fiche qui y reste ouverte après « Sauvegarder »
 - [ ] Essayer taches.py voir sur un vrai projet Notion (testé sur faux serveur seulement)
 - [ ] MVP Andrea (#247) : structurer les pages Grist d'Andrea avec la Page et les Interactions (par URL) ; la Page peut servir de source « Sélectionner par » pour la Galerie ; passer Page et Interactions « en test » au catalogue une fois branchées ; donner un nom spécifique à chaque Galerie dans ⚙ (#264), y compris sur les pages dupliquées, puis « Enregistrer » ; retirer la pastille `identifiant` des Galeries d'EPICs (doublon du numéro, #244)
 - [ ] Associer `Chef_de_projet` (désormais liste de références) aux Pastilles de la Galerie et de la Page des projets, et `Contributeurs` à celles de la Galerie des EPICs (PR #64)
@@ -169,3 +168,7 @@ _Projet « Gestion de projet » — toutes les tâches ouvertes — lu le 2026-1
 - 2026-11-19 — Page et Interactions gardent leurs réglages dans les options du widget, sans mémoire du navigateur : pas de partage entre pages ; une harmonisation éventuelle relève de #249
 - 2026-11-19 — numéro des cartes de la Galerie dans un pied poussé en bas (ou à droite des objets liés en grande taille), pas en taille compacte — à droite des pastilles, il restait au milieu d'une carte étirée (retour de test)
 - 2026-11-19 — CLAUDE.md global : section « Tâches suivies » (statut accepté sans simulation ; « En cours » au démarrage et « Fait » après fusion testée sans demander) et petits détails tranchés sans question ; mémoires locales correspondantes supprimées — règles communes aux deux postes
+- 2026-11-22 — Kanban lié par « Sélectionner par » : le projet de ⚙ commande toujours, avis seulement si aucune carte reçue n'est de ce projet (#248) — recevoir des cartes d'autres projets est normal
+- 2026-11-22 — UX commune des widgets (#249) : barre du haut (type de widget, nom en gris, « ? » et ⚙ à gauche ; recherche et création à droite), réglages dans fenetre.js avec « ✓ Appliquer » puis « Enregistrer » de Grist, mode d'emploi « ? » en texte fixe sans ouverture automatique (hors Kanban), toast et questions « … Les abandonner ? » dans _commun/messages.js, fiche qui reste ouverte après « Sauvegarder » — parcours constant d'un widget à l'autre
+- 2026-11-22 — confirmations d'abandon par la fenêtre confirm() du navigateur, sans fenêtre maison — fonctionne dans Grist et dans les bancs, une fenêtre maison imposerait des appels asynchrones partout
+- 2026-11-22 — emblèmes : 📌 Kanban, 🖼️ Galerie, 🤝 Interactions — choix de Martin
