@@ -2211,6 +2211,22 @@ function changerNomGalerie(nom) {
   afficherGrille();
 }
 
+/* Mode d'emploi, derrière le bouton « ? » (#249, règle R4), comme le Kanban.
+   Le texte est écrit dans index.html (#aide-contenu) : rien de Grist n'y
+   entre. Fenêtre commune à un seul onglet, sans colonne d'onglets (classe
+   « fenetre-aide », style dans ../_commun/fenetre.css). */
+let _fenetreAide = null;
+function fenetreAide() {
+  if (_fenetreAide) return _fenetreAide;
+  _fenetreAide = Fenetre.creer({
+    titre: '📖 Mode d\'emploi',
+    onglets: [{ id: 'aide', libelle: 'Mode d\'emploi', contenu: document.getElementById('aide-contenu') }],
+    actions: [{ libelle: 'Fermer', classe: 'btn-primary', fermer: true }],
+  });
+  _fenetreAide.element.classList.add('fenetre-aide');
+  return _fenetreAide;
+}
+
 /* Fenêtre ⚙ : la brique commune ../_commun/fenetre.js, comme le Kanban, la
    Page et Interactions (#249, étape B). Elle apporte la barre du bas
    « Annuler / ✓ Appliquer » toujours visible, la marque « modifications non
@@ -2398,6 +2414,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('fiche-sauver').addEventListener('click', sauverFiche);
   document.getElementById('btn-nouvelle').addEventListener('click', ouvrirNouvelleFiche);
   document.getElementById('btn-reglages').addEventListener('click', ouvrirReglages);
+  document.getElementById('btn-aide').addEventListener('click', () => fenetreAide().ouvrir());
   document.getElementById('reglages-reprendre').addEventListener('click', reprendreTexteCarte);
   document.getElementById('bandeau-notepad-bouton').addEventListener('click', () =>
     convertirNotepad().catch(err => afficherToast(`⚠️ Erreur : ${err.message || err}`, 4000)));
@@ -2407,9 +2424,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    // Réglages ou « Gérer la vue » ouverts : Échap ne concerne qu'eux
-    // (fenetre.js les ferme elle-même, avec confirmation si besoin).
-    if (fenetreReglages().estOuverte() || UI_VUES.fenetre.estOuverte()) return;
+    // Réglages, mode d'emploi ou « Gérer la vue » ouverts : Échap ne concerne
+    // qu'eux (fenetre.js les ferme elle-même, avec confirmation si besoin).
+    if (fenetreReglages().estOuverte() || fenetreAide().estOuverte() || UI_VUES.fenetre.estOuverte()) return;
     // Un panneau des vues ou un filtre ouvert : on le ferme, lui seul
     if (panneauOuvert()) { UI_VUES.fermerMenus(); return; }
     if (panneau().classList.contains('open')) fermerFiche();

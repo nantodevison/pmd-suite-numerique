@@ -48,13 +48,13 @@ Banc.lancer(async () => {
   ok('Appliquer : projet enregistré sous son numéro', FAUX_GRIST.options.projet === 1, JSON.stringify(FAUX_GRIST.options));
   ok('Appliquer : libellé enregistré sans espaces', FAUX_GRIST.options.libelleBouton === 'Réunion');
   ok('Appliquer : rappel « Enregistrer »', $('#toast').textContent.includes('Enregistrer'));
-  ok('liste affichée : nom du projet', $('.journal-projet')?.textContent === 'Atelier vélo');
+  ok('liste affichée : nom du projet', $('#barre-titre .barre-nom')?.textContent === ' · Atelier vélo');
   ok('bouton de création avec le libellé', $('#bouton-creer')?.textContent === '＋ Réunion');
 
   // 4. Grist rappelle onOptions après setOption : sans effet
   FAUX_GRIST.demarrer({ projet: 2 });
   await Banc.attendre(300);
-  ok('options relues : ignorées (copie du widget)', $('.journal-projet')?.textContent === 'Atelier vélo');
+  ok('options relues : ignorées (copie du widget)', $('#barre-titre .barre-nom')?.textContent === ' · Atelier vélo');
 
   // 5. Ouvrir ⚙ puis Annuler : rien ne change
   $('#bouton-reglages').click();
@@ -64,7 +64,7 @@ Banc.lancer(async () => {
   Banc.repondre(true);
   boutonFenetre('Annuler').click();
   await Banc.attendre(50);
-  ok('Annuler : projet inchangé', $('.journal-projet')?.textContent === 'Atelier vélo' && FAUX_GRIST.options.projet === 1);
+  ok('Annuler : projet inchangé', $('#barre-titre .barre-nom')?.textContent === ' · Atelier vélo' && FAUX_GRIST.options.projet === 1);
 
   // 6. Projet enregistré qui n'existe plus
   await relancer({ projet: 99 });

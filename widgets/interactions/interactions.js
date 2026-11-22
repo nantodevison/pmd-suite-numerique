@@ -296,6 +296,7 @@ function afficher() {
  *   avecBouton: ajoute « ⚙ Choisir le projet ».
  */
 function afficherMessage(texte, avecBouton = false, html = true) {
+  majBarre(null);
   const zone = contenu();
   zone.replaceChildren();
   const bloc = document.createElement('div');
@@ -317,25 +318,38 @@ function bouton(texte, classe, surClic) {
   return b;
 }
 
+/**
+ * Barre du haut (#249) : « 🤝 Interactions », suivi en gris du nom du
+ * projet, le nombre d'interactions et le bouton de création.
+ *   nombre : null quand un message remplace la liste ; on n'affiche alors
+ *            ni projet, ni nombre, ni bouton de création.
+ * textContent partout : le nom du projet vient de Grist, jamais lu comme du HTML.
+ */
+function majBarre(nombre) {
+  const avecListe = nombre !== null;
+  const titre = document.getElementById('barre-titre');
+  titre.textContent = '🤝 Interactions';
+  if (avecListe) {
+    const nom = document.createElement('span');
+    nom.className = 'barre-nom';
+    nom.textContent = ' · ' + nomProjet(ETAT.reglages.projet);
+    titre.appendChild(nom);
+  }
+  const compte = document.getElementById('barre-compte');
+  compte.hidden = !avecListe;
+  compte.textContent = avecListe ? String(nombre) : '';
+  compte.title = !avecListe ? '' : (nombre > 1 ? `${nombre} interactions` : `${nombre} interaction`);
+  const creer = document.getElementById('bouton-creer');
+  creer.hidden = !avecListe;
+  creer.textContent = `＋ ${(ETAT.reglages && ETAT.reglages.libelle) || LIBELLE_DEFAUT}`;
+}
+
 function dessinerListe(rangs) {
+  majBarre(rangs.length);
   const zone = contenu();
   zone.replaceChildren();
   const journal = document.createElement('section');
   journal.className = 'journal';
-
-  // En-tête : nom du projet, nombre d'interactions, bouton de création
-  const entete = document.createElement('div');
-  entete.className = 'journal-entete';
-  const titre = document.createElement('span');
-  titre.className = 'journal-projet';
-  titre.textContent = nomProjet(ETAT.reglages.projet);
-  const compte = document.createElement('span');
-  compte.className = 'journal-compte';
-  compte.textContent = rangs.length > 1 ? `${rangs.length} interactions` : `${rangs.length} interaction`;
-  const creer = bouton(`＋ ${ETAT.reglages.libelle}`, 'btn-primary', () => ouvrirFiche(null));
-  creer.id = 'bouton-creer';
-  entete.append(titre, compte, creer);
-  journal.appendChild(entete);
 
   if (!rangs.length) {
     const vide = document.createElement('p');
@@ -717,7 +731,7 @@ document.getElementById('fiche-sauver').addEventListener('click', sauverFiche);
 document.getElementById('fiche-annuler').addEventListener('click', () => fermerFiche());
 document.getElementById('fiche-fermer').addEventListener('click', () => fermerFiche());
 document.addEventListener('keydown', (e) => {
-  if (!ETAT.fiche || FENETRE.estOuverte()) return;
+  if (!ETAT.fiche || FENETRE.estOuverte() || FENETRE_AIDE.estOuverte()) return;
   // Ctrl + S (ou Cmd + S) sauvegarde ; Échap ferme (un menu ouvert se ferme d'abord : fiche.js)
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); sauverFiche(); }
   if (e.key === 'Escape') fermerFiche();
@@ -800,6 +814,19 @@ async function appliquerReglages() {
 }
 
 document.getElementById('bouton-reglages').addEventListener('click', ouvrirReglages);
+document.getElementById('bouton-creer').addEventListener('click', () => ouvrirFiche(null));
+
+/* Mode d'emploi, derrière le bouton « ? » (#249, règle R4), comme le Kanban
+   et la Galerie. Le texte est écrit dans index.html (#aide-contenu) : rien de
+   Grist n'y entre. Un seul onglet, donc pas de colonne d'onglets (classe
+   « fenetre-aide », style dans ../_commun/fenetre.css). */
+const FENETRE_AIDE = Fenetre.creer({
+  titre: '📖 Mode d\'emploi',
+  onglets: [{ id: 'aide', libelle: 'Mode d\'emploi', contenu: document.getElementById('aide-contenu') }],
+  actions: [{ libelle: 'Fermer', classe: 'btn-primary', fermer: true }],
+});
+FENETRE_AIDE.element.classList.add('fenetre-aide');
+document.getElementById('bouton-aide').addEventListener('click', () => FENETRE_AIDE.ouvrir());
 
 /* ══════════════════════════════════════════════════════════════
    6. PETIT MESSAGE TEMPORAIRE

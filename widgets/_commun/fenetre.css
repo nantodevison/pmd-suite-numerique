@@ -71,6 +71,21 @@
 }
 .fenetre.modifiee .fenetre-modifiee { visibility: visible; }
 
+/* Mode d'emploi, derrière le bouton « ? » de chaque widget (#214, #249) :
+   un seul panneau, donc pas de colonne d'onglets. Le widget ajoute la classe
+   « fenetre-aide » à sa fenêtre et met son texte dans un bloc « aide ». */
+.fenetre-aide .fenetre-onglets { display: none; }
+.aide {
+  width: 100%; max-width: 640px; height: 100%; margin: 0 auto; overflow-y: auto;
+  padding: 24px 8px 40px; color: var(--text, #2d3748); font-size: 13px; line-height: 1.5;
+}
+.aide h2 { font-size: 20px; margin: 0 0 8px; }
+.aide-intro { color: var(--text-muted, #718096); margin: 0 0 16px; }
+.aide-etapes { margin: 20px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; }
+.aide-plus { margin-top: 20px; }
+.aide-boutons { display: flex; flex-wrap: wrap; gap: 8px; }
+.aide-plus a { color: var(--accent, #667eea); }
+
 /* Fenêtre étroite (widget réduit dans Grist) : onglets en haut, sur une ligne */
 @media (max-width: 600px) {
   .fenetre { width: calc(100vw - 16px); height: calc(100vh - 16px); }

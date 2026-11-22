@@ -19,7 +19,7 @@ Statut : **en développement** (version 0, #246).
 | [`../_commun/fiche.js`](../_commun/fiche.js), [`fiche.css`](../_commun/fiche.css) | Panneau de la fiche (côté / centre), champ de titre, menus de choix et de recherche |
 | [`../_commun/pastilles.js`](../_commun/pastilles.js), [`pastilles.css`](../_commun/pastilles.css) | Pastille colorée du type |
 | [`../_commun/colonnes.js`](../_commun/colonnes.js) | Structure du document et noms des projets et des personnes |
-| [`../_commun/fenetre.js`](../_commun/fenetre.js), [`fenetre.css`](../_commun/fenetre.css) | Fenêtre des réglages ⚙ |
+| [`../_commun/fenetre.js`](../_commun/fenetre.js), [`fenetre.css`](../_commun/fenetre.css) | Fenêtre des réglages ⚙ et du mode d'emploi « ? » |
 | [`../_commun/recherche.js`](../_commun/recherche.js) | Règle de recherche du menu des personnes |
 
 Le widget dépend du dossier `_commun/` : il ne fonctionne qu'**en mode URL**.
@@ -64,8 +64,8 @@ widget :
 
 ### 3. Le projet (⚙)
 
-Le bouton ⚙, discret en haut à droite, ouvre la fenêtre **Projet**. Elle
-s'ouvre d'office tant qu'aucun projet n'est choisi.
+Le bouton ⚙ de la barre du haut ouvre la fenêtre **Projet**. Elle s'ouvre
+d'office tant qu'aucun projet n'est choisi.
 
 - On choisit le projet dans la liste des lignes de la table visée par la
   colonne Projet (de A à Z). Il est retenu sous son **numéro** : le renommer
@@ -84,6 +84,18 @@ lignes. C'est aussi la même habitude que pour la [Page](../page/) : « je vois
 
 Seules les lignes que Grist envoie au widget comptent : un filtre de la vue
 Grist s'ajoute à celui du projet.
+
+## La barre du haut
+
+Même disposition que le Kanban et la Galerie (#249) : à gauche,
+**🤝 Interactions** suivi en gris du nom du projet, le nombre d'interactions,
+**?** et **⚙** ; à droite, le bouton de création (« ＋ Rendez-vous »). Elle
+reste visible quand la liste défile. Tant qu'un message remplace la liste
+(aucun projet, colonnes à associer…), elle ne montre que le titre, ? et ⚙.
+
+Le bouton **?** ouvre un court mode d'emploi (⚙, création, fiche, lien,
+colonnes), avec un lien vers ce README. Il ne s'ouvre pas de lui-même : à la
+première visite, c'est ⚙ qui s'ouvre, tant qu'aucun projet n'est choisi.
 
 ## La liste
 
